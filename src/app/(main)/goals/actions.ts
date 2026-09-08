@@ -28,8 +28,8 @@ function readGoalFields(formData: FormData) {
   return {
     title,
     description: description || null,
-    frequencyType,
-    targetDays: frequencyType === "SPECIFIC_DAYS" ? targetDays.join(",") : null,
+    frequencyType: frequencyType as GoalFrequencyType,
+    targetDays: frequencyType === "SPECIFIC_DAYS" ? targetDays : [],
     targetValue: targetValueRaw ? Number(targetValueRaw) : null,
     unit: frequencyType === "WEEKLY_TARGET" ? unit || null : null,
   };

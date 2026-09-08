@@ -20,10 +20,13 @@ and [`docs/STACK.md`](docs/STACK.md) for the full plan before any code was writt
 
 ## Running it locally
 
+Needs a Postgres database — see [Deploying](#deploying) below for how to get
+a free one from Supabase. Once you have a `DATABASE_URL`:
+
 ```bash
 npm install
-cp .env.example .env      # only the first time — .env itself is gitignored
-npx prisma migrate dev    # creates prisma/dev.db and applies the schema
+cp .env.example .env      # only the first time — .env itself is gitignored, fill in DATABASE_URL
+npx prisma migrate dev    # applies the schema to your database
 npx prisma db seed        # creates your user, starter subjects, exercise library
 npm run dev
 ```
@@ -31,11 +34,19 @@ npm run dev
 Then open http://localhost:3000 and sign in with the password from `.env`
 (`APP_PASSWORD`, `year13goals` by default — change it to whatever you like).
 
+## Deploying
+
+1. Create a free [Supabase](https://supabase.com) project — this is the Postgres database.
+2. Project Settings → Database → Connection string → URI (the "Transaction pooler" one). That's your `DATABASE_URL`.
+3. Import this repo into [Vercel](https://vercel.com) (Add New Project → your GitHub account → `goals-tracker`). It auto-detects Next.js.
+4. In the Vercel project's Environment Variables, add `DATABASE_URL` and `APP_PASSWORD`.
+5. Deploy.
+
 ## Status
 
 **Phase 1, in progress.**
 
-- [x] Scaffolding — Next.js + Tailwind + Prisma (SQLite locally), password gate
+- [x] Scaffolding — Next.js + Tailwind + Prisma (Postgres via Supabase), password gate
 - [x] Journal — write/edit one entry per day, prev/next day navigation
 - [x] Goals — create/edit/archive, daily check-in, streaks, shown alongside the journal
 - [ ] Study timer — per-subject sessions, weekly totals

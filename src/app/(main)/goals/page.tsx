@@ -7,6 +7,12 @@ import { setGoalActive } from "./actions";
 
 const HISTORY_DAYS = 14;
 
+// Without this, Next.js has no reason to think this page depends on
+// per-request state (no searchParams/cookies here) and would prerender it
+// once at build time — freezing whatever goals existed at deploy time
+// instead of showing live data on every visit.
+export const dynamic = "force-dynamic";
+
 export default async function GoalsPage() {
   const user = await getCurrentUser();
   const goals = await prisma.goal.findMany({

@@ -1,12 +1,10 @@
 // Schema mirrors docs/DATA_MODEL.md — keep both in sync when this changes.
 // learn more: https://pris.ly/d/prisma-schema
 //
-// NOTE: this uses SQLite for local dev (zero setup). SQLite has no native
-// enum or array column types, so fields that would be enums/arrays on
-// Postgres are plain strings here, validated in application code (see
-// src/lib/constants.ts). Swapping the datasource to Postgres later
-// (docs/STACK.md) lets those become real `enum` and `String[]` columns
-// with no data-shape change.
+// Postgres (hosted on Supabase — see docs/STACK.md), used for both local
+// dev and production. Enum-like fields are real `enum` columns and
+// weekday selections are real array columns — Postgres supports both
+// natively, unlike the SQLite this schema started on.
 
 generator client {
   provider = "prisma-client"
@@ -14,8 +12,34 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum GoalFrequencyType {
+  DAILY
+  SPECIFIC_DAYS
+  WEEKLY_TARGET
+}
+
+enum Weekday {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+  SUN
+}
+
+enum WeightUnit {
+  KG
+  LB
+}
+
+enum ReminderChannel {
+  PUSH
+  EMAIL
 }
 
 model User {
@@ -53,11 +77,8 @@ model Goal {
   title       String
   description String?
 
-  // "DAILY" | "SPECIFIC_DAYS" | "WEEKLY_TARGET" — see GoalFrequencyType in src/lib/constants.ts
-  frequencyType String
-
-  // comma-separated Weekday codes, e.g. "MON,WED,FRI"; only used when frequencyType = SPECIFIC_DAYS
-  targetDays String?
+  frequencyType GoalFrequencyType
+  targetDays    Weekday[] // only used when frequencyType = SPECIFIC_DAYS
 
   targetValue Float? // e.g. 10 for "10 minutes"; null for simple yes/no goals
   unit        String? // e.g. "minutes", "sessions"
@@ -149,9 +170,8 @@ model WorkoutSet {
   reps      Int
   weight    Float
 
-  // "KG" | "LB" — see WeightUnit in src/lib/constants.ts
-  weightUnit String  @default("KG")
-  isWarmup   Boolean @default(false)
+  weightUnit WeightUnit @default(KG)
+  isWarmup   Boolean    @default(false)
 }
 
 model Reminder {
@@ -160,11 +180,9 @@ model Reminder {
   goalId String
   goal   Goal   @relation(fields: [goalId], references: [id])
 
-  // comma-separated Weekday codes, e.g. "MON,TUE,WED,THU,FRI"
-  daysOfWeek String
+  daysOfWeek Weekday[]
   timeOfDay  String // "HH:mm", 24h
 
-  // "PUSH" | "EMAIL" — see ReminderChannel in src/lib/constants.ts
-  channel String
-  enabled Boolean @default(true)
+  channel ReminderChannel
+  enabled Boolean         @default(true)
 }

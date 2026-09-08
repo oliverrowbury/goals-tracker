@@ -3,7 +3,7 @@ import { dateToISO, shiftISO, isoToDate } from "@/lib/dates";
 
 type GoalLike = {
   frequencyType: string;
-  targetDays: string | null;
+  targetDays: Weekday[];
   startDate: Date;
   endDate: Date | null;
 };
@@ -20,8 +20,7 @@ export function isGoalDueOn(goal: GoalLike, dateISO: string): boolean {
   if (goal.endDate && dateISO > dateToISO(goal.endDate)) return false;
 
   if (goal.frequencyType === "SPECIFIC_DAYS") {
-    const days = (goal.targetDays ?? "").split(",").filter(Boolean);
-    return days.includes(weekdayOf(dateISO));
+    return goal.targetDays.includes(weekdayOf(dateISO));
   }
 
   // DAILY and WEEKLY_TARGET goals are relevant every day within their range.
@@ -60,11 +59,10 @@ export function weekRangeContaining(dateISO: string): { startISO: string; endISO
   return { startISO, endISO };
 }
 
-export function describeFrequency(goal: { frequencyType: string; targetDays: string | null; targetValue: number | null; unit: string | null }): string {
+export function describeFrequency(goal: { frequencyType: string; targetDays: Weekday[]; targetValue: number | null; unit: string | null }): string {
   if (goal.frequencyType === "DAILY") return "Every day";
   if (goal.frequencyType === "SPECIFIC_DAYS") {
-    const days = (goal.targetDays ?? "").split(",").filter(Boolean);
-    return days.length ? days.join(", ") : "No days set";
+    return goal.targetDays.length ? goal.targetDays.join(", ") : "No days set";
   }
   if (goal.frequencyType === "WEEKLY_TARGET") {
     const target = goal.targetValue ?? 0;
