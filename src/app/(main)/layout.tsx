@@ -12,6 +12,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <Link href="/journal" className="hover:text-neutral-900">
               Journal
             </Link>
+            <Link href="/goals" className="hover:text-neutral-900">
+              Goals
+            </Link>
             <form action="/api/logout" method="POST">
               <button type="submit" className="hover:text-neutral-900">
                 Sign out

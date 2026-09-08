@@ -37,6 +37,6 @@ Then open http://localhost:3000 and sign in with the password from `.env`
 
 - [x] Scaffolding — Next.js + Tailwind + Prisma (SQLite locally), password gate
 - [x] Journal — write/edit one entry per day, prev/next day navigation
-- [ ] Goals — daily check-in, streaks, shown alongside the journal
+- [x] Goals — create/edit/archive, daily check-in, streaks, shown alongside the journal
 - [ ] Study timer — per-subject sessions, weekly totals
 - [ ] Phase 2 (workout tracker, notifications) — not started; see docs/BUILD_PLAN.md
