@@ -18,6 +18,25 @@ and [`docs/STACK.md`](docs/STACK.md) for the full plan before any code was writt
 - Social or community features
 - Heavy gamification (badges, medals, etc.)
 
+## Running it locally
+
+```bash
+npm install
+cp .env.example .env      # only the first time — .env itself is gitignored
+npx prisma migrate dev    # creates prisma/dev.db and applies the schema
+npx prisma db seed        # creates your user, starter subjects, exercise library
+npm run dev
+```
+
+Then open http://localhost:3000 and sign in with the password from `.env`
+(`APP_PASSWORD`, `year13goals` by default — change it to whatever you like).
+
 ## Status
 
-Planning stage — Phase 1 (journal, goals, study timer) has not been scaffolded yet.
+**Phase 1, in progress.**
+
+- [x] Scaffolding — Next.js + Tailwind + Prisma (SQLite locally), password gate
+- [x] Journal — write/edit one entry per day, prev/next day navigation
+- [ ] Goals — daily check-in, streaks, shown alongside the journal
+- [ ] Study timer — per-subject sessions, weekly totals
+- [ ] Phase 2 (workout tracker, notifications) — not started; see docs/BUILD_PLAN.md

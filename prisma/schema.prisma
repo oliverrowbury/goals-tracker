@@ -1,0 +1,170 @@
+// Schema mirrors docs/DATA_MODEL.md — keep both in sync when this changes.
+// learn more: https://pris.ly/d/prisma-schema
+//
+// NOTE: this uses SQLite for local dev (zero setup). SQLite has no native
+// enum or array column types, so fields that would be enums/arrays on
+// Postgres are plain strings here, validated in application code (see
+// src/lib/constants.ts). Swapping the datasource to Postgres later
+// (docs/STACK.md) lets those become real `enum` and `String[]` columns
+// with no data-shape change.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+
+  journalEntries JournalEntry[]
+  goals          Goal[]
+  subjects       Subject[]
+  studySessions  StudySession[]
+  exercises      Exercise[]
+  workouts       Workout[]
+}
+
+model JournalEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime
+  bodyText  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+model Goal {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title       String
+  description String?
+
+  // "DAILY" | "SPECIFIC_DAYS" | "WEEKLY_TARGET" — see GoalFrequencyType in src/lib/constants.ts
+  frequencyType String
+
+  // comma-separated Weekday codes, e.g. "MON,WED,FRI"; only used when frequencyType = SPECIFIC_DAYS
+  targetDays String?
+
+  targetValue Float? // e.g. 10 for "10 minutes"; null for simple yes/no goals
+  unit        String? // e.g. "minutes", "sessions"
+
+  active    Boolean   @default(true)
+  startDate DateTime  @default(now())
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+
+  logs      GoalLog[]
+  reminders Reminder[]
+}
+
+model GoalLog {
+  id String @id @default(uuid())
+
+  goalId String
+  goal   Goal   @relation(fields: [goalId], references: [id])
+
+  date      DateTime
+  completed Boolean  @default(false)
+  value     Float?
+  note      String?
+
+  @@unique([goalId, date])
+}
+
+model Subject {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  name   String
+  color  String
+
+  studySessions StudySession[]
+}
+
+model StudySession {
+  id String @id @default(uuid())
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationMinutes Int?
+  note            String?
+}
+
+model Exercise {
+  id String @id @default(uuid())
+
+  userId String? // null = built-in library item
+  user   User?   @relation(fields: [userId], references: [id])
+
+  name     String
+  category String
+  isCustom Boolean @default(false)
+
+  sets WorkoutSet[]
+}
+
+model Workout {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  date      DateTime
+  label     String
+  startedAt DateTime?
+  endedAt   DateTime?
+  note      String?
+
+  sets WorkoutSet[]
+}
+
+model WorkoutSet {
+  id String @id @default(uuid())
+
+  workoutId  String
+  workout    Workout  @relation(fields: [workoutId], references: [id])
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id])
+
+  setNumber Int
+  reps      Int
+  weight    Float
+
+  // "KG" | "LB" — see WeightUnit in src/lib/constants.ts
+  weightUnit String  @default("KG")
+  isWarmup   Boolean @default(false)
+}
+
+model Reminder {
+  id String @id @default(uuid())
+
+  goalId String
+  goal   Goal   @relation(fields: [goalId], references: [id])
+
+  // comma-separated Weekday codes, e.g. "MON,TUE,WED,THU,FRI"
+  daysOfWeek String
+  timeOfDay  String // "HH:mm", 24h
+
+  // "PUSH" | "EMAIL" — see ReminderChannel in src/lib/constants.ts
+  channel String
+  enabled Boolean @default(true)
+}
