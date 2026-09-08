@@ -21,6 +21,10 @@ const DEFAULTS: GoalFormValues = {
   unit: "",
 };
 
+const inputClass =
+  "w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
+const labelClass = "mb-1 block text-sm font-medium text-ink";
+
 export function GoalForm({
   action,
   initialValues,
@@ -34,9 +38,9 @@ export function GoalForm({
   const [frequencyType, setFrequencyType] = useState(values.frequencyType);
 
   return (
-    <form action={action} className="space-y-4">
+    <form action={action} className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
       <div>
-        <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="title">
+        <label className={labelClass} htmlFor="title">
           Title
         </label>
         <input
@@ -45,25 +49,19 @@ export function GoalForm({
           defaultValue={values.title}
           required
           placeholder="e.g. Gym 3x a week"
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+          className={inputClass}
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="description">
-          Description <span className="text-neutral-400">(optional)</span>
+        <label className={labelClass} htmlFor="description">
+          Description <span className="text-ink-muted">(optional)</span>
         </label>
-        <textarea
-          id="description"
-          name="description"
-          defaultValue={values.description}
-          rows={2}
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
-        />
+        <textarea id="description" name="description" defaultValue={values.description} rows={2} className={inputClass} />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="frequencyType">
+        <label className={labelClass} htmlFor="frequencyType">
           Frequency
         </label>
         <select
@@ -71,7 +69,7 @@ export function GoalForm({
           name="frequencyType"
           value={frequencyType}
           onChange={(e) => setFrequencyType(e.target.value)}
-          className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+          className={inputClass}
         >
           <option value="DAILY">Every day</option>
           <option value="SPECIFIC_DAYS">Specific days of the week</option>
@@ -81,12 +79,12 @@ export function GoalForm({
 
       {frequencyType === "SPECIFIC_DAYS" && (
         <div>
-          <span className="mb-1 block text-sm font-medium text-neutral-700">Which days?</span>
+          <span className={labelClass}>Which days?</span>
           <div className="flex flex-wrap gap-2">
             {WEEKDAYS.map((day) => (
               <label
                 key={day}
-                className="flex items-center gap-1.5 rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm has-[:checked]:border-neutral-900 has-[:checked]:bg-neutral-900 has-[:checked]:text-white"
+                className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-white"
               >
                 <input
                   type="checkbox"
@@ -105,7 +103,7 @@ export function GoalForm({
       {frequencyType === "WEEKLY_TARGET" && (
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="targetValue">
+            <label className={labelClass} htmlFor="targetValue">
               Target amount
             </label>
             <input
@@ -116,11 +114,11 @@ export function GoalForm({
               step="any"
               defaultValue={values.targetValue}
               required
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+              className={inputClass}
             />
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="unit">
+            <label className={labelClass} htmlFor="unit">
               Unit
             </label>
             <input
@@ -129,16 +127,13 @@ export function GoalForm({
               defaultValue={values.unit}
               placeholder="minutes, sessions, pages…"
               required
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+              className={inputClass}
             />
           </div>
         </div>
       )}
 
-      <button
-        type="submit"
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700"
-      >
+      <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
         {submitLabel}
       </button>
     </form>

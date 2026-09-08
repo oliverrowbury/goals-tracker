@@ -32,9 +32,9 @@ function GoalCheckboxRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
             toggleGoalCompletion(goal.id, dateISO);
           });
         }}
-        className="h-4 w-4 rounded border-neutral-300"
+        className="h-4 w-4 rounded border-line accent-accent"
       />
-      <span className={completed ? "text-neutral-400 line-through" : ""}>{goal.title}</span>
+      <span className={completed ? "text-ink-muted line-through" : "text-ink"}>{goal.title}</span>
     </label>
   );
 }
@@ -46,7 +46,7 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
 
   return (
     <>
-      <span className="text-sm">{goal.title}</span>
+      <span className="text-sm text-ink">{goal.title}</span>
       <div className="flex items-center gap-2">
         <input
           type="number"
@@ -64,10 +64,10 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
               setGoalLogValue(goal.id, dateISO, newValue);
             });
           }}
-          className="w-16 rounded-md border border-neutral-300 px-2 py-1 text-right text-sm"
+          className="w-16 rounded-md border border-line px-2 py-1 text-right text-sm focus:border-accent focus:outline-none"
         />
-        <span className="text-xs text-neutral-500">
-          {goal.unit} today · {weekTotal}/{goal.targetValue} this week
+        <span className="text-xs text-ink-muted">
+          {goal.unit} today · <span className="font-medium text-accent">{weekTotal}</span>/{goal.targetValue} this week
         </span>
       </div>
     </>
@@ -77,9 +77,9 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
 export function GoalsForDay({ dateISO, goals }: { dateISO: string; goals: DayGoal[] }) {
   if (goals.length === 0) {
     return (
-      <p className="text-sm text-neutral-500">
+      <p className="text-sm text-ink-muted">
         No goals due today.{" "}
-        <Link href="/goals" className="underline hover:text-neutral-900">
+        <Link href="/goals" className="text-accent underline hover:text-accent-strong">
           Add one
         </Link>
         .
@@ -92,7 +92,7 @@ export function GoalsForDay({ dateISO, goals }: { dateISO: string; goals: DayGoa
       {goals.map((goal) => (
         <li
           key={`${dateISO}-${goal.id}`}
-          className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 bg-white px-3 py-2"
+          className="flex items-center justify-between gap-3 rounded-xl border border-line bg-card px-3.5 py-2.5"
         >
           {goal.frequencyType === "WEEKLY_TARGET" ? (
             <WeeklyTargetRow goal={goal} dateISO={dateISO} />

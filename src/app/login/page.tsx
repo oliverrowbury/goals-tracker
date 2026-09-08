@@ -6,23 +6,23 @@ export default async function LoginPage({
   const { from = "/", error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="flex min-h-screen items-center justify-center bg-paper px-4">
       <form
         action="/api/login"
         method="POST"
-        className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white p-6 shadow-sm"
+        className="w-full max-w-sm rounded-2xl border border-line bg-card p-7 shadow-sm"
       >
-        <h1 className="mb-1 text-xl font-semibold">Goals Tracker</h1>
-        <p className="mb-6 text-sm text-neutral-500">Enter the password to continue.</p>
+        <h1 className="mb-1 font-serif text-2xl font-semibold text-ink">Goals Tracker</h1>
+        <p className="mb-6 text-sm text-ink-muted">Enter the password to continue.</p>
 
         {error && (
-          <p className="mb-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
             Wrong password — try again.
           </p>
         )}
 
         <input type="hidden" name="from" value={from} />
-        <label className="mb-1 block text-sm font-medium text-neutral-700" htmlFor="password">
+        <label className="mb-1 block text-sm font-medium text-ink" htmlFor="password">
           Password
         </label>
         <input
@@ -31,12 +31,12 @@ export default async function LoginPage({
           type="password"
           autoFocus
           required
-          className="mb-4 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:border-neutral-500 focus:outline-none"
+          className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
 
         <button
           type="submit"
-          className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700"
+          className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-strong"
         >
           Sign in
         </button>

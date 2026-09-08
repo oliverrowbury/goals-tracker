@@ -6,10 +6,10 @@ export default function NewGoalPage() {
   return (
     <div>
       <div className="mb-6">
-        <Link href="/goals" className="text-sm text-neutral-500 hover:text-neutral-900">
+        <Link href="/goals" className="text-sm text-ink-muted hover:text-accent">
           ← Back to goals
         </Link>
-        <h1 className="mt-1 text-lg font-semibold">New goal</h1>
+        <h1 className="mt-1 font-serif text-2xl font-semibold text-ink">New goal</h1>
       </div>
       <GoalForm action={createGoal} submitLabel="Create goal" />
     </div>

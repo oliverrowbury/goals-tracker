@@ -58,28 +58,28 @@ export default async function JournalPage({
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">{formatLong(dateISO)}</h1>
-          {isToday && <p className="text-sm text-neutral-500">Today</p>}
+          <h1 className="font-serif text-2xl font-semibold text-ink">{formatLong(dateISO)}</h1>
+          {isToday && <p className="text-sm text-accent">Today</p>}
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Link href={`/journal?date=${prevISO}`} className="rounded-md border border-neutral-300 px-3 py-1.5 hover:bg-neutral-100">
+          <Link href={`/journal?date=${prevISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
             ← Prev
           </Link>
           {!isToday && (
-            <Link href="/journal" className="rounded-md border border-neutral-300 px-3 py-1.5 hover:bg-neutral-100">
+            <Link href="/journal" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
               Today
             </Link>
           )}
-          <Link href={`/journal?date=${nextISO}`} className="rounded-md border border-neutral-300 px-3 py-1.5 hover:bg-neutral-100">
+          <Link href={`/journal?date=${nextISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
             Next →
           </Link>
         </div>
       </div>
 
-      <div className="mb-6">
-        <h2 className="mb-2 text-sm font-medium text-neutral-700">Goals</h2>
+      <div className="mb-8">
+        <h2 className="mb-2 text-sm font-medium text-ink-muted">Goals</h2>
         <GoalsForDay dateISO={dateISO} goals={dayGoals} />
       </div>
 

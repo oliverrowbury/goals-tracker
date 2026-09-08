@@ -28,17 +28,17 @@ export default async function GoalsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Goals</h1>
+        <h1 className="font-serif text-2xl font-semibold text-ink">Goals</h1>
         <Link
           href="/goals/new"
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-700"
+          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-strong"
         >
           New goal
         </Link>
       </div>
 
       {active.length === 0 && (
-        <p className="text-sm text-neutral-500">No goals yet — add one to start tracking.</p>
+        <p className="text-sm text-ink-muted">No goals yet — add one to start tracking.</p>
       )}
 
       <div className="space-y-3">
@@ -51,24 +51,24 @@ export default async function GoalsPage() {
           const historyDays = Array.from({ length: HISTORY_DAYS }, (_, i) => shiftISO(today, -(HISTORY_DAYS - 1 - i)));
 
           return (
-            <div key={goal.id} className="rounded-lg border border-neutral-200 bg-white p-4">
+            <div key={goal.id} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="font-medium">{goal.title}</h2>
-                  <p className="text-sm text-neutral-500">{describeFrequency(goal)}</p>
-                  {goal.description && <p className="mt-1 text-sm text-neutral-600">{goal.description}</p>}
+                  <h2 className="font-medium text-ink">{goal.title}</h2>
+                  <p className="text-sm text-ink-muted">{describeFrequency(goal)}</p>
+                  {goal.description && <p className="mt-1 text-sm text-ink-muted">{goal.description}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-sm">
                   {streak !== null && (
-                    <span className="rounded-full bg-neutral-100 px-2.5 py-1 font-medium text-neutral-700">
+                    <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent-strong">
                       {streak} day{streak === 1 ? "" : "s"} streak
                     </span>
                   )}
-                  <Link href={`/goals/${goal.id}/edit`} className="text-neutral-500 hover:text-neutral-900">
+                  <Link href={`/goals/${goal.id}/edit`} className="text-ink-muted hover:text-accent">
                     Edit
                   </Link>
                   <form action={setGoalActive.bind(null, goal.id, false)}>
-                    <button type="submit" className="text-neutral-500 hover:text-neutral-900">
+                    <button type="submit" className="text-ink-muted hover:text-accent">
                       Archive
                     </button>
                   </form>
@@ -86,12 +86,12 @@ export default async function GoalsPage() {
                         title={day}
                         className={`h-4 w-4 rounded-sm ${
                           !due
-                            ? "bg-neutral-100"
+                            ? "bg-line/40"
                             : done
-                              ? "bg-neutral-900"
+                              ? "bg-accent"
                               : day < today
-                                ? "bg-red-200"
-                                : "border border-dashed border-neutral-300"
+                                ? "bg-accent-soft"
+                                : "border border-dashed border-line"
                         }`}
                       />
                     );
@@ -105,16 +105,16 @@ export default async function GoalsPage() {
 
       {archived.length > 0 && (
         <div className="mt-10">
-          <h2 className="mb-3 text-sm font-medium text-neutral-500">Archived</h2>
+          <h2 className="mb-3 text-sm font-medium text-ink-muted">Archived</h2>
           <div className="space-y-2">
             {archived.map((goal) => (
               <div
                 key={goal.id}
-                className="flex items-center justify-between rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm"
+                className="flex items-center justify-between rounded-xl border border-line bg-paper px-4 py-2.5 text-sm"
               >
-                <span className="text-neutral-500">{goal.title}</span>
+                <span className="text-ink-muted">{goal.title}</span>
                 <form action={setGoalActive.bind(null, goal.id, true)}>
-                  <button type="submit" className="text-neutral-500 hover:text-neutral-900">
+                  <button type="submit" className="text-ink-muted hover:text-accent">
                     Reactivate
                   </button>
                 </form>
