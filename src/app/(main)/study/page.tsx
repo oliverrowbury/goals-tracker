@@ -33,7 +33,7 @@ export default async function StudyPage() {
         endedAt: { not: null },
         startedAt: { gte: new Date(`${week.startISO}T00:00:00.000Z`), lte: new Date(`${week.endISO}T23:59:59.999Z`) },
       },
-      select: { subjectId: true, durationMinutes: true },
+      select: { subjectId: true, durationMinutes: true, startedAt: true },
     }),
     prisma.studySession.findMany({
       where: {
@@ -80,6 +80,7 @@ export default async function StudyPage() {
         <StudyStats
           subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
           totalsByPeriod={{
+            day: totalsBySubject(weekSessions.filter((s) => s.startedAt.toISOString().slice(0, 10) === today)),
             week: totalsBySubject(weekSessions),
             month: totalsBySubject(monthSessions),
             year: totalsBySubject(yearSessions),

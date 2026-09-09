@@ -8,9 +8,14 @@ import { ClockIcon } from "@/components/Icons";
 type Subject = { id: string; name: string; color: string };
 type OpenSession = { id: string; subjectId: string; startedAt: string; pausedAt: string | null } | null;
 
-// Tab hidden this long while a session is running auto-pauses it, so time
-// doesn't keep accruing while you're not actually looking at the screen.
-const AUTO_PAUSE_AFTER_MS = 90_000;
+// Tab hidden this long while a session is running auto-pauses it. This is
+// a safety net for "started the timer and forgot about it," not a claim
+// that it can verify you're actually studying — tab visibility alone can't
+// tell that apart from reading a PDF in another tab, watching a lecture
+// video, or studying from a physical book with the phone timer running.
+// So the threshold is long: minutes, not seconds, to avoid punishing
+// normal cross-tab studying.
+const AUTO_PAUSE_AFTER_MS = 10 * 60_000;
 
 function useElapsedSeconds(startedAt: string | null, pausedAt: string | null) {
   const [now, setNow] = useState(() => Date.now());
@@ -86,7 +91,7 @@ export function StudyTimer({
             {formatClock(elapsedSeconds)}
           </p>
           {isPaused && autoPaused && (
-            <p className="mt-2 text-xs text-ink-muted">Paused automatically — you left the tab.</p>
+            <p className="mt-2 text-xs text-ink-muted">Paused automatically — this tab was in the background a while.</p>
           )}
           <div className="mt-5 flex items-center justify-center gap-2">
             {isRunning && (

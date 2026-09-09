@@ -5,9 +5,15 @@ import { formatMinutes } from "@/lib/study";
 import { ChartIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
-type Period = "week" | "month" | "year";
+type Period = "day" | "week" | "month" | "year";
 
-const PERIOD_LABELS: Record<Period, string> = { week: "This week", month: "This month", year: "This year" };
+const PERIOD_LABELS: Record<Period, string> = {
+  day: "Today",
+  week: "This week",
+  month: "This month",
+  year: "This year",
+};
+const PERIOD_BUTTON_LABELS: Record<Period, string> = { day: "Day", week: "Week", month: "Month", year: "Year" };
 
 export function StudyStats({
   subjects,
@@ -16,7 +22,7 @@ export function StudyStats({
   subjects: Subject[];
   totalsByPeriod: Record<Period, Record<string, number>>;
 }) {
-  const [period, setPeriod] = useState<Period>("week");
+  const [period, setPeriod] = useState<Period>("day");
 
   const totals = totalsByPeriod[period];
   const rows = subjects
@@ -42,7 +48,7 @@ export function StudyStats({
                 period === p ? "bg-study text-white" : "text-ink-muted hover:text-study"
               }`}
             >
-              {p === "week" ? "Week" : p === "month" ? "Month" : "Year"}
+              {PERIOD_BUTTON_LABELS[p]}
             </button>
           ))}
         </div>
