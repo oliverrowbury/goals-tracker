@@ -13,6 +13,7 @@ export type DayGoal = {
   completed: boolean;
   value: number | null;
   weekTotal: number | null;
+  isAutoTracked: boolean;
 };
 
 function GoalCheckboxRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) {
@@ -43,6 +44,18 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
   const [value, setValue] = useState(goal.value ?? 0);
   const [weekTotal, setWeekTotal] = useState(goal.weekTotal ?? 0);
   const [isPending, startTransition] = useTransition();
+
+  if (goal.isAutoTracked) {
+    return (
+      <>
+        <span className="text-sm text-ink">{goal.title}</span>
+        <span className="text-xs text-ink-muted">
+          <span className="font-medium text-accent">{weekTotal}</span>/{goal.targetValue} {goal.unit} this week ·
+          auto-tracked
+        </span>
+      </>
+    );
+  }
 
   return (
     <>

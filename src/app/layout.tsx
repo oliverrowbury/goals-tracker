@@ -19,8 +19,8 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Goals Tracker",
-  description: "Personal goals, journal, study and workout tracker",
+  title: "Proudly",
+  description: "A daily journal for what you're proud of, with goals and study tracking alongside it.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

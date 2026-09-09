@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO } from "@/lib/dates";
-import { computeStreak, describeFrequency, isGoalDueOn } from "@/lib/goals";
+import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { setGoalActive } from "./actions";
 
 const HISTORY_DAYS = 14;
@@ -15,13 +15,32 @@ export const dynamic = "force-dynamic";
 
 export default async function GoalsPage() {
   const user = await getCurrentUser();
-  const goals = await prisma.goal.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "asc" },
-    include: { logs: true },
-  });
-
   const today = todayISO();
+  const { startISO: weekStartISO, endISO: weekEndISO } = weekRangeContaining(today);
+
+  const [goals, weekStudySessions] = await Promise.all([
+    prisma.goal.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "asc" },
+      include: { logs: true },
+    }),
+    prisma.studySession.findMany({
+      where: {
+        userId: user.id,
+        endedAt: { not: null },
+        startedAt: { gte: new Date(`${weekStartISO}T00:00:00.000Z`), lte: new Date(`${weekEndISO}T23:59:59.999Z`) },
+      },
+    }),
+  ]);
+
+  const weekMinutesBySubject = new Map<string, number>();
+  for (const session of weekStudySessions) {
+    weekMinutesBySubject.set(
+      session.subjectId,
+      (weekMinutesBySubject.get(session.subjectId) ?? 0) + (session.durationMinutes ?? 0),
+    );
+  }
+
   const active = goals.filter((g) => g.active);
   const archived = goals.filter((g) => !g.active);
 
@@ -47,6 +66,18 @@ export default async function GoalsPage() {
             goal.logs.filter((l) => l.completed).map((l) => l.date.toISOString().slice(0, 10)),
           );
           const streak = goal.frequencyType !== "WEEKLY_TARGET" ? computeStreak(goal, completedDates, today) : null;
+
+          const weekTotal =
+            goal.frequencyType === "WEEKLY_TARGET"
+              ? goal.subjectId
+                ? (weekMinutesBySubject.get(goal.subjectId) ?? 0)
+                : goal.logs
+                    .filter((l) => {
+                      const d = l.date.toISOString().slice(0, 10);
+                      return d >= weekStartISO && d <= weekEndISO;
+                    })
+                    .reduce((sum, l) => sum + (l.value ?? 0), 0)
+              : null;
 
           const historyDays = Array.from({ length: HISTORY_DAYS }, (_, i) => shiftISO(today, -(HISTORY_DAYS - 1 - i)));
 
@@ -74,6 +105,21 @@ export default async function GoalsPage() {
                   </form>
                 </div>
               </div>
+
+              {goal.frequencyType === "WEEKLY_TARGET" && weekTotal !== null && (
+                <div className="mt-3">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+                    <div
+                      className="h-full rounded-full bg-accent"
+                      style={{ width: `${Math.min(100, ((weekTotal / (goal.targetValue || 1)) * 100))}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-ink-muted">
+                    {weekTotal}/{goal.targetValue} {goal.unit} this week
+                    {goal.subjectId && " · auto-tracked from Study"}
+                  </p>
+                </div>
+              )}
 
               {goal.frequencyType !== "WEEKLY_TARGET" && (
                 <div className="mt-3 flex gap-1">

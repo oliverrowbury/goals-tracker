@@ -88,6 +88,13 @@ model Goal {
   targetValue Float? // e.g. 10 for "10 minutes"; null for simple yes/no goals
   unit        String? // e.g. "minutes", "sessions"
 
+  // When set on a WEEKLY_TARGET goal, its weekly total is computed
+  // automatically from StudySession minutes for this subject instead of
+  // manual daily entry — this is the "study Maths 5 hours this week"
+  // link from the study timer to the goal tracker.
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+
   active    Boolean   @default(true)
   startDate DateTime  @default(now())
   endDate   DateTime?
@@ -119,6 +126,7 @@ model Subject {
   color  String
 
   studySessions StudySession[]
+  goals         Goal[]
 }
 
 model StudySession {

@@ -24,6 +24,7 @@ function readGoalFields(formData: FormData) {
   const targetValueRaw = String(formData.get("targetValue") ?? "").trim();
   const unit = String(formData.get("unit") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const subjectId = String(formData.get("subjectId") ?? "").trim();
 
   return {
     title,
@@ -32,6 +33,7 @@ function readGoalFields(formData: FormData) {
     targetDays: frequencyType === "SPECIFIC_DAYS" ? targetDays : [],
     targetValue: targetValueRaw ? Number(targetValueRaw) : null,
     unit: frequencyType === "WEEKLY_TARGET" ? unit || null : null,
+    subjectId: frequencyType === "WEEKLY_TARGET" && subjectId ? subjectId : null,
   };
 }
 

@@ -9,6 +9,7 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
   const goal = await prisma.goal.findUnique({ where: { id } });
   if (!goal) notFound();
 
+  const subjects = await prisma.subject.findMany({ where: { userId: goal.userId }, orderBy: { name: "asc" } });
   const updateGoalWithId = updateGoal.bind(null, goal.id);
 
   return (
@@ -22,6 +23,7 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
       <GoalForm
         action={updateGoalWithId}
         submitLabel="Save changes"
+        subjects={subjects}
         initialValues={{
           title: goal.title,
           description: goal.description ?? "",
@@ -29,6 +31,7 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
           targetDays: goal.targetDays,
           targetValue: goal.targetValue?.toString() ?? "",
           unit: goal.unit ?? "",
+          subjectId: goal.subjectId ?? "",
         }}
       />
     </div>

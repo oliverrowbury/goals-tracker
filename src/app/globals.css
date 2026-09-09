@@ -26,6 +26,9 @@
 }
 
 body {
-  background: var(--paper);
+  background:
+    radial-gradient(ellipse 900px 500px at 15% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
+    radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent),
+    var(--paper);
   color: var(--ink);
 }

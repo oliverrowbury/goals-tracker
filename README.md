@@ -1,4 +1,4 @@
-# Goals & Accomplishment Tracker
+# Proudly
 
 A personal, all-in-one goals and accomplishment tracker for the Year 13 academic year.
 
@@ -44,10 +44,12 @@ Then open http://localhost:3000 and sign in with the password from `.env`
 
 ## Status
 
-**Phase 1, in progress.**
+**Phase 1 complete.**
 
-- [x] Scaffolding — Next.js + Tailwind + Prisma (Postgres via Supabase), password gate
+- [x] Scaffolding — Next.js + Tailwind + Prisma (Postgres via Supabase, driver-adapter mode), password gate
 - [x] Journal — write/edit one entry per day, prev/next day navigation
 - [x] Goals — create/edit/archive, daily check-in, streaks, shown alongside the journal
-- [ ] Study timer — per-subject sessions, weekly totals
-- [ ] Phase 2 (workout tracker, notifications) — not started; see docs/BUILD_PLAN.md
+- [x] Study timer — per-subject sessions, weekly totals, feeds today's sessions into the journal,
+      and can auto-track a weekly-target goal directly (no manual logging needed for that goal)
+- [ ] Phase 2 (workout tracker, notifications) — not started; see docs/BUILD_PLAN.md, treated as
+      its own mini-project since it's flagged as the heaviest remaining piece

@@ -10,6 +10,7 @@ type GoalFormValues = {
   targetDays: string[];
   targetValue: string;
   unit: string;
+  subjectId: string;
 };
 
 const DEFAULTS: GoalFormValues = {
@@ -19,6 +20,7 @@ const DEFAULTS: GoalFormValues = {
   targetDays: [],
   targetValue: "",
   unit: "",
+  subjectId: "",
 };
 
 const inputClass =
@@ -29,10 +31,12 @@ export function GoalForm({
   action,
   initialValues,
   submitLabel,
+  subjects = [],
 }: {
   action: (formData: FormData) => void;
   initialValues?: Partial<GoalFormValues>;
   submitLabel: string;
+  subjects?: { id: string; name: string }[];
 }) {
   const values = { ...DEFAULTS, ...initialValues };
   const [frequencyType, setFrequencyType] = useState(values.frequencyType);
@@ -130,6 +134,25 @@ export function GoalForm({
               className={inputClass}
             />
           </div>
+        </div>
+      )}
+
+      {frequencyType === "WEEKLY_TARGET" && subjects.length > 0 && (
+        <div>
+          <label className={labelClass} htmlFor="subjectId">
+            Auto-track from a study subject <span className="text-ink-muted">(optional)</span>
+          </label>
+          <select id="subjectId" name="subjectId" defaultValue={values.subjectId} className={inputClass}>
+            <option value="">No — I'll log this myself</option>
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-ink-muted">
+            When set, this goal's weekly total comes straight from time logged on the Study page instead of manual entry.
+          </p>
         </div>
       )}
 
