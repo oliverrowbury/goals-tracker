@@ -7,13 +7,13 @@
 // natively, unlike the SQLite this schema started on.
 
 generator client {
-  provider      = "prisma-client"
-  output        = "../src/generated/prisma"
-  // Vercel's build machine and its actual serverless runtime aren't always
-  // the same platform, so letting Prisma auto-detect "native" at build
-  // time isn't enough — rhel-openssl-3.0.x is what Vercel's Node.js
-  // functions run on. Keeping "native" too so local dev is unaffected.
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  // No native query-engine binary at all — queries go through the `pg`
+  // driver via @prisma/adapter-pg instead. This is what actually ends
+  // the "wrong platform binary" problem, rather than continuing to
+  // guess which binaryTargets string Vercel's runtime wants.
+  engineType = "client"
 }
 
 datasource db {
