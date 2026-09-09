@@ -3,22 +3,14 @@ export function Logo({ size = 24, className = "" }: { size?: number; className?:
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 48 48"
       fill="none"
       className={className}
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="5" fill="currentColor" />
-      <g stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-        <line x1="12" y1="1.5" x2="12" y2="4.5" />
-        <line x1="12" y1="19.5" x2="12" y2="22.5" />
-        <line x1="1.5" y1="12" x2="4.5" y2="12" />
-        <line x1="19.5" y1="12" x2="22.5" y2="12" />
-        <line x1="4.4" y1="4.4" x2="6.5" y2="6.5" />
-        <line x1="17.5" y1="17.5" x2="19.6" y2="19.6" />
-        <line x1="4.4" y1="19.6" x2="6.5" y2="17.5" />
-        <line x1="17.5" y1="6.5" x2="19.6" y2="4.4" />
-      </g>
+      <rect x="8" y="30" width="8" height="12" rx="1.5" fill="currentColor" />
+      <rect x="20" y="20" width="8" height="22" rx="1.5" fill="currentColor" />
+      <rect x="32" y="8" width="8" height="34" rx="1.5" fill="currentColor" />
     </svg>
   );
 }

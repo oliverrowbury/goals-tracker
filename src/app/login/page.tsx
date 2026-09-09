@@ -1,4 +1,4 @@
-import { Logo } from "@/components/Logo";
+import { Wordmark } from "@/components/Wordmark";
 
 export default async function LoginPage({
   searchParams,
@@ -14,8 +14,9 @@ export default async function LoginPage({
         method="POST"
         className="w-full max-w-sm rounded-2xl border border-line bg-card p-7 shadow-sm"
       >
-        <Logo size={32} className="mb-3 text-accent" />
-        <h1 className="mb-1 font-serif text-2xl font-semibold text-ink">Proudly</h1>
+        <h1 className="mb-1 text-2xl text-ink">
+          <Wordmark />
+        </h1>
         <p className="mb-6 text-sm text-ink-muted">Enter the password to continue.</p>
 
         {error && (

@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
+import { Wordmark } from "@/components/Wordmark";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-card/70 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/journal" className="flex items-center gap-2 font-serif text-lg font-semibold text-ink">
-            <Logo size={22} className="text-accent" />
-            Proudly
+          <Link href="/journal" className="text-lg text-ink">
+            <Wordmark />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-ink-muted">
             <Link href="/journal" className="hover:text-accent">
