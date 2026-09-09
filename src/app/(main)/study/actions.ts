@@ -56,4 +56,5 @@ export async function createSubject(formData: FormData) {
   });
 
   revalidatePath("/study");
+  revalidatePath("/settings");
 }

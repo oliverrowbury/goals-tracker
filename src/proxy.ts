@@ -1,11 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-export function proxy(request: NextRequest) {
-  const cookie = request.cookies.get(AUTH_COOKIE)?.value;
+// Proxy (formerly "middleware") runs on the Node.js runtime by default as
+// of Next.js 16, so — unlike the old Edge-only middleware — it can just
+// check the session against the database directly. No signed tokens, no
+// duplicating the password anywhere: the cookie is only ever an opaque
+// session id.
+export async function proxy(request: NextRequest) {
+  const token = request.cookies.get(AUTH_COOKIE)?.value;
 
-  if (cookie === process.env.APP_PASSWORD) {
-    return NextResponse.next();
+  if (token) {
+    const user = await prisma.user.findUnique({ where: { sessionToken: token } });
+    if (user) {
+      return NextResponse.next();
+    }
   }
 
   const loginUrl = new URL("/login", request.url);

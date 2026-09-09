@@ -53,6 +53,16 @@ model User {
   name      String
   createdAt DateTime @default(now())
 
+  // Password lives in the database (scrypt hash) instead of the
+  // APP_PASSWORD env var, so it's changeable from Settings without a
+  // redeploy. Nullable: null until the first password change, during
+  // which login falls back to comparing against APP_PASSWORD directly —
+  // avoids ever needing a real password hash committed in migration SQL.
+  // sessionToken is the current logged-in session, if any — set on
+  // login, cleared on logout or when the password changes.
+  passwordHash String?
+  sessionToken String? @unique
+
   journalEntries JournalEntry[]
   goals          Goal[]
   subjects       Subject[]
@@ -119,11 +129,12 @@ model GoalLog {
 }
 
 model Subject {
-  id     String @id @default(uuid())
+  id     String  @id @default(uuid())
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User    @relation(fields: [userId], references: [id])
   name   String
   color  String
+  active Boolean @default(true)
 
   studySessions StudySession[]
   goals         Goal[]

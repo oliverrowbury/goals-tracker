@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function NewGoalPage() {
   const user = await getCurrentUser();
-  const subjects = await prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const subjects = await prisma.subject.findMany({ where: { userId: user.id, active: true }, orderBy: { name: "asc" } });
 
   return (
     <div>

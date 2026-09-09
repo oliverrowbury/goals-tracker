@@ -1,11 +1,12 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { hashPassword } from "../src/lib/password";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-const STARTER_SUBJECTS = ["Maths", "Physics", "Chemistry", "Biology", "English"];
-
+// No starter subjects — add your own from Settings or the Study page.
+// The exercise library stays seeded (Phase 2, not yet exposed in the UI).
 const STARTER_EXERCISES: { name: string; category: string }[] = [
   { name: "Barbell Back Squat", category: "Legs" },
   { name: "Barbell Bench Press", category: "Push" },
@@ -30,37 +31,31 @@ const STARTER_EXERCISES: { name: string; category: string }[] = [
 ];
 
 async function main() {
-  const user = await prisma.user.upsert({
-    where: { email: "orowbury08@gmail.com" },
-    update: {},
-    create: {
-      email: "orowbury08@gmail.com",
-      name: "Oliver",
-    },
-  });
+  const existing = await prisma.user.findUnique({ where: { email: "orowbury08@gmail.com" } });
 
-  for (const name of STARTER_SUBJECTS) {
-    const existing = await prisma.subject.findFirst({ where: { userId: user.id, name } });
-    if (!existing) {
-      await prisma.subject.create({
-        data: { userId: user.id, name, color: "#4f46e5" },
+  const user = existing
+    ? existing
+    : await prisma.user.create({
+        data: {
+          email: "orowbury08@gmail.com",
+          name: "Oliver",
+          passwordHash: await hashPassword(process.env.APP_PASSWORD ?? "year13goals"),
+        },
       });
-    }
-  }
 
   // Built-in library exercises have no userId — every user sees the same set.
   for (const exercise of STARTER_EXERCISES) {
-    const existing = await prisma.exercise.findFirst({
+    const existingExercise = await prisma.exercise.findFirst({
       where: { userId: null, name: exercise.name },
     });
-    if (!existing) {
+    if (!existingExercise) {
       await prisma.exercise.create({
         data: { userId: null, name: exercise.name, category: exercise.category, isCustom: false },
       });
     }
   }
 
-  console.log(`Seeded user ${user.email}, ${STARTER_SUBJECTS.length} subjects, ${STARTER_EXERCISES.length} exercises.`);
+  console.log(`Seeded user ${user.email}, ${STARTER_EXERCISES.length} exercises. No starter subjects.`);
 }
 
 main()

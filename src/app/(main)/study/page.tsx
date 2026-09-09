@@ -10,7 +10,7 @@ export default async function StudyPage() {
   const user = await getCurrentUser();
 
   const [subjects, openSession, { startISO, endISO }] = await Promise.all([
-    prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.subject.findMany({ where: { userId: user.id, active: true }, orderBy: { name: "asc" } }),
     prisma.studySession.findFirst({ where: { userId: user.id, endedAt: null } }),
     Promise.resolve(weekRangeContaining(todayISO())),
   ]);

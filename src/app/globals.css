@@ -29,6 +29,25 @@ body {
   background:
     radial-gradient(ellipse 900px 500px at 15% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
     radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent),
+    radial-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
     var(--paper);
   color: var(--ink);
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+  }
 }

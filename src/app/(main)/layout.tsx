@@ -6,7 +6,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-card/70 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/journal" className="text-lg text-ink">
+          <Link href="/" className="text-lg text-ink">
             <Wordmark />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-ink-muted">
@@ -18,6 +18,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <Link href="/study" className="hover:text-accent">
               Study
+            </Link>
+            <Link href="/settings" className="hover:text-accent">
+              Settings
             </Link>
             <form action="/api/logout" method="POST">
               <button type="submit" className="hover:text-accent">
