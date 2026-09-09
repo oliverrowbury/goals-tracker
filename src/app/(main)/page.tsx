@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, formatLong } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
+import { JournalIcon, TargetIcon, ClockIcon } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -62,31 +63,40 @@ export default async function HomePage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Link
           href="/journal"
-          className="group rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
+          className="group animate-[fade-up_0.5s_ease-out_0.05s_both] rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
         >
-          <p className="text-sm font-medium text-ink-muted">Journal</p>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <JournalIcon className="h-4.5 w-4.5" />
+          </span>
+          <p className="mt-4 text-sm font-medium text-ink-muted">Journal</p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{journalStatus}</p>
           <p className="mt-3 text-sm text-accent group-hover:underline">Write today's entry →</p>
         </Link>
 
         <Link
           href="/goals"
-          className="group rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
+          className="group animate-[fade-up_0.5s_ease-out_0.1s_both] rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-goals hover:shadow-md"
         >
-          <p className="text-sm font-medium text-ink-muted">Goals</p>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-goals-soft text-goals">
+            <TargetIcon className="h-4.5 w-4.5" />
+          </span>
+          <p className="mt-4 text-sm font-medium text-ink-muted">Goals</p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">
             {dueToday.length === 0 ? "None due today" : `${doneToday.length} of ${dueToday.length} done`}
           </p>
-          <p className="mt-3 text-sm text-accent group-hover:underline">Check today's goals →</p>
+          <p className="mt-3 text-sm text-goals group-hover:underline">Check today's goals →</p>
         </Link>
 
         <Link
           href="/study"
-          className="group rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
+          className="group animate-[fade-up_0.5s_ease-out_0.15s_both] rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md"
         >
-          <p className="text-sm font-medium text-ink-muted">Study</p>
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-study-soft text-study">
+            <ClockIcon className="h-4.5 w-4.5" />
+          </span>
+          <p className="mt-4 text-sm font-medium text-ink-muted">Study</p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{formatMinutes(weekMinutes)} this week</p>
-          <p className="mt-3 text-sm text-accent group-hover:underline">Start a session →</p>
+          <p className="mt-3 text-sm text-study group-hover:underline">Start a session →</p>
         </Link>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { JournalEditor } from "./JournalEditor";
 import { GoalsForDay, type DayGoal } from "./GoalsForDay";
+import { JournalIcon } from "@/components/Icons";
 
 export default async function JournalPage({
   searchParams,
@@ -81,9 +82,14 @@ export default async function JournalPage({
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-serif text-2xl font-semibold text-ink">{formatLong(dateISO)}</h1>
-          {isToday && <p className="text-sm text-accent">Today</p>}
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <JournalIcon className="h-4.5 w-4.5" />
+          </span>
+          <div>
+            <h1 className="font-serif text-2xl font-semibold text-ink">{formatLong(dateISO)}</h1>
+            {isToday && <p className="text-sm text-accent">Today</p>}
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Link href={`/journal?date=${prevISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">

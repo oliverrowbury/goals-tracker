@@ -24,7 +24,7 @@ const DEFAULTS: GoalFormValues = {
 };
 
 const inputClass =
-  "w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none";
+  "w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:border-goals focus:outline-none";
 const labelClass = "mb-1 block text-sm font-medium text-ink";
 
 export function GoalForm({
@@ -88,7 +88,7 @@ export function GoalForm({
             {WEEKDAYS.map((day) => (
               <label
                 key={day}
-                className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-white"
+                className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-goals has-[:checked]:bg-goals has-[:checked]:text-white"
               >
                 <input
                   type="checkbox"
@@ -156,7 +156,7 @@ export function GoalForm({
         </div>
       )}
 
-      <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+      <button type="submit" className="rounded-lg bg-goals px-4 py-2 text-sm font-medium text-white hover:opacity-90">
         {submitLabel}
       </button>
     </form>

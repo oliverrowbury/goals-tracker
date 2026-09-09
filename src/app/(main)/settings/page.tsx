@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/user";
 import { updateName, renameSubject, setSubjectActive } from "./actions";
 import { PasswordForm } from "./PasswordForm";
 import { NewSubjectForm } from "./NewSubjectForm";
+import { GearIcon, ClockIcon } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,12 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-10">
-      <h1 className="font-serif text-2xl font-semibold text-ink">Settings</h1>
+      <div className="flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-line/60 text-ink">
+          <GearIcon className="h-4.5 w-4.5" />
+        </span>
+        <h1 className="font-serif text-2xl font-semibold text-ink">Settings</h1>
+      </div>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Your name</h2>
@@ -39,7 +45,10 @@ export default async function SettingsPage() {
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Study subjects</h2>
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <ClockIcon className="h-4 w-4 text-study" />
+          Study subjects
+        </h2>
         <p className="mb-4 text-sm text-ink-muted">
           Rename or archive the ones you have — archiving keeps its history but takes it off the
           picker on the Study page.

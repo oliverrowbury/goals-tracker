@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { setGoalActive } from "./actions";
+import { TargetIcon, FlameIcon } from "@/components/Icons";
 
 const HISTORY_DAYS = 14;
 
@@ -47,17 +48,27 @@ export default async function GoalsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-serif text-2xl font-semibold text-ink">Goals</h1>
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-goals-soft text-goals">
+            <TargetIcon className="h-4.5 w-4.5" />
+          </span>
+          <h1 className="font-serif text-2xl font-semibold text-ink">Goals</h1>
+        </div>
         <Link
           href="/goals/new"
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-strong"
+          className="rounded-lg bg-goals px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
         >
           New goal
         </Link>
       </div>
 
       {active.length === 0 && (
-        <p className="text-sm text-ink-muted">No goals yet — add one to start tracking.</p>
+        <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
+          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-goals-soft text-goals">
+            <TargetIcon className="h-5 w-5" />
+          </span>
+          <p className="mt-3 text-sm text-ink-muted">No goals yet — add one to start tracking.</p>
+        </div>
       )}
 
       <div className="space-y-3">
@@ -90,16 +101,17 @@ export default async function GoalsPage() {
                   {goal.description && <p className="mt-1 text-sm text-ink-muted">{goal.description}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-sm">
-                  {streak !== null && (
-                    <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent-strong">
-                      {streak} day{streak === 1 ? "" : "s"} streak
+                  {streak !== null && streak > 0 && (
+                    <span className="flex items-center gap-1 rounded-full bg-goals-soft px-2.5 py-1 font-medium text-goals">
+                      <FlameIcon className="h-3.5 w-3.5" />
+                      {streak} day{streak === 1 ? "" : "s"}
                     </span>
                   )}
-                  <Link href={`/goals/${goal.id}/edit`} className="text-ink-muted hover:text-accent">
+                  <Link href={`/goals/${goal.id}/edit`} className="text-ink-muted hover:text-goals">
                     Edit
                   </Link>
                   <form action={setGoalActive.bind(null, goal.id, false)}>
-                    <button type="submit" className="text-ink-muted hover:text-accent">
+                    <button type="submit" className="text-ink-muted hover:text-goals">
                       Archive
                     </button>
                   </form>
@@ -110,7 +122,7 @@ export default async function GoalsPage() {
                 <div className="mt-3">
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/50">
                     <div
-                      className="h-full rounded-full bg-accent"
+                      className="h-full rounded-full bg-goals"
                       style={{ width: `${Math.min(100, ((weekTotal / (goal.targetValue || 1)) * 100))}%` }}
                     />
                   </div>
@@ -134,9 +146,9 @@ export default async function GoalsPage() {
                           !due
                             ? "bg-line/40"
                             : done
-                              ? "bg-accent"
+                              ? "bg-goals"
                               : day < today
-                                ? "bg-accent-soft"
+                                ? "bg-goals-soft"
                                 : "border border-dashed border-line"
                         }`}
                       />
@@ -160,7 +172,7 @@ export default async function GoalsPage() {
               >
                 <span className="text-ink-muted">{goal.title}</span>
                 <form action={setGoalActive.bind(null, goal.id, true)}>
-                  <button type="submit" className="text-ink-muted hover:text-accent">
+                  <button type="submit" className="text-ink-muted hover:text-goals">
                     Reactivate
                   </button>
                 </form>

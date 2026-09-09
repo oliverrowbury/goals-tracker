@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { startStudySession, stopStudySession, createSubject } from "./actions";
 import { formatMinutes } from "@/lib/study";
+import { ClockIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
 type OpenSession = { id: string; subjectId: string; startedAt: string } | null;
@@ -47,11 +48,11 @@ export function StudyTimer({
         <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm">
           <p className="text-sm text-ink-muted">Studying</p>
           <p className="mt-1 font-serif text-2xl font-semibold text-ink">{activeSubject.name}</p>
-          <p className="mt-3 font-mono text-4xl tabular-nums text-accent">{formatClock(elapsedSeconds)}</p>
+          <p className="mt-3 font-mono text-4xl tabular-nums text-study">{formatClock(elapsedSeconds)}</p>
           <button
             disabled={isPending}
             onClick={() => startTransition(() => stopStudySession(openSession.id))}
-            className="mt-5 rounded-lg bg-accent px-5 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+            className="mt-5 rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             Stop
           </button>
@@ -65,7 +66,7 @@ export function StudyTimer({
                 key={subject.id}
                 disabled={isPending}
                 onClick={() => startTransition(() => startStudySession(subject.id))}
-                className="rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink hover:border-accent disabled:opacity-50"
+                className="rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink hover:border-study disabled:opacity-50"
                 style={{ borderLeftColor: subject.color, borderLeftWidth: 3 }}
               >
                 {subject.name}
@@ -73,7 +74,7 @@ export function StudyTimer({
             ))}
             <button
               onClick={() => setAddingSubject((v) => !v)}
-              className="rounded-lg border border-dashed border-line px-3.5 py-2 text-sm text-ink-muted hover:border-accent hover:text-accent"
+              className="rounded-lg border border-dashed border-line px-3.5 py-2 text-sm text-ink-muted hover:border-study hover:text-study"
             >
               + Subject
             </button>
@@ -91,9 +92,9 @@ export function StudyTimer({
                 autoFocus
                 required
                 placeholder="e.g. Further Maths"
-                className="rounded-lg border border-line bg-card px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
+                className="rounded-lg border border-line bg-card px-3 py-1.5 text-sm focus:border-study focus:outline-none"
               />
-              <button type="submit" className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-strong">
+              <button type="submit" className="rounded-lg bg-study px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
                 Add
               </button>
             </form>
@@ -104,7 +105,12 @@ export function StudyTimer({
       <div>
         <h2 className="mb-2 text-sm font-medium text-ink-muted">This week</h2>
         {subjects.length === 0 ? (
-          <p className="text-sm text-ink-muted">Add a subject above to start tracking.</p>
+          <div className="rounded-2xl border border-dashed border-line px-6 py-8 text-center">
+            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-study-soft text-study">
+              <ClockIcon className="h-5 w-5" />
+            </span>
+            <p className="mt-3 text-sm text-ink-muted">Add a subject above to start tracking.</p>
+          </div>
         ) : (
           <ul className="space-y-1.5">
             {subjects.map((subject) => {
@@ -120,7 +126,7 @@ export function StudyTimer({
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }} />
                     {subject.name}
                   </span>
-                  <span className={isActive ? "font-medium text-accent" : "text-ink-muted"}>
+                  <span className={isActive ? "font-medium text-study" : "text-ink-muted"}>
                     {formatMinutes(liveMinutes)}
                   </span>
                 </li>

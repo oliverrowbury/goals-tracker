@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
+import { JournalIcon, TargetIcon, ClockIcon, GearIcon } from "@/components/Icons";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -10,17 +11,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <Wordmark />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-ink-muted">
-            <Link href="/journal" className="hover:text-accent">
-              Journal
+            <Link href="/journal" className="flex items-center gap-1.5 hover:text-accent">
+              <JournalIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Journal</span>
             </Link>
-            <Link href="/goals" className="hover:text-accent">
-              Goals
+            <Link href="/goals" className="flex items-center gap-1.5 hover:text-goals">
+              <TargetIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Goals</span>
             </Link>
-            <Link href="/study" className="hover:text-accent">
-              Study
+            <Link href="/study" className="flex items-center gap-1.5 hover:text-study">
+              <ClockIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Study</span>
             </Link>
-            <Link href="/settings" className="hover:text-accent">
-              Settings
+            <Link href="/settings" className="flex items-center gap-1.5 hover:text-ink">
+              <GearIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Settings</span>
             </Link>
             <form action="/api/logout" method="POST">
               <button type="submit" className="hover:text-accent">

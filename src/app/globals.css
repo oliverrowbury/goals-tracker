@@ -9,6 +9,14 @@
   --accent: #c1592f;
   --accent-strong: #a2481f;
   --accent-soft: #f3e2d3;
+
+  /* Section-identity colors — Journal keeps the main terracotta accent;
+     Goals/Study get their own hue (matching the subject color palette) so
+     the app doesn't read as one flat color throughout. */
+  --goals: #4f7ba6;
+  --goals-soft: #e4edf4;
+  --study: #5f9e6f;
+  --study-soft: #e6f0e8;
 }
 
 @theme inline {
@@ -20,6 +28,10 @@
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
+  --color-goals: var(--goals);
+  --color-goals-soft: var(--goals-soft);
+  --color-study: var(--study);
+  --color-study-soft: var(--study-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-fraunces);

@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/user";
 import { weekRangeContaining } from "@/lib/goals";
 import { todayISO } from "@/lib/dates";
 import { StudyTimer } from "./StudyTimer";
+import { ClockIcon } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,12 @@ export default async function StudyPage() {
 
   return (
     <div>
-      <h1 className="mb-6 font-serif text-2xl font-semibold text-ink">Study</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-study-soft text-study">
+          <ClockIcon className="h-4.5 w-4.5" />
+        </span>
+        <h1 className="font-serif text-2xl font-semibold text-ink">Study</h1>
+      </div>
       <StudyTimer
         subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
         openSession={

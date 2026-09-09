@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toggleGoalCompletion, setGoalLogValue } from "../goals/actions";
+import { TargetIcon } from "@/components/Icons";
 
 export type DayGoal = {
   id: string;
@@ -33,7 +34,7 @@ function GoalCheckboxRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
             toggleGoalCompletion(goal.id, dateISO);
           });
         }}
-        className="h-4 w-4 rounded border-line accent-accent"
+        className="h-4 w-4 rounded border-line accent-goals"
       />
       <span className={completed ? "text-ink-muted line-through" : "text-ink"}>{goal.title}</span>
     </label>
@@ -50,7 +51,7 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
       <>
         <span className="text-sm text-ink">{goal.title}</span>
         <span className="text-xs text-ink-muted">
-          <span className="font-medium text-accent">{weekTotal}</span>/{goal.targetValue} {goal.unit} this week ·
+          <span className="font-medium text-goals">{weekTotal}</span>/{goal.targetValue} {goal.unit} this week ·
           auto-tracked
         </span>
       </>
@@ -77,10 +78,10 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
               setGoalLogValue(goal.id, dateISO, newValue);
             });
           }}
-          className="w-16 rounded-md border border-line px-2 py-1 text-right text-sm focus:border-accent focus:outline-none"
+          className="w-16 rounded-md border border-line px-2 py-1 text-right text-sm focus:border-goals focus:outline-none"
         />
         <span className="text-xs text-ink-muted">
-          {goal.unit} today · <span className="font-medium text-accent">{weekTotal}</span>/{goal.targetValue} this week
+          {goal.unit} today · <span className="font-medium text-goals">{weekTotal}</span>/{goal.targetValue} this week
         </span>
       </div>
     </>
@@ -90,13 +91,13 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
 export function GoalsForDay({ dateISO, goals }: { dateISO: string; goals: DayGoal[] }) {
   if (goals.length === 0) {
     return (
-      <p className="text-sm text-ink-muted">
+      <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-line px-3.5 py-3 text-sm text-ink-muted">
+        <TargetIcon className="h-4 w-4 shrink-0 text-goals" />
         No goals due today.{" "}
-        <Link href="/goals" className="text-accent underline hover:text-accent-strong">
+        <Link href="/goals" className="text-goals underline hover:opacity-80">
           Add one
         </Link>
-        .
-      </p>
+      </div>
     );
   }
 
