@@ -7,6 +7,7 @@ import { formatMinutes } from "@/lib/study";
 import { JournalEditor } from "./JournalEditor";
 import { GoalsForDay, type DayGoal } from "./GoalsForDay";
 import { JournalIcon } from "@/components/Icons";
+import { deleteStudySession } from "../study/actions";
 
 export default async function JournalPage({
   searchParams,
@@ -119,9 +120,18 @@ export default async function JournalPage({
               const subject = subjectById.get(session.subjectId);
               return (
                 <li key={session.id} className="flex items-center gap-2 rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subject?.color ?? "#999" }} />
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: subject?.color ?? "#999" }} />
                   {subject?.name ?? "Unknown subject"}
                   <span className="text-ink-muted">— {formatMinutes(session.durationMinutes ?? 0)}</span>
+                  <form action={deleteStudySession.bind(null, session.id)} className="ml-auto">
+                    <button
+                      type="submit"
+                      title="Remove this session"
+                      className="text-ink-muted hover:text-accent"
+                    >
+                      ×
+                    </button>
+                  </form>
                 </li>
               );
             })}

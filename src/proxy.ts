@@ -23,6 +23,8 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page itself, its API route, and Next.js internals.
-  matcher: ["/((?!login|api/login|_next/static|_next/image|favicon.ico).*)"],
+  // Everything except the login page itself, its API route, Next.js
+  // internals, the service worker, and the cron route — the latter is
+  // called by Vercel Cron (no session cookie) and checks CRON_SECRET itself.
+  matcher: ["/((?!login|api/login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico).*)"],
 };

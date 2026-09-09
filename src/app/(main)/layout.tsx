@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
-import { JournalIcon, TargetIcon, ClockIcon, GearIcon } from "@/components/Icons";
+import { JournalIcon, TargetIcon, ClockIcon, GearIcon, CalendarIcon } from "@/components/Icons";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -22,6 +22,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <Link href="/study" className="flex items-center gap-1.5 hover:text-study">
               <ClockIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Study</span>
+            </Link>
+            <Link href="/calendar" className="flex items-center gap-1.5 hover:text-ink">
+              <CalendarIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">Calendar</span>
             </Link>
             <Link href="/settings" className="flex items-center gap-1.5 hover:text-ink">
               <GearIcon className="h-4 w-4" />

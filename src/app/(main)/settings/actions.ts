@@ -63,3 +63,33 @@ export async function setSubjectActive(subjectId: string, active: boolean) {
   revalidatePath("/settings");
   revalidatePath("/study");
 }
+
+export async function updateReminder(formData: FormData) {
+  const enabled = formData.get("reminderEnabled") === "on";
+  const time = String(formData.get("reminderTime") ?? "").trim();
+
+  const user = await getCurrentUser();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { reminderEnabled: enabled && !!time, reminderTime: time || null },
+  });
+  revalidatePath("/settings");
+}
+
+export async function savePushSubscription(subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) {
+  const user = await getCurrentUser();
+  await prisma.pushSubscription.upsert({
+    where: { endpoint: subscription.endpoint },
+    update: { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth, userId: user.id },
+    create: {
+      userId: user.id,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    },
+  });
+}
+
+export async function removePushSubscription(endpoint: string) {
+  await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+}

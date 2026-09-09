@@ -3,7 +3,8 @@ import { getCurrentUser } from "@/lib/user";
 import { updateName, renameSubject, setSubjectActive } from "./actions";
 import { PasswordForm } from "./PasswordForm";
 import { NewSubjectForm } from "./NewSubjectForm";
-import { GearIcon, ClockIcon } from "@/components/Icons";
+import { NotificationsForm } from "./NotificationsForm";
+import { GearIcon, ClockIcon, BellIcon } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,15 @@ export default async function SettingsPage() {
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Password</h2>
         <p className="mb-4 text-sm text-ink-muted">Changes immediately — no redeploy needed.</p>
         <PasswordForm />
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <BellIcon className="h-4 w-4 text-accent" />
+          Notifications
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">A daily nudge to check in, sent as a browser push.</p>
+        <NotificationsForm reminderEnabled={user.reminderEnabled} reminderTime={user.reminderTime} />
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

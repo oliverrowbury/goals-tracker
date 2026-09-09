@@ -1,22 +1,27 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { startStudySession, stopStudySession, createSubject } from "./actions";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { startStudySession, pauseStudySession, resumeStudySession, finishStudySession, createSubject } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import { ClockIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
-type OpenSession = { id: string; subjectId: string; startedAt: string } | null;
+type OpenSession = { id: string; subjectId: string; startedAt: string; pausedAt: string | null } | null;
 
-function useTicker(startedAt: string | null) {
+// Tab hidden this long while a session is running auto-pauses it, so time
+// doesn't keep accruing while you're not actually looking at the screen.
+const AUTO_PAUSE_AFTER_MS = 90_000;
+
+function useElapsedSeconds(startedAt: string | null, pausedAt: string | null) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!startedAt) return;
+    if (!startedAt || pausedAt) return; // frozen while paused
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [startedAt]);
+  }, [startedAt, pausedAt]);
   if (!startedAt) return 0;
-  return Math.floor((now - new Date(startedAt).getTime()) / 1000);
+  const end = pausedAt ? new Date(pausedAt).getTime() : now;
+  return Math.max(0, Math.floor((end - new Date(startedAt).getTime()) / 1000));
 }
 
 function formatClock(totalSeconds: number): string {
@@ -38,24 +43,84 @@ export function StudyTimer({
 }) {
   const [isPending, startTransition] = useTransition();
   const [addingSubject, setAddingSubject] = useState(false);
-  const elapsedSeconds = useTicker(openSession?.startedAt ?? null);
+  const [autoPaused, setAutoPaused] = useState(false);
+  const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, openSession?.pausedAt ?? null);
 
   const activeSubject = subjects.find((s) => s.id === openSession?.subjectId);
+  const isRunning = !!openSession && !openSession.pausedAt;
+  const isPaused = !!openSession && !!openSession.pausedAt;
+
+  // Anti-idle: if the tab is hidden while a session is running, auto-pause
+  // it after a grace period. This can't prove you're actually studying, but
+  // it stops the clock from running unattended in a backgrounded tab.
+  const hiddenSinceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!isRunning || !openSession) return;
+    const sessionId = openSession.id;
+
+    function handleVisibilityChange() {
+      if (document.hidden) {
+        hiddenSinceRef.current = Date.now();
+        setTimeout(() => {
+          if (hiddenSinceRef.current && Date.now() - hiddenSinceRef.current >= AUTO_PAUSE_AFTER_MS && document.hidden) {
+            setAutoPaused(true);
+            startTransition(() => pauseStudySession(sessionId));
+          }
+        }, AUTO_PAUSE_AFTER_MS + 200);
+      } else {
+        hiddenSinceRef.current = null;
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isRunning, openSession]);
 
   return (
     <div className="space-y-8">
       {openSession && activeSubject ? (
         <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm">
-          <p className="text-sm text-ink-muted">Studying</p>
+          <p className="text-sm text-ink-muted">{isPaused ? "Paused" : "Studying"}</p>
           <p className="mt-1 font-serif text-2xl font-semibold text-ink">{activeSubject.name}</p>
-          <p className="mt-3 font-mono text-4xl tabular-nums text-study">{formatClock(elapsedSeconds)}</p>
-          <button
-            disabled={isPending}
-            onClick={() => startTransition(() => stopStudySession(openSession.id))}
-            className="mt-5 rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-          >
-            Stop
-          </button>
+          <p className={`mt-3 font-mono text-4xl tabular-nums ${isPaused ? "text-ink-muted" : "text-study"}`}>
+            {formatClock(elapsedSeconds)}
+          </p>
+          {isPaused && autoPaused && (
+            <p className="mt-2 text-xs text-ink-muted">Paused automatically — you left the tab.</p>
+          )}
+          <div className="mt-5 flex items-center justify-center gap-2">
+            {isRunning && (
+              <button
+                disabled={isPending}
+                onClick={() => {
+                  setAutoPaused(false);
+                  startTransition(() => pauseStudySession(openSession.id));
+                }}
+                className="rounded-lg border border-line px-5 py-2 text-sm font-medium text-ink hover:border-study disabled:opacity-50"
+              >
+                Pause
+              </button>
+            )}
+            {isPaused && (
+              <button
+                disabled={isPending}
+                onClick={() => {
+                  setAutoPaused(false);
+                  startTransition(() => resumeStudySession(openSession.id));
+                }}
+                className="rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              >
+                Resume
+              </button>
+            )}
+            <button
+              disabled={isPending}
+              onClick={() => startTransition(() => finishStudySession(openSession.id))}
+              className="rounded-lg bg-ink px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            >
+              Finish
+            </button>
+          </div>
         </div>
       ) : (
         <div>

@@ -63,12 +63,34 @@ model User {
   passwordHash String?
   sessionToken String? @unique
 
-  journalEntries JournalEntry[]
-  goals          Goal[]
-  subjects       Subject[]
-  studySessions  StudySession[]
-  exercises      Exercise[]
-  workouts       Workout[]
+  // A single daily reminder time ("HH:mm", 24h, checked in the server's
+  // local sense of "now" — see the cron route). Null/false means no
+  // reminder is sent. Kept simple on purpose: one global nudge rather than
+  // the more granular per-goal Reminder model below, which nothing wires
+  // up to yet.
+  reminderTime    String?
+  reminderEnabled Boolean @default(false)
+
+  journalEntries    JournalEntry[]
+  goals             Goal[]
+  subjects          Subject[]
+  studySessions     StudySession[]
+  exercises         Exercise[]
+  workouts          Workout[]
+  pushSubscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // The three fields a browser's PushSubscription.toJSON() gives you —
+  // exactly what web-push needs to send a notification later.
+  endpoint  String @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model JournalEntry {
@@ -149,6 +171,10 @@ model StudySession {
   subject   Subject @relation(fields: [subjectId], references: [id])
 
   startedAt       DateTime
+  // Set while the timer is paused. On resume, startedAt is shifted forward
+  // by the paused duration and this is cleared — so elapsed time (now -
+  // startedAt) stays correct without a separate accumulator field.
+  pausedAt        DateTime?
   endedAt         DateTime?
   durationMinutes Int?
   note            String?
