@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { startStudySession, pauseStudySession, resumeStudySession, finishStudySession, createSubject } from "./actions";
+import {
+  startStudySession,
+  pauseStudySession,
+  resumeStudySession,
+  finishStudySession,
+  deleteStudySession,
+  createSubject,
+} from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { ClockIcon } from "@/components/Icons";
+import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
 type OpenSession = { id: string; subjectId: string; startedAt: string; pausedAt: string | null } | null;
@@ -126,25 +133,41 @@ export function StudyTimer({
               Finish
             </button>
           </div>
+          <button
+            disabled={isPending}
+            onClick={() => {
+              if (confirm("Discard this session? It won't be saved anywhere — use Finish instead if you want to keep it.")) {
+                startTransition(() => deleteStudySession(openSession.id));
+              }
+            }}
+            className="mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50 mx-auto"
+          >
+            <TrashIcon className="h-3.5 w-3.5" />
+            Started by accident? Discard it
+          </button>
         </div>
       ) : (
         <div>
-          <h2 className="mb-2 text-sm font-medium text-ink-muted">Start a session</h2>
-          <div className="flex flex-wrap gap-2">
+          <h2 className="mb-1 text-sm font-medium text-ink-muted">Start a session</h2>
+          <p className="mb-3 text-xs text-ink-muted">Tap a subject below to start timing it.</p>
+          <div className="flex flex-wrap gap-2.5">
             {subjects.map((subject) => (
               <button
                 key={subject.id}
                 disabled={isPending}
                 onClick={() => startTransition(() => startStudySession(subject.id))}
-                className="rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink hover:border-study disabled:opacity-50"
-                style={{ borderLeftColor: subject.color, borderLeftWidth: 3 }}
+                className="group flex items-center gap-2 rounded-xl border border-line bg-card py-2.5 pl-2 pr-4 text-sm text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md disabled:opacity-50"
+                style={{ borderLeftColor: subject.color, borderLeftWidth: 4 }}
               >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-study-soft text-study transition group-hover:bg-study group-hover:text-white">
+                  <PlayIcon className="h-3.5 w-3.5" />
+                </span>
                 {subject.name}
               </button>
             ))}
             <button
               onClick={() => setAddingSubject((v) => !v)}
-              className="rounded-lg border border-dashed border-line px-3.5 py-2 text-sm text-ink-muted hover:border-study hover:text-study"
+              className="rounded-xl border border-dashed border-line px-3.5 py-2.5 text-sm text-ink-muted hover:border-study hover:text-study"
             >
               + Subject
             </button>
