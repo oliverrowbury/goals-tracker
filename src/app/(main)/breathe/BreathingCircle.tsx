@@ -35,13 +35,22 @@ export function BreathingCircle() {
     <div className="flex flex-col items-center gap-8 py-10">
       <div className="relative flex h-64 w-64 items-center justify-center">
         <div
-          className="absolute h-32 w-32 rounded-full bg-accent-soft transition-transform ease-in-out"
+          className="absolute h-56 w-56 rounded-full opacity-30 transition-transform ease-linear"
+          style={{
+            background: "conic-gradient(from 0deg, var(--accent), var(--goals), var(--study), var(--calm), var(--accent))",
+            transform: running ? "rotate(360deg)" : "rotate(0deg)",
+            transitionDuration: running ? "16s" : "0s",
+            filter: "blur(10px)",
+          }}
+        />
+        <div
+          className="absolute h-32 w-32 rounded-full bg-calm-soft transition-transform ease-in-out"
           style={{
             transform: `scale(${running ? phase.scale : 1})`,
             transitionDuration: `${phase.seconds}s`,
           }}
         />
-        <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border-2 border-accent text-center">
+        <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border-2 border-calm bg-card text-center">
           <span className="font-serif text-lg font-medium text-ink">{running ? phase.label : "Ready?"}</span>
           {running && <span className="text-sm text-ink-muted">{secondsLeft}</span>}
         </div>
@@ -58,7 +67,7 @@ export function BreathingCircle() {
             setRunning(true);
           }
         }}
-        className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:bg-accent-strong"
+        className="rounded-lg bg-calm px-5 py-2.5 text-sm font-medium text-white hover:bg-calm-strong"
       >
         {running ? "Stop" : "Start breathing"}
       </button>

@@ -7,7 +7,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line bg-card/70 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-lg text-ink">
+          <Link href="/" className="text-2xl text-ink transition-transform hover:scale-[1.02]">
             <Wordmark />
           </Link>
           <nav className="flex items-center gap-5 text-sm text-ink-muted">

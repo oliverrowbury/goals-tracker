@@ -17,6 +17,12 @@
   --goals-soft: #e4edf4;
   --study: #5f9e6f;
   --study-soft: #e6f0e8;
+
+  /* Wellness (mood + breathing) gets its own hue too — a fourth pillar
+     alongside Journal/Goals/Study rather than borrowing the accent color. */
+  --calm: #8570b3;
+  --calm-strong: #6c579a;
+  --calm-soft: #ece7f5;
 }
 
 @theme inline {
@@ -32,6 +38,9 @@
   --color-goals-soft: var(--goals-soft);
   --color-study: var(--study);
   --color-study-soft: var(--study-soft);
+  --color-calm: var(--calm);
+  --color-calm-strong: var(--calm-strong);
+  --color-calm-soft: var(--calm-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-fraunces);
@@ -39,8 +48,9 @@
 
 body {
   background:
-    radial-gradient(ellipse 900px 500px at 15% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent),
-    radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent),
+    radial-gradient(ellipse 900px 500px at 15% -10%, color-mix(in srgb, var(--accent) 12%, transparent), transparent),
+    radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in srgb, var(--goals) 9%, transparent), transparent),
+    radial-gradient(ellipse 600px 500px at 20% 100%, color-mix(in srgb, var(--study) 7%, transparent), transparent),
     radial-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
     var(--paper);
   color: var(--ink);

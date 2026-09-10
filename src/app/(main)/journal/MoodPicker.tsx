@@ -25,13 +25,13 @@ export function MoodPicker({ dateISO, initialMood }: { dateISO: string; initialM
             });
           }}
           className={`rounded-full p-1.5 text-xl transition-transform hover:scale-110 ${
-            mood === m.value ? "bg-accent-soft ring-2 ring-accent" : "opacity-50 hover:opacity-100"
+            mood === m.value ? "bg-calm-soft ring-2 ring-calm" : "opacity-50 hover:opacity-100"
           }`}
         >
           {m.face}
         </button>
       ))}
-      <Link href="/breathe" className="ml-2 text-sm text-ink-muted underline decoration-line hover:text-accent">
+      <Link href="/breathe" className="ml-2 text-sm text-ink-muted underline decoration-line hover:text-calm">
         Need a moment? Breathe →
       </Link>
     </div>

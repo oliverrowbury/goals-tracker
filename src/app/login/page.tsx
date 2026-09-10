@@ -14,7 +14,7 @@ export default async function LoginPage({
         method="POST"
         className="w-full max-w-sm rounded-2xl border border-line bg-card p-7 shadow-sm"
       >
-        <h1 className="mb-1 text-2xl text-ink">
+        <h1 className="mb-1 text-3xl text-ink">
           <Wordmark />
         </h1>
         <p className="mb-6 text-sm text-ink-muted">Enter the password to continue.</p>

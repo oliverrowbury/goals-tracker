@@ -17,7 +17,7 @@ export function MoodChart({ monthISO, entries }: { monthISO: string; entries: En
         <h2 className="text-sm font-medium text-ink-muted">Mood in {formatMonth(monthISO)}</h2>
         {average !== null && (
           <span className="text-sm text-ink-muted">
-            Average <span className="font-medium text-accent">{average.toFixed(1)}</span> {moodFace(Math.round(average))}
+            Average <span className="font-medium text-calm">{average.toFixed(1)}</span> {moodFace(Math.round(average))}
           </span>
         )}
       </div>
@@ -32,7 +32,7 @@ export function MoodChart({ monthISO, entries }: { monthISO: string; entries: En
               <div
                 key={dateISO}
                 title={`${dateISO}${mood ? ` — ${moodFace(mood)}` : ""}`}
-                className={`flex-1 rounded-sm ${mood ? "bg-accent" : isFuture ? "" : "bg-line"}`}
+                className={`flex-1 rounded-sm ${mood ? "bg-calm" : isFuture ? "" : "bg-line"}`}
                 style={{ height: mood ? `${(mood / 5) * 100}%` : isFuture ? 0 : 4, opacity: mood ? 0.35 + mood * 0.13 : 1 }}
               />
             );
