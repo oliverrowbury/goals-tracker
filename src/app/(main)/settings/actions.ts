@@ -93,3 +93,14 @@ export async function savePushSubscription(subscription: { endpoint: string; key
 export async function removePushSubscription(endpoint: string) {
   await prisma.pushSubscription.deleteMany({ where: { endpoint } });
 }
+
+export async function sendFeedback(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
+  const message = String(formData.get("message") ?? "").trim();
+  if (!message) return { error: "Write something first." };
+
+  const user = await getCurrentUser();
+  await prisma.feedback.create({ data: { userId: user.id, message } });
+  revalidatePath("/settings");
+
+  return { success: "Thanks — feedback sent." };
+}

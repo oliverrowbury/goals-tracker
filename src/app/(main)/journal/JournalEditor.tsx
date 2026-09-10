@@ -174,13 +174,18 @@ export function JournalEditor({
   dateISO,
   initialText,
   initialImproveText,
+  initialPromptResponse,
+  prompt,
 }: {
   dateISO: string;
   initialText: string;
   initialImproveText: string;
+  initialPromptResponse: string;
+  prompt: string;
 }) {
   const [text, setText] = useState(initialText);
   const [improveText, setImproveText] = useState(initialImproveText);
+  const [promptResponse, setPromptResponse] = useState(initialPromptResponse);
   const { mode: proudMode, changeMode: changeProudMode } = useFieldMode("journal-mode-proud");
   const { mode: improveMode, changeMode: changeImproveMode } = useFieldMode("journal-mode-improve");
   const [isPending, startTransition] = useTransition();
@@ -188,13 +193,25 @@ export function JournalEditor({
 
   function save() {
     startTransition(async () => {
-      await saveJournalEntry(dateISO, text, improveText);
+      await saveJournalEntry(dateISO, text, improveText, promptResponse);
       setSavedAt(new Date());
     });
   }
 
   return (
     <div>
+      <div className="mb-6 rounded-2xl border border-accent-soft bg-accent-soft/40 p-5">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-accent">Proudly Prompt of the Day</p>
+        <p className="mb-3 font-serif text-base text-ink">{prompt}</p>
+        <textarea
+          value={promptResponse}
+          onChange={(e) => setPromptResponse(e.target.value)}
+          placeholder="Answer today's prompt…"
+          rows={3}
+          className="w-full resize-y rounded-xl border border-line bg-card p-3.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+        />
+      </div>
+
       <ModeToggle mode={proudMode} onChange={changeProudMode} />
       {proudMode === "list" ? (
         <ListEditor value={text} onChange={setText} placeholder="What are you proud of today?" />

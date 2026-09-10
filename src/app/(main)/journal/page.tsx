@@ -1,13 +1,21 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, isoToDate, shiftISO, formatLong } from "@/lib/dates";
+import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, monthRangeContaining, dateToISO } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
+import { promptForDate } from "@/lib/prompts";
 import { JournalEditor } from "./JournalEditor";
 import { GoalsForDay, type DayGoal } from "./GoalsForDay";
+import { MoodPicker } from "./MoodPicker";
+import { MoodChart } from "./MoodChart";
+import { PhotoUpload } from "./PhotoUpload";
+import { Flashbacks } from "./Flashbacks";
 import { JournalIcon } from "@/components/Icons";
 import { deleteStudySession } from "../study/actions";
+
+// How many years back to look for "on this day" flashbacks.
+const FLASHBACK_YEARS = 8;
 
 export default async function JournalPage({
   searchParams,
@@ -20,8 +28,16 @@ export default async function JournalPage({
 
   const user = await getCurrentUser();
   const { startISO: weekStartISO, endISO: weekEndISO } = weekRangeContaining(dateISO);
+  const monthISO = monthISOOf(dateISO);
+  const { startISO: monthStartISO, endISO: monthEndISO } = monthRangeContaining(dateISO);
 
-  const [entry, allGoals, weekStudySessions, subjects] = await Promise.all([
+  const flashbackDates = Array.from({ length: FLASHBACK_YEARS }, (_, i) => {
+    const d = isoToDate(dateISO);
+    d.setUTCFullYear(d.getUTCFullYear() - (i + 1));
+    return dateToISO(d);
+  }).filter((d) => monthISOOf(d).slice(5) === dateISO.slice(5, 7)); // guard against Feb 29 rolling into March
+
+  const [entry, allGoals, weekStudySessions, subjects, monthEntries, flashbackEntries] = await Promise.all([
     prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(dateISO) } } }),
     prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
@@ -32,7 +48,28 @@ export default async function JournalPage({
       },
     }),
     prisma.subject.findMany({ where: { userId: user.id } }),
+    prisma.journalEntry.findMany({
+      where: { userId: user.id, date: { gte: isoToDate(monthStartISO), lte: isoToDate(monthEndISO) } },
+      select: { date: true, mood: true },
+    }),
+    prisma.journalEntry.findMany({
+      where: { userId: user.id, date: { in: flashbackDates.map(isoToDate) } },
+      select: { date: true, bodyText: true, photoUrl: true },
+    }),
   ]);
+
+  const flashbacks = flashbackEntries
+    .filter((e) => e.bodyText.trim() || e.photoUrl)
+    .map((e) => {
+      const fDateISO = dateToISO(e.date);
+      return {
+        dateISO: fDateISO,
+        yearsAgo: Number(dateISO.slice(0, 4)) - Number(fDateISO.slice(0, 4)),
+        bodyText: e.bodyText,
+        photoUrl: e.photoUrl,
+      };
+    })
+    .sort((a, b) => a.yearsAgo - b.yearsAgo);
 
   const subjectById = new Map(subjects.map((s) => [s.id, s]));
 
@@ -105,6 +142,10 @@ export default async function JournalPage({
         </div>
       </div>
 
+      <Flashbacks flashbacks={flashbacks} />
+
+      <MoodPicker dateISO={dateISO} initialMood={entry?.mood ?? null} />
+
       <div className="mb-8">
         <h2 className="mb-2 text-sm font-medium text-ink-muted">Goals</h2>
         <GoalsForDay dateISO={dateISO} goals={dayGoals} />
@@ -137,7 +178,19 @@ export default async function JournalPage({
         </div>
       )}
 
-      <JournalEditor dateISO={dateISO} initialText={entry?.bodyText ?? ""} initialImproveText={entry?.improveText ?? ""} />
+      <PhotoUpload dateISO={dateISO} initialPhotoUrl={entry?.photoUrl ?? null} />
+
+      <JournalEditor
+        dateISO={dateISO}
+        initialText={entry?.bodyText ?? ""}
+        initialImproveText={entry?.improveText ?? ""}
+        initialPromptResponse={entry?.promptResponse ?? ""}
+        prompt={promptForDate(dateISO)}
+      />
+
+      <div className="mt-8">
+        <MoodChart monthISO={monthISO} entries={monthEntries.map((e) => ({ dateISO: dateToISO(e.date), mood: e.mood }))} />
+      </div>
     </div>
   );
 }

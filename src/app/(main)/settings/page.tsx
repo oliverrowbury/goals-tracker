@@ -5,13 +5,18 @@ import { PasswordForm } from "./PasswordForm";
 import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
 import { HelpSection } from "./HelpSection";
-import { GearIcon, ClockIcon, BellIcon, HelpIcon } from "@/components/Icons";
+import { FeedbackForm } from "./FeedbackForm";
+import { GearIcon, ClockIcon, BellIcon, HelpIcon, MessageIcon } from "@/components/Icons";
+import { formatLong } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
-  const subjects = await prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } });
+  const [subjects, feedback] = await Promise.all([
+    prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+    prisma.feedback.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 5 }),
+  ]);
   const active = subjects.filter((s) => s.active);
   const archived = subjects.filter((s) => !s.active);
 
@@ -118,6 +123,31 @@ export default async function SettingsPage() {
         </h2>
         <p className="mb-4 text-sm text-ink-muted">Common questions — tap one to expand it.</p>
         <HelpSection />
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <MessageIcon className="h-4 w-4 text-accent" />
+          Feedback
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">
+          Bugs, ideas, things that annoy you — this goes straight to Oliver, not an app store review.
+        </p>
+        <FeedbackForm />
+
+        {feedback.length > 0 && (
+          <div className="mt-6 border-t border-line pt-4">
+            <p className="mb-2 text-xs font-medium text-ink-muted">Previously sent</p>
+            <ul className="space-y-2">
+              {feedback.map((f) => (
+                <li key={f.id} className="rounded-lg border border-line bg-paper px-3.5 py-2 text-sm">
+                  <p className="text-ink">{f.message}</p>
+                  <p className="mt-1 text-xs text-ink-muted">{formatLong(f.createdAt.toISOString().slice(0, 10))}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
     </div>
   );

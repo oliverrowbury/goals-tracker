@@ -78,6 +78,7 @@ model User {
   exercises         Exercise[]
   workouts          Workout[]
   pushSubscriptions PushSubscription[]
+  feedback          Feedback[]
 }
 
 model PushSubscription {
@@ -103,10 +104,30 @@ model JournalEntry {
   // its own field rather than folded into bodyText so the two can have
   // their own prompts and be shown/edited independently.
   improveText String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // 1 (bad) – 5 (great), from the daily 5-face mood tracker. Nullable —
+  // most old entries won't have one, and answering it isn't required.
+  mood Int?
+  // The answer to that day's "Proudly Prompt of the Day". The prompt
+  // itself isn't stored — it's derived from the date (see lib/prompts.ts)
+  // — only what the user wrote in response.
+  promptResponse String?
+  // Public URL of a photo uploaded to Supabase Storage for this entry.
+  // One photo per entry, kept simple on purpose.
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([userId, date])
+}
+
+model Feedback {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  message   String
+  createdAt DateTime @default(now())
 }
 
 model Goal {
