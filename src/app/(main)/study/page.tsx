@@ -4,6 +4,7 @@ import { weekRangeContaining } from "@/lib/goals";
 import { todayISO, monthRangeContaining, yearRangeContaining } from "@/lib/dates";
 import { StudyTimer } from "./StudyTimer";
 import { StudyStats } from "./StudyStats";
+import { RecentSessions } from "./RecentSessions";
 import { ClockIcon } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,8 @@ export default async function StudyPage() {
         endedAt: { not: null },
         startedAt: { gte: new Date(`${week.startISO}T00:00:00.000Z`), lte: new Date(`${week.endISO}T23:59:59.999Z`) },
       },
-      select: { subjectId: true, durationMinutes: true, startedAt: true },
+      select: { id: true, subjectId: true, durationMinutes: true, startedAt: true },
+      orderBy: { startedAt: "desc" },
     }),
     prisma.studySession.findMany({
       where: {
@@ -83,6 +85,18 @@ export default async function StudyPage() {
             month: totalsBySubject(monthSessions),
             year: totalsBySubject(yearSessions),
           }}
+        />
+      </div>
+
+      <div className="mt-8">
+        <RecentSessions
+          subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
+          sessions={weekSessions.slice(0, 10).map((s) => ({
+            id: s.id,
+            subjectId: s.subjectId,
+            durationMinutes: s.durationMinutes,
+            startedAt: s.startedAt.toISOString(),
+          }))}
         />
       </div>
     </div>
