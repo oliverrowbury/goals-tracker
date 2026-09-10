@@ -35,15 +35,6 @@ export function BreathingCircle() {
     <div className="flex flex-col items-center gap-8 py-10">
       <div className="relative flex h-64 w-64 items-center justify-center">
         <div
-          className="absolute h-56 w-56 rounded-full opacity-30 transition-transform ease-linear"
-          style={{
-            background: "conic-gradient(from 0deg, var(--accent), var(--goals), var(--study), var(--calm), var(--accent))",
-            transform: running ? "rotate(360deg)" : "rotate(0deg)",
-            transitionDuration: running ? "16s" : "0s",
-            filter: "blur(10px)",
-          }}
-        />
-        <div
           className="absolute h-32 w-32 rounded-full bg-calm-soft transition-transform ease-in-out"
           style={{
             transform: `scale(${running ? phase.scale : 1})`,
