@@ -97,10 +97,14 @@ model JournalEntry {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
-  date      DateTime
-  bodyText  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  date        DateTime
+  bodyText    String
+  // Separate "what didn't go well / what to improve" reflection — kept as
+  // its own field rather than folded into bodyText so the two can have
+  // their own prompts and be shown/edited independently.
+  improveText String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@unique([userId, date])
 }

@@ -6,8 +6,26 @@ import { saveJournalEntry } from "./actions";
 type Mode = "freewrite" | "list";
 const MODE_KEY = "journal-mode";
 
-export function JournalEditor({ dateISO, initialText }: { dateISO: string; initialText: string }) {
+// List mode: finishing a sentence with "." at the end starts a new bullet
+// on the next line instead of just continuing the paragraph.
+function applyListMode(mode: Mode, prev: string, next: string): string {
+  if (mode === "list" && next.length === prev.length + 1 && next.endsWith(".")) {
+    return `${next.slice(0, -1)}\n• `;
+  }
+  return next;
+}
+
+export function JournalEditor({
+  dateISO,
+  initialText,
+  initialImproveText,
+}: {
+  dateISO: string;
+  initialText: string;
+  initialImproveText: string;
+}) {
   const [text, setText] = useState(initialText);
+  const [improveText, setImproveText] = useState(initialImproveText);
   const [mode, setMode] = useState<Mode>("freewrite");
   const [isPending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -28,25 +46,13 @@ export function JournalEditor({ dateISO, initialText }: { dateISO: string; initi
     } catch {
       // not persisted this session — not worth surfacing to the user
     }
-    if (next === "list" && text.trim() === "") {
-      setText("• ");
-    }
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    const next = e.target.value;
-    // List mode: finishing a sentence with "." at the end starts a new
-    // bullet on the next line instead of just continuing the paragraph.
-    if (mode === "list" && next.length === text.length + 1 && next.endsWith(".")) {
-      setText(`${next.slice(0, -1)}\n• `);
-      return;
-    }
-    setText(next);
+    if (next === "list" && text.trim() === "") setText("• ");
+    if (next === "list" && improveText.trim() === "") setImproveText("• ");
   }
 
   function save() {
     startTransition(async () => {
-      await saveJournalEntry(dateISO, text);
+      await saveJournalEntry(dateISO, text, improveText);
       setSavedAt(new Date());
     });
   }
@@ -75,11 +81,21 @@ export function JournalEditor({ dateISO, initialText }: { dateISO: string; initi
       </div>
       <textarea
         value={text}
-        onChange={handleChange}
-        placeholder="What are you proud of today? What did you struggle with?"
-        rows={14}
+        onChange={(e) => setText(applyListMode(mode, text, e.target.value))}
+        placeholder="What are you proud of today?"
+        rows={10}
         className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
       />
+
+      <p className="mb-2 mt-5 text-sm font-medium text-ink-muted">What didn't go well / what to improve</p>
+      <textarea
+        value={improveText}
+        onChange={(e) => setImproveText(applyListMode(mode, improveText, e.target.value))}
+        placeholder="What could've gone better today?"
+        rows={6}
+        className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
+      />
+
       <div className="mt-3 flex items-center gap-3">
         <button
           onClick={save}

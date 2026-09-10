@@ -139,7 +139,7 @@ export default async function JournalPage({
         </div>
       )}
 
-      <JournalEditor dateISO={dateISO} initialText={entry?.bodyText ?? ""} />
+      <JournalEditor dateISO={dateISO} initialText={entry?.bodyText ?? ""} initialImproveText={entry?.improveText ?? ""} />
     </div>
   );
 }
