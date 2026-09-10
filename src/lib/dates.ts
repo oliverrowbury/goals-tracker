@@ -70,6 +70,20 @@ export function yearRangeContaining(dateISO: string): { startISO: string; endISO
   return { startISO: `${y}-01-01`, endISO: `${y}-12-31` };
 }
 
+// "12–19 Dec" (same month) or "29 Dec – 4 Jan" (spans a month/year boundary).
+export function formatWeekRange(startISO: string, endISO: string): string {
+  const start = isoToDate(startISO);
+  const end = isoToDate(endISO);
+  const sameMonth = start.getUTCMonth() === end.getUTCMonth() && start.getUTCFullYear() === end.getUTCFullYear();
+  const dayMonth = (d: Date, withYear: boolean) =>
+    d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: withYear ? "numeric" : undefined, timeZone: "UTC" });
+
+  if (sameMonth) {
+    return `${start.getUTCDate()}–${dayMonth(end, true)}`;
+  }
+  return `${dayMonth(start, false)} – ${dayMonth(end, true)}`;
+}
+
 export function formatLong(iso: string): string {
   return isoToDate(iso).toLocaleDateString("en-GB", {
     weekday: "long",
