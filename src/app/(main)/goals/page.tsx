@@ -48,10 +48,8 @@ export default async function GoalsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-goals-soft text-goals">
-            <TargetIcon className="h-4.5 w-4.5" />
-          </span>
+        <div className="flex items-center gap-2.5">
+          <TargetIcon className="h-5 w-5 shrink-0 text-goals" />
           <h1 className="font-serif text-2xl font-semibold text-ink">Goals</h1>
         </div>
         <Link

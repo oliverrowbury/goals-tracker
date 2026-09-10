@@ -55,10 +55,8 @@ export default async function StudyPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-study-soft text-study">
-          <ClockIcon className="h-4.5 w-4.5" />
-        </span>
+      <div className="mb-6 flex items-center gap-2.5">
+        <ClockIcon className="h-5 w-5 shrink-0 text-study" />
         <h1 className="font-serif text-2xl font-semibold text-ink">Study</h1>
       </div>
       <StudyTimer

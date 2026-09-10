@@ -106,6 +106,22 @@ export function TrashIcon({ className }: IconProps) {
   );
 }
 
+export function HelpIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M9.5 9.3a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="16.7" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function ChartIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">

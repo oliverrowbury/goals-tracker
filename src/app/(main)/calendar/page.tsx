@@ -49,10 +49,8 @@ export default async function CalendarPage({
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-line/60 text-ink">
-            <CalendarIcon className="h-4.5 w-4.5" />
-          </span>
+        <div className="flex items-center gap-2.5">
+          <CalendarIcon className="h-5 w-5 shrink-0 text-ink-muted" />
           <h1 className="font-serif text-2xl font-semibold text-ink">{formatMonth(monthISO)}</h1>
         </div>
         <div className="flex items-center gap-2 text-sm">

@@ -83,10 +83,8 @@ export default async function JournalPage({
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <JournalIcon className="h-4.5 w-4.5" />
-          </span>
+        <div className="flex items-baseline gap-2.5">
+          <JournalIcon className="h-5 w-5 shrink-0 translate-y-0.5 text-accent" />
           <div>
             <h1 className="font-serif text-2xl font-semibold text-ink">{formatLong(dateISO)}</h1>
             {isToday && <p className="text-sm text-accent">Today</p>}

@@ -63,24 +63,24 @@ export default async function HomePage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Link
           href="/journal"
-          className="group animate-[fade-up_0.5s_ease-out_0.05s_both] rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
+          className="group relative animate-[fade-up_0.5s_ease-out_0.05s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <JournalIcon className="h-4.5 w-4.5" />
-          </span>
-          <p className="mt-4 text-sm font-medium text-ink-muted">Journal</p>
+          <span className="absolute inset-x-0 top-0 h-1 bg-accent" />
+          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+            <JournalIcon className="h-3.5 w-3.5 text-accent" /> Journal
+          </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{journalStatus}</p>
           <p className="mt-3 text-sm text-accent group-hover:underline">Write today's entry →</p>
         </Link>
 
         <Link
           href="/goals"
-          className="group animate-[fade-up_0.5s_ease-out_0.1s_both] rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-goals hover:shadow-md"
+          className="group relative animate-[fade-up_0.5s_ease-out_0.1s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-goals hover:shadow-md"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-goals-soft text-goals">
-            <TargetIcon className="h-4.5 w-4.5" />
-          </span>
-          <p className="mt-4 text-sm font-medium text-ink-muted">Goals</p>
+          <span className="absolute inset-x-0 top-0 h-1 bg-goals" />
+          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+            <TargetIcon className="h-3.5 w-3.5 text-goals" /> Goals
+          </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">
             {dueToday.length === 0 ? "None due today" : `${doneToday.length} of ${dueToday.length} done`}
           </p>
@@ -89,12 +89,12 @@ export default async function HomePage() {
 
         <Link
           href="/study"
-          className="group animate-[fade-up_0.5s_ease-out_0.15s_both] rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md"
+          className="group relative animate-[fade-up_0.5s_ease-out_0.15s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-study-soft text-study">
-            <ClockIcon className="h-4.5 w-4.5" />
-          </span>
-          <p className="mt-4 text-sm font-medium text-ink-muted">Study</p>
+          <span className="absolute inset-x-0 top-0 h-1 bg-study" />
+          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+            <ClockIcon className="h-3.5 w-3.5 text-study" /> Study
+          </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{formatMinutes(weekMinutes)} this week</p>
           <p className="mt-3 text-sm text-study group-hover:underline">Start a session →</p>
         </Link>
