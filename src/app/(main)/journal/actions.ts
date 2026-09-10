@@ -6,19 +6,14 @@ import { getCurrentUser } from "@/lib/user";
 import { isoToDate } from "@/lib/dates";
 import { uploadJournalPhoto, deleteJournalPhoto } from "@/lib/storage";
 
-export async function saveJournalEntry(
-  dateISO: string,
-  bodyText: string,
-  improveText: string,
-  promptResponse: string,
-) {
+export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string) {
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
 
   await prisma.journalEntry.upsert({
     where: { userId_date: { userId: user.id, date } },
-    update: { bodyText, improveText, promptResponse },
-    create: { userId: user.id, date, bodyText, improveText, promptResponse },
+    update: { bodyText, improveText },
+    create: { userId: user.id, date, bodyText, improveText },
   });
 
   revalidatePath("/journal");
@@ -34,6 +29,25 @@ export async function setMood(dateISO: string, mood: number) {
     create: { userId: user.id, date, bodyText: "", mood },
   });
 
+  revalidatePath("/journal");
+  revalidatePath("/");
+  revalidatePath("/calendar");
+}
+
+// Lives on the home page (not the Journal editor's own save flow) — the
+// prompt is a lightweight daily check-in, so it saves itself rather than
+// waiting on the full journal entry's Save button.
+export async function savePromptResponse(dateISO: string, promptResponse: string) {
+  const user = await getCurrentUser();
+  const date = isoToDate(dateISO);
+
+  await prisma.journalEntry.upsert({
+    where: { userId_date: { userId: user.id, date } },
+    update: { promptResponse },
+    create: { userId: user.id, date, bodyText: "", promptResponse },
+  });
+
+  revalidatePath("/");
   revalidatePath("/journal");
 }
 

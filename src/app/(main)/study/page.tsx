@@ -27,7 +27,7 @@ export default async function StudyPage() {
 
   const [subjects, openSession, weekSessions, monthSessions, yearSessions] = await Promise.all([
     prisma.subject.findMany({ where: { userId: user.id, active: true }, orderBy: { name: "asc" } }),
-    prisma.studySession.findFirst({ where: { userId: user.id, endedAt: null } }),
+    prisma.studySession.findFirst({ where: { userId: user.id, endedAt: null }, orderBy: { startedAt: "asc" } }),
     prisma.studySession.findMany({
       where: {
         userId: user.id,

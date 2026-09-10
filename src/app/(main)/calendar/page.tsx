@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, monthISOOf, shiftMonth, formatMonth, monthGridDays, isoToDate } from "@/lib/dates";
 import { CalendarIcon } from "@/components/Icons";
+import { moodFace } from "@/lib/mood";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function CalendarPage({
   const [entries, goalLogs, sessions] = await Promise.all([
     prisma.journalEntry.findMany({
       where: { userId: user.id, date: { gte: rangeStart, lte: rangeEnd } },
-      select: { date: true, bodyText: true },
+      select: { date: true, bodyText: true, mood: true },
     }),
     prisma.goalLog.findMany({
       where: { completed: true, date: { gte: rangeStart, lte: rangeEnd }, goal: { userId: user.id } },
@@ -45,6 +46,9 @@ export default async function CalendarPage({
   );
   const goalDays = new Set(goalLogs.map((g) => g.date.toISOString().slice(0, 10)));
   const studyDays = new Set(sessions.map((s) => s.startedAt.toISOString().slice(0, 10)));
+  const moodByDay = new Map(
+    entries.filter((e) => e.mood != null).map((e) => [e.date.toISOString().slice(0, 10), e.mood as number]),
+  );
 
   return (
     <div>
@@ -90,18 +94,20 @@ export default async function CalendarPage({
           const hasGoal = goalDays.has(dayISO);
           const hasStudy = studyDays.has(dayISO);
           const dayNum = Number(dayISO.slice(8, 10));
+          const mood = moodByDay.get(dayISO);
 
           return (
             <Link
               key={dayISO}
               href={`/journal?date=${dayISO}`}
-              className={`flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border text-sm transition hover:border-accent ${
+              className={`flex aspect-square flex-col items-center gap-1 rounded-xl border pt-2 text-sm transition hover:border-accent ${
                 inMonth ? "border-line bg-card" : "border-transparent text-ink-muted/50"
               } ${isToday ? "ring-2 ring-accent ring-offset-1 ring-offset-paper" : ""}`}
             >
               <span className={inMonth ? "text-ink" : "text-ink-muted/50"}>{dayNum}</span>
+              {mood != null && <span className="text-base leading-none">{moodFace(mood)}</span>}
               {(hasJournal || hasGoal || hasStudy) && (
-                <span className="flex items-center gap-0.5">
+                <span className="mt-auto flex items-center gap-0.5 pb-1.5">
                   {hasJournal && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                   {hasGoal && <span className="h-1.5 w-1.5 rounded-full bg-goals" />}
                   {hasStudy && <span className="h-1.5 w-1.5 rounded-full bg-study" />}

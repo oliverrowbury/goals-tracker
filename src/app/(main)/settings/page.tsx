@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { updateName, renameSubject, setSubjectActive } from "./actions";
@@ -149,6 +150,16 @@ export default async function SettingsPage() {
           </div>
         )}
       </section>
+
+      <p className="text-center text-xs text-ink-muted">
+        <Link href="/privacy" className="hover:text-accent hover:underline">
+          Privacy Policy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="hover:text-accent hover:underline">
+          Terms of Service
+        </Link>
+      </p>
     </div>
   );
 }

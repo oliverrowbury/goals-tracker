@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, monthRangeContaining, dateToISO } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
-import { promptForDate } from "@/lib/prompts";
 import { JournalEditor } from "./JournalEditor";
 import { GoalsForDay, type DayGoal } from "./GoalsForDay";
 import { MoodPicker } from "./MoodPicker";
@@ -180,13 +179,7 @@ export default async function JournalPage({
 
       <PhotoUpload dateISO={dateISO} initialPhotoUrl={entry?.photoUrl ?? null} />
 
-      <JournalEditor
-        dateISO={dateISO}
-        initialText={entry?.bodyText ?? ""}
-        initialImproveText={entry?.improveText ?? ""}
-        initialPromptResponse={entry?.promptResponse ?? ""}
-        prompt={promptForDate(dateISO)}
-      />
+      <JournalEditor dateISO={dateISO} initialText={entry?.bodyText ?? ""} initialImproveText={entry?.improveText ?? ""} />
 
       <div className="mt-8">
         <MoodChart monthISO={monthISO} entries={monthEntries.map((e) => ({ dateISO: dateToISO(e.date), mood: e.mood }))} />

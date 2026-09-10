@@ -1,10 +1,24 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 import { JournalIcon, TargetIcon, ClockIcon, GearIcon, CalendarIcon, ChartIcon } from "@/components/Icons";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user";
+import { todayISO, isoToDate } from "@/lib/dates";
+import { MoodCheckInModal } from "./MoodCheckInModal";
 
-export default function MainLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
+  const today = todayISO();
+  const todayEntry = await prisma.journalEntry.findUnique({
+    where: { userId_date: { userId: user.id, date: isoToDate(today) } },
+    select: { mood: true },
+  });
+
   return (
     <div className="flex min-h-screen flex-col">
+      {todayEntry?.mood == null && <MoodCheckInModal dateISO={today} />}
       <header className="border-b border-line bg-card/70 backdrop-blur-sm">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link href="/" className="text-2xl text-ink transition-transform hover:scale-[1.02]">

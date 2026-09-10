@@ -73,7 +73,21 @@ export async function finishStudySession(sessionId: string) {
 }
 
 export async function deleteStudySession(sessionId: string) {
+  const session = await prisma.studySession.findUnique({ where: { id: sessionId } });
+  if (!session) return; // already gone — nothing to do
+
   await prisma.studySession.delete({ where: { id: sessionId } });
+
+  // Only one open session should ever exist per user. If the one just
+  // discarded was still open, sweep up any other stray open session too —
+  // otherwise a leftover duplicate (e.g. from a double-click race, or an
+  // old bug before startStudySession closed out open sessions) would make
+  // the timer immediately show "Studying X" again right after discarding,
+  // looking exactly like the delete silently failed.
+  if (session.endedAt === null) {
+    await prisma.studySession.deleteMany({ where: { userId: session.userId, endedAt: null } });
+  }
+
   revalidateStudyViews();
 }
 

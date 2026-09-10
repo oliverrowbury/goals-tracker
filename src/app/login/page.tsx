@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 
 export default async function LoginPage({
@@ -45,6 +46,16 @@ export default async function LoginPage({
           Sign in
         </button>
       </form>
+
+      <p className="fixed inset-x-0 bottom-4 text-center text-xs text-ink-muted">
+        <Link href="/privacy" className="hover:text-accent hover:underline">
+          Privacy Policy
+        </Link>
+        {" · "}
+        <Link href="/terms" className="hover:text-accent hover:underline">
+          Terms of Service
+        </Link>
+      </p>
     </main>
   );
 }

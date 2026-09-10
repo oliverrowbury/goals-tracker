@@ -4,8 +4,9 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, formatLong } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
-import { JournalIcon, TargetIcon, ClockIcon, LeafIcon } from "@/components/Icons";
-import { moodFace } from "@/lib/mood";
+import { JournalIcon, TargetIcon, ClockIcon } from "@/components/Icons";
+import { promptForDate } from "@/lib/prompts";
+import { PromptOfDayCard } from "./PromptOfDayCard";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,9 @@ export default async function HomePage() {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <PromptOfDayCard dateISO={today} prompt={promptForDate(today)} initialResponse={entry?.promptResponse ?? ""} />
+
+      <div className="grid gap-4 sm:grid-cols-3">
         <Link
           href="/journal"
           className="group relative animate-[fade-up_0.5s_ease-out_0.05s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
@@ -98,20 +101,6 @@ export default async function HomePage() {
           </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{formatMinutes(weekMinutes)} this week</p>
           <p className="mt-3 text-sm text-study group-hover:underline">Start a session →</p>
-        </Link>
-
-        <Link
-          href="/breathe"
-          className="group relative animate-[fade-up_0.5s_ease-out_0.2s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-calm hover:shadow-md"
-        >
-          <span className="absolute inset-x-0 top-0 h-1 bg-calm" />
-          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
-            <LeafIcon className="h-3.5 w-3.5 text-calm" /> Wellness
-          </p>
-          <p className="mt-1 font-serif text-xl font-semibold text-ink">
-            {entry?.mood ? `Feeling ${moodFace(entry.mood)}` : "Check in with yourself"}
-          </p>
-          <p className="mt-3 text-sm text-calm group-hover:underline">Take a moment to breathe →</p>
         </Link>
       </div>
     </div>
