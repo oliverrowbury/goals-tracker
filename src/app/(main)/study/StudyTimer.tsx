@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import {
   startStudySession,
   pauseStudySession,
@@ -11,6 +11,39 @@ import {
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
+
+function AddSubjectForm({ onAdded }: { onAdded: () => void }) {
+  const [state, formAction, isPending] = useActionState(createSubject, null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const wasPending = useRef(false);
+
+  useEffect(() => {
+    if (wasPending.current && !isPending && !state?.error) onAdded();
+    wasPending.current = isPending;
+  }, [isPending, state, onAdded]);
+
+  return (
+    <div className="mt-3">
+      <form ref={formRef} action={formAction} className="flex gap-2">
+        <input
+          name="name"
+          autoFocus
+          required
+          placeholder="e.g. Further Maths"
+          className="rounded-lg border border-line bg-card px-3 py-1.5 text-sm focus:border-study focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-lg bg-study px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+        >
+          Add
+        </button>
+      </form>
+      {state?.error && <p className="mt-1.5 text-xs text-accent">{state.error}</p>}
+    </div>
+  );
+}
 
 type Subject = { id: string; name: string; color: string };
 type OpenSession = { id: string; subjectId: string; startedAt: string; pausedAt: string | null } | null;
@@ -172,26 +205,7 @@ export function StudyTimer({
               + Subject
             </button>
           </div>
-          {addingSubject && (
-            <form
-              action={(formData) => {
-                startTransition(() => createSubject(formData));
-                setAddingSubject(false);
-              }}
-              className="mt-3 flex gap-2"
-            >
-              <input
-                name="name"
-                autoFocus
-                required
-                placeholder="e.g. Further Maths"
-                className="rounded-lg border border-line bg-card px-3 py-1.5 text-sm focus:border-study focus:outline-none"
-              />
-              <button type="submit" className="rounded-lg bg-study px-3 py-1.5 text-sm font-medium text-white hover:opacity-90">
-                Add
-              </button>
-            </form>
-          )}
+          {addingSubject && <AddSubjectForm onAdded={() => setAddingSubject(false)} />}
         </div>
       )}
 

@@ -77,10 +77,28 @@ export async function deleteStudySession(sessionId: string) {
   revalidateStudyViews();
 }
 
-export async function createSubject(formData: FormData) {
+export type CreateSubjectState = { error: string } | null;
+
+// Shaped as a useActionState reducer (prevState, formData) rather than a
+// plain function that throws — a thrown error from a form's action prop
+// doesn't get caught cleanly on the client (confirmed: it broke React's
+// form submit handling entirely), whereas returned state is the pattern
+// already working for changePassword.
+export async function createSubject(_prev: CreateSubjectState, formData: FormData): Promise<CreateSubjectState> {
   const user = await getCurrentUser();
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) throw new Error("Subject name is required");
+  if (!name) return { error: "Subject name is required" };
+
+  const existing = await prisma.subject.findFirst({
+    where: { userId: user.id, name: { equals: name, mode: "insensitive" } },
+  });
+  if (existing) {
+    return {
+      error: existing.active
+        ? `You already have a subject called "${existing.name}"`
+        : `"${existing.name}" already exists but is archived — reactivate it from Settings instead of adding it again`,
+    };
+  }
 
   const colors = ["#c1592f", "#4f7ba6", "#5f9e6f", "#a25fa6", "#c99a3e"];
   const count = await prisma.subject.count({ where: { userId: user.id } });
@@ -91,4 +109,5 @@ export async function createSubject(formData: FormData) {
 
   revalidatePath("/study");
   revalidatePath("/settings");
+  return null;
 }

@@ -114,7 +114,7 @@ export function GoalForm({
               id="targetValue"
               name="targetValue"
               type="number"
-              min="0"
+              min="0.01"
               step="any"
               defaultValue={values.targetValue}
               required

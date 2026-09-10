@@ -26,6 +26,10 @@ function readGoalFields(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const subjectId = String(formData.get("subjectId") ?? "").trim();
 
+  if (frequencyType === "WEEKLY_TARGET" && Number(targetValueRaw) <= 0) {
+    throw new Error("Target amount needs to be more than 0");
+  }
+
   return {
     title,
     description: description || null,
