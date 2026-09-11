@@ -44,6 +44,7 @@ export default async function GoalsPage() {
 
   const active = goals.filter((g) => g.active);
   const archived = goals.filter((g) => !g.active);
+  const weekDays = Array.from({ length: 7 }, (_, i) => shiftISO(weekStartISO, i));
 
   return (
     <div>
@@ -90,6 +91,20 @@ export default async function GoalsPage() {
 
           const historyDays = Array.from({ length: HISTORY_DAYS }, (_, i) => shiftISO(today, -(HISTORY_DAYS - 1 - i)));
 
+          // Days due this week vs. how many are completed — the same
+          // "filled bar" treatment WEEKLY_TARGET goals get below, so every
+          // goal type has a progress indicator, not just a streak.
+          let weekDueTotal = 0;
+          let weekDoneTotal = 0;
+          if (goal.frequencyType !== "WEEKLY_TARGET") {
+            for (const d of weekDays) {
+              if (isGoalDueOn(goal, d)) {
+                weekDueTotal++;
+                if (completedDates.has(d)) weekDoneTotal++;
+              }
+            }
+          }
+
           return (
             <div key={goal.id} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -131,8 +146,22 @@ export default async function GoalsPage() {
                 </div>
               )}
 
+              {goal.frequencyType !== "WEEKLY_TARGET" && weekDueTotal > 0 && (
+                <div className="mt-3">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+                    <div
+                      className="h-full rounded-full bg-goals transition-all"
+                      style={{ width: `${(weekDoneTotal / weekDueTotal) * 100}%` }}
+                    />
+                  </div>
+                  <p className="mt-1.5 text-xs text-ink-muted">
+                    {weekDoneTotal}/{weekDueTotal} day{weekDueTotal === 1 ? "" : "s"} this week
+                  </p>
+                </div>
+              )}
+
               {goal.frequencyType !== "WEEKLY_TARGET" && (
-                <div className="mt-3 flex gap-1">
+                <div className="mt-2 flex gap-1">
                   {historyDays.map((day) => {
                     const due = isGoalDueOn(goal, day);
                     const done = completedDates.has(day);

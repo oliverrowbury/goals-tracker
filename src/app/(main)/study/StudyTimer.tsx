@@ -219,16 +219,13 @@ export function StudyTimer({
             <p className="mt-3 text-sm text-ink-muted">Add a subject above to start tracking.</p>
           </div>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
             {subjects.map((subject) => {
               const minutes = weekTotals[subject.id] ?? 0;
               const isActive = subject.id === openSession?.subjectId;
               const liveMinutes = isActive ? minutes + Math.floor(elapsedSeconds / 60) : minutes;
               return (
-                <li
-                  key={subject.id}
-                  className="flex items-center justify-between rounded-lg border border-line bg-card px-3.5 py-2 text-sm"
-                >
+                <li key={subject.id} className="flex items-center justify-between px-3.5 py-2 text-sm">
                   <span className="flex items-center gap-2 text-ink">
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }} />
                     {subject.name}

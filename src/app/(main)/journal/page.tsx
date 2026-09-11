@@ -153,11 +153,11 @@ export default async function JournalPage({
       {todaysStudySessions.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-2 text-sm font-medium text-ink-muted">Studied</h2>
-          <ul className="space-y-1.5">
+          <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
             {todaysStudySessions.map((session) => {
               const subject = subjectById.get(session.subjectId);
               return (
-                <li key={session.id} className="flex items-center gap-2 rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink">
+                <li key={session.id} className="flex items-center gap-2 px-3.5 py-2 text-sm text-ink">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: subject?.color ?? "#999" }} />
                   {subject?.name ?? "Unknown subject"}
                   <span className="text-ink-muted">— {formatMinutes(session.durationMinutes ?? 0)}</span>

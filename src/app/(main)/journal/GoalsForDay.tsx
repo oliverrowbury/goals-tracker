@@ -102,12 +102,9 @@ export function GoalsForDay({ dateISO, goals }: { dateISO: string; goals: DayGoa
   }
 
   return (
-    <ul className="space-y-2">
+    <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
       {goals.map((goal) => (
-        <li
-          key={`${dateISO}-${goal.id}`}
-          className="flex items-center justify-between gap-3 rounded-xl border border-line bg-card px-3.5 py-2.5"
-        >
+        <li key={`${dateISO}-${goal.id}`} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
           {goal.frequencyType === "WEEKLY_TARGET" ? (
             <WeeklyTargetRow goal={goal} dateISO={dateISO} />
           ) : (

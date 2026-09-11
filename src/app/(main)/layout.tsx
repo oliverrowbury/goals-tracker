@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
-import { JournalIcon, TargetIcon, ClockIcon, GearIcon, CalendarIcon, ChartIcon } from "@/components/Icons";
+import { JournalIcon, TargetIcon, ClockIcon, GearIcon, CalendarIcon, ChartIcon, SignOutIcon } from "@/components/Icons";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate } from "@/lib/dates";
 import { MoodCheckInModal } from "./MoodCheckInModal";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           <Link href="/" className="text-2xl text-ink transition-transform hover:scale-[1.02]">
             <Wordmark />
           </Link>
-          <nav className="flex items-center gap-5 text-sm text-ink-muted">
+          <nav className="flex items-center gap-3.5 text-sm text-ink-muted sm:gap-5">
             <Link href="/journal" className="flex items-center gap-1.5 hover:text-accent">
               <JournalIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Journal</span>
@@ -50,10 +51,11 @@ export default async function MainLayout({ children }: { children: React.ReactNo
               <span className="hidden sm:inline">Settings</span>
             </Link>
             <form action="/api/logout" method="POST">
-              <button type="submit" className="hover:text-accent">
-                Sign out
+              <button type="submit" title="Sign out" className="flex items-center hover:text-accent">
+                <SignOutIcon className="h-4 w-4" />
               </button>
             </form>
+            <ThemeToggle />
           </nav>
         </div>
       </header>

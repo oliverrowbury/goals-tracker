@@ -106,9 +106,9 @@ export default async function RecapPage({
           {goalSummaries.length === 0 ? (
             <p className="text-sm text-ink-muted">No goals due this week.</p>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="-mx-5 divide-y divide-line">
               {goalSummaries.map((g) => (
-                <li key={g.title} className="flex items-center justify-between rounded-lg border border-line bg-paper px-3.5 py-2 text-sm">
+                <li key={g.title} className="flex items-center justify-between px-5 py-2 text-sm">
                   <span className={g.hit ? "text-ink" : "text-ink-muted"}>{g.title}</span>
                   <span className={g.hit ? "font-medium text-goals" : "text-ink-muted"}>{g.detail}</span>
                 </li>
@@ -125,11 +125,11 @@ export default async function RecapPage({
             <p className="text-sm text-ink-muted">No study time logged this week.</p>
           ) : (
             <>
-              <ul className="space-y-1.5">
+              <ul className="-mx-5 divide-y divide-line">
                 {Array.from(minutesBySubject.entries())
                   .sort((a, b) => b[1] - a[1])
                   .map(([subjectId, minutes]) => (
-                    <li key={subjectId} className="flex items-center justify-between rounded-lg border border-line bg-paper px-3.5 py-2 text-sm">
+                    <li key={subjectId} className="flex items-center justify-between px-5 py-2 text-sm">
                       <span className="flex items-center gap-2 text-ink">
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subjectById.get(subjectId)?.color ?? "#999" }} />
                         {subjectById.get(subjectId)?.name ?? "Unknown subject"}
@@ -150,10 +150,10 @@ export default async function RecapPage({
           {journaledDays.length === 0 ? (
             <p className="text-sm text-ink-muted">No journal entries this week.</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="-mx-5 divide-y divide-line">
               {journaledDays.map(({ dateISO, entry }) => (
                 <li key={dateISO}>
-                  <Link href={`/journal?date=${dateISO}`} className="block rounded-lg border border-line bg-paper px-3.5 py-2.5 hover:border-accent">
+                  <Link href={`/journal?date=${dateISO}`} className="block px-5 py-2.5 hover:bg-paper">
                     <p className="text-xs font-medium text-ink-muted">{formatLong(dateISO)}</p>
                     {entry!.bodyText.trim() && <p className="mt-1 text-sm text-ink">{snippet(entry!.bodyText)}</p>}
                   </Link>

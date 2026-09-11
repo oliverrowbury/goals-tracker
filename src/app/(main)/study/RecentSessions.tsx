@@ -20,15 +20,12 @@ export function RecentSessions({ subjects, sessions }: { subjects: Subject[]; se
 
   return (
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-      <h2 className="mb-3 text-sm font-medium text-ink-muted">Recent sessions</h2>
-      <ul className="space-y-1.5">
+      <h2 className="mb-1 text-sm font-medium text-ink-muted">Recent sessions</h2>
+      <ul className="-mx-5 divide-y divide-line">
         {sessions.map((session) => {
           const subject = subjectById.get(session.subjectId);
           return (
-            <li
-              key={session.id}
-              className="flex items-center gap-2 rounded-lg border border-line bg-paper px-3.5 py-2 text-sm text-ink"
-            >
+            <li key={session.id} className="flex items-center gap-2 px-5 py-2 text-sm text-ink">
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: subject?.color ?? "#999" }} />
               {subject?.name ?? "Unknown subject"}
               <span className="text-ink-muted">— {formatMinutes(session.durationMinutes ?? 0)}</span>

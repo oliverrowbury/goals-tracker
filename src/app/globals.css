@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Manual (class-based) dark mode instead of the default prefers-color-scheme
+   variant — .dark is toggled by ThemeToggle and persisted in localStorage. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --paper: #fbf6ee;
   --ink: #2b2420;
@@ -23,6 +27,26 @@
   --calm: #8570b3;
   --calm-strong: #6c579a;
   --calm-soft: #ece7f5;
+}
+
+.dark {
+  --paper: #1c1815;
+  --ink: #f0e9df;
+  --ink-muted: #a89a89;
+  --card: #262019;
+  --line: #3c342b;
+  --accent: #dd8055;
+  --accent-strong: #e99b76;
+  --accent-soft: #3a2a20;
+
+  --goals: #83b1dd;
+  --goals-soft: #22303e;
+  --study: #86c896;
+  --study-soft: #21302a;
+
+  --calm: #ab98d6;
+  --calm-strong: #beafdf;
+  --calm-soft: #2c2438;
 }
 
 @theme inline {

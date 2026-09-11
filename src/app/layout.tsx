@@ -23,13 +23,30 @@ export const metadata: Metadata = {
   description: "A daily journal for what you're proud of, with goals and study tracking alongside it.",
 };
 
+// Runs before paint so there's no flash of the wrong theme — can't do this
+// with a React effect, since that only runs after the first paint.
+const THEME_INIT_SCRIPT = `
+try {
+  var t = localStorage.getItem("theme");
+  if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) {
+    document.documentElement.classList.add("dark");
+  }
+} catch {}
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-paper text-ink">{children}</body>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-paper text-ink" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
