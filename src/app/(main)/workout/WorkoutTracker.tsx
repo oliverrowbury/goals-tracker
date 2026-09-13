@@ -12,7 +12,7 @@ import {
   createExercise,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { formatPace, formatDistance, formatWeight, computeVolume } from "@/lib/workout";
+import { formatPace, formatDistance, formatWeight, computeVolume, fromKm, haversineKm } from "@/lib/workout";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { TrashIcon } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
@@ -50,6 +50,83 @@ function formatClock(totalSeconds: number): string {
   const s = totalSeconds % 60;
   const pad = (n: number) => n.toString().padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+type GpsStatus = "idle" | "acquiring" | "tracking" | "denied" | "unsupported";
+
+// A single bad GPS fix shouldn't wreck the total, so fixes are filtered
+// two ways before being added: too-imprecise (a poor accuracy radius,
+// common indoors or under tree cover) and too-fast (an instant "jump"
+// between two fixes implying a speed nothing on foot or a bike hits —
+// almost always a GPS glitch rather than real movement).
+const MAX_GPS_ACCURACY_M = 30;
+const MAX_PLAUSIBLE_SPEED_MPS = 12; // ~43km/h — generous enough for a hard bike leg
+
+// Live-tracks distance for a cardio session via the browser's geolocation
+// API — no route/map, just a running total (see haversineKm), which is
+// all "how far did I go" actually needs. Requires the tab to stay open and
+// the OS to keep granting fixes; that's a real limitation on a locked
+// phone in a pocket, not something this can paper over.
+function useGpsDistance(active: boolean): { distanceKm: number; status: GpsStatus } {
+  const [distanceKm, setDistanceKm] = useState(0);
+  const [status, setStatus] = useState<GpsStatus>("idle");
+  const lastFix = useRef<{ lat: number; lon: number; t: number } | null>(null);
+
+  useEffect(() => {
+    if (!active) return;
+    if (!("geolocation" in navigator)) {
+      setStatus("unsupported");
+      return;
+    }
+
+    setDistanceKm(0);
+    setStatus("acquiring");
+    lastFix.current = null;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setStatus("tracking");
+        const { latitude, longitude, accuracy } = pos.coords;
+        const t = pos.timestamp;
+        if (accuracy != null && accuracy > MAX_GPS_ACCURACY_M) return;
+
+        const prev = lastFix.current;
+        if (!prev) {
+          lastFix.current = { lat: latitude, lon: longitude, t };
+          return;
+        }
+
+        const km = haversineKm(prev.lat, prev.lon, latitude, longitude);
+        const seconds = (t - prev.t) / 1000;
+        const speedMps = seconds > 0 ? (km * 1000) / seconds : 0;
+        if (speedMps <= MAX_PLAUSIBLE_SPEED_MPS) {
+          setDistanceKm((d) => d + km);
+          lastFix.current = { lat: latitude, lon: longitude, t };
+        }
+        // else: drop this one fix as a likely glitch, but keep the old
+        // anchor point so tracking recovers on the next good fix.
+      },
+      () => setStatus("denied"),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+    );
+
+    // Best-effort — a locked/dimmed screen is a common reason background
+    // tracking stops getting fixes at all, so keeping it awake helps.
+    let wakeLock: { release: () => Promise<void> } | null = null;
+    navigator.wakeLock
+      ?.request("screen")
+      .then((lock) => {
+        wakeLock = lock;
+      })
+      .catch(() => {});
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      wakeLock?.release().catch(() => {});
+    };
+  }, [active]);
+
+  return { distanceKm, status };
 }
 
 function EditableLabel({ workoutId, label }: { workoutId: string; label: string }) {
@@ -278,7 +355,11 @@ export function WorkoutTracker({
   const [creatingExercise, setCreatingExercise] = useState(false);
   const [pickedExerciseId, setPickedExerciseId] = useState("");
   const [startTab, setStartTab] = useState<WorkoutType>("STRENGTH");
+  const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
   const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null);
+  const { distanceKm: gpsDistanceKm, status: gpsStatus } = useGpsDistance(
+    !!openWorkout && openWorkout.type === "CARDIO",
+  );
 
   // Reset the exercise picker state whenever the open workout itself
   // changes (a new one starts, or the current one finishes/is discarded) —
@@ -290,6 +371,7 @@ export function WorkoutTracker({
     setAddingExercise(false);
     setCreatingExercise(false);
     setPickedExerciseId("");
+    setDistanceOverride(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openWorkout?.id]);
 
@@ -482,6 +564,17 @@ export function WorkoutTracker({
             <EditableLabel workoutId={openWorkout.id} label={openWorkout.label} />
           </div>
           <p className="mt-3 font-serif text-5xl font-semibold tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
+
+          <p className="mt-2 text-sm text-ink-muted">
+            {gpsStatus === "tracking" &&
+              (gpsDistanceKm > 0
+                ? `📍 ${formatDistance(gpsDistanceKm, distanceUnit)} tracked so far`
+                : "📍 Tracking your distance — get moving for it to pick up a track")}
+            {gpsStatus === "acquiring" && "📍 Finding your location…"}
+            {gpsStatus === "denied" && "Location unavailable — enter distance yourself below"}
+            {gpsStatus === "unsupported" && "Your browser can't track location — enter distance yourself below"}
+          </p>
+
           <form
             action={finishCardioWorkout.bind(null, openWorkout.id)}
             className="mt-5 flex items-center justify-center gap-2"
@@ -491,6 +584,8 @@ export function WorkoutTracker({
               type="number"
               min="0"
               step="0.01"
+              value={distanceOverride ?? (gpsDistanceKm > 0 ? fromKm(gpsDistanceKm, distanceUnit).toFixed(2) : "")}
+              onChange={(e) => setDistanceOverride(e.target.value)}
               placeholder={`Distance (${distanceUnit === "MI" ? "mi" : "km"})`}
               className="w-32 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-workout focus:outline-none"
             />
@@ -498,6 +593,9 @@ export function WorkoutTracker({
               Finish
             </button>
           </form>
+          <p className="mt-1.5 text-xs text-ink-muted">
+            {gpsStatus === "tracking" ? "Tracked automatically — edit it above if it’s off." : "Distance is up to you to enter."}
+          </p>
           <button
             disabled={isPending}
             onClick={() => {
