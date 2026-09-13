@@ -37,7 +37,7 @@ const FAQS = [
   },
   {
     q: "Is my data private — can anyone else see it?",
-    a: "Right now, yes — this is a single-user app, so only your login can see your data.",
+    a: "Yes — everyone has their own account and password, and your journal, goals, study, and workout data is only ever visible to you when you're signed in.",
   },
 ];
 

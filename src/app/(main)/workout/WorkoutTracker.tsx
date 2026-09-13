@@ -57,13 +57,18 @@ function formatClock(totalSeconds: number): string {
 
 type GpsStatus = "idle" | "acquiring" | "tracking" | "denied" | "unsupported";
 
-// A single bad GPS fix shouldn't wreck the total, so fixes are filtered
-// two ways before being added: too-imprecise (a poor accuracy radius,
-// common indoors or under tree cover) and too-fast (an instant "jump"
-// between two fixes implying a speed nothing on foot or a bike hits —
-// almost always a GPS glitch rather than real movement).
-const MAX_GPS_ACCURACY_M = 30;
+// A single bad GPS fix shouldn't wreck the total or make the drawn route
+// look like static, so fixes are filtered three ways before being added:
+// too-imprecise (a poor accuracy radius, common indoors or under tree
+// cover), too-fast (an instant "jump" between two fixes implying a speed
+// nothing on foot or a bike hits — almost always a glitch), and
+// too-small (GPS jitter while standing still or moving very slowly —
+// without this, a stationary phone draws a jagged little scribble instead
+// of a clean line, since consecutive fixes never land on the exact same
+// point even when nothing moved).
+const MAX_GPS_ACCURACY_M = 25;
 const MAX_PLAUSIBLE_SPEED_MPS = 12; // ~43km/h — generous enough for a hard bike leg
+const MIN_MOVEMENT_M = 5; // below this, treat it as jitter rather than real movement
 
 // Live-tracks distance and the route itself for a cardio session via the
 // browser's geolocation API — a running total (see haversineKm) plus the
@@ -104,18 +109,19 @@ function useGpsTrack(active: boolean): { distanceKm: number; status: GpsStatus; 
         }
 
         const km = haversineKm(prev.lat, prev.lon, latitude, longitude);
+        const meters = km * 1000;
         const seconds = (t - prev.t) / 1000;
-        const speedMps = seconds > 0 ? (km * 1000) / seconds : 0;
-        if (speedMps <= MAX_PLAUSIBLE_SPEED_MPS) {
-          setDistanceKm((d) => d + km);
-          setPoints((pts) => [...pts, { lat: latitude, lng: longitude }]);
-          lastFix.current = { lat: latitude, lon: longitude, t };
-        }
-        // else: drop this one fix as a likely glitch, but keep the old
-        // anchor point so tracking recovers on the next good fix.
+        const speedMps = seconds > 0 ? meters / seconds : 0;
+
+        if (meters < MIN_MOVEMENT_M) return; // jitter — keep the old anchor, wait for real movement
+        if (speedMps > MAX_PLAUSIBLE_SPEED_MPS) return; // an implausible jump — likely a glitch
+
+        setDistanceKm((d) => d + km);
+        setPoints((pts) => [...pts, { lat: latitude, lng: longitude }]);
+        lastFix.current = { lat: latitude, lon: longitude, t };
       },
       () => setStatus("denied"),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 },
     );
 
     // Best-effort — a locked/dimmed screen is a common reason background
@@ -213,12 +219,12 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
           autoFocus
           required
           placeholder="e.g. Cable Fly"
-          className="rounded-lg border border-line bg-card px-3 py-1.5 text-sm focus:border-workout focus:outline-none"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-card px-3 py-2 text-base focus:border-workout focus:outline-none"
         />
         <select
           name="category"
           defaultValue="Chest"
-          className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+          className="rounded-lg border border-line bg-card px-2.5 py-2 text-sm focus:border-workout focus:outline-none"
         >
           <option value="Chest">Chest</option>
           <option value="Back">Back</option>
@@ -234,12 +240,91 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-workout px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-workout px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
         >
           Add
         </button>
       </form>
       {state?.error && <p className="mt-1.5 text-xs text-accent">{state.error}</p>}
+    </div>
+  );
+}
+
+// A search-and-tap list rather than a <select> + separate confirm button —
+// tapping a result adds it immediately, closer to how Hevy's own exercise
+// picker works and much easier to use one-handed on a phone.
+function ExercisePicker({
+  exercises,
+  onPick,
+  onCreated,
+  onCancel,
+}: {
+  exercises: Exercise[];
+  onPick: (id: string) => void;
+  onCreated: (ex: Exercise) => void;
+  onCancel: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+
+  const q = query.trim().toLowerCase();
+  const filtered = q ? exercises.filter((ex) => ex.name.toLowerCase().includes(q)) : exercises;
+  const byCategory = new Map<string, Exercise[]>();
+  for (const ex of filtered) {
+    if (!byCategory.has(ex.category)) byCategory.set(ex.category, []);
+    byCategory.get(ex.category)!.push(ex);
+  }
+
+  return (
+    <div className="rounded-xl border border-line bg-card p-4">
+      <div className="flex items-center gap-2">
+        <input
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search exercises…"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 py-2.5 text-base focus:border-workout focus:outline-none"
+        />
+        <button type="button" onClick={onCancel} className="p-2.5 text-sm text-ink-muted hover:text-accent">
+          Cancel
+        </button>
+      </div>
+
+      <div className="mt-2 max-h-72 overflow-y-auto">
+        {byCategory.size === 0 && <p className="px-1 py-3 text-sm text-ink-muted">No matches.</p>}
+        {Array.from(byCategory.entries()).map(([category, exs]) => (
+          <div key={category}>
+            <p className="px-1 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-ink-muted">{category}</p>
+            {exs.map((ex) => (
+              <button
+                key={ex.id}
+                type="button"
+                onClick={() => onPick(ex.id)}
+                className="block w-full rounded-lg px-3 py-3 text-left text-sm text-ink hover:bg-workout-soft active:bg-workout-soft"
+              >
+                {ex.name}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {!creating ? (
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="mt-2 py-1.5 text-xs text-ink-muted underline decoration-line hover:text-workout"
+        >
+          Can’t find it? Add a new exercise
+        </button>
+      ) : (
+        <AddExerciseForm
+          onCreated={(ex) => {
+            onCreated(ex);
+            setCreating(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -290,7 +375,7 @@ function ExerciseSection({
                 {set.isWarmup && <span className="ml-1 text-xs text-ink-muted">(warm-up)</span>}
               </span>
               <form action={removeSet.bind(null, set.id)} className="ml-auto">
-                <button type="submit" className="text-ink-muted hover:text-accent">
+                <button type="submit" className="rounded-lg p-2 -m-2 text-ink-muted hover:text-accent">
                   ×
                 </button>
               </form>
@@ -360,11 +445,9 @@ export function WorkoutTracker({
     openWorkout ? Array.from(new Set(openWorkout.sets.map((s) => s.exerciseId))) : [],
   );
   const [addingExercise, setAddingExercise] = useState(false);
-  const [creatingExercise, setCreatingExercise] = useState(false);
-  const [pickedExerciseId, setPickedExerciseId] = useState("");
   const [startTab, setStartTab] = useState<WorkoutType>("STRENGTH");
   const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
-  const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
+  const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
   const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null);
   const {
     distanceKm: gpsDistanceKm,
@@ -380,18 +463,11 @@ export function WorkoutTracker({
   useEffect(() => {
     setActiveExerciseIds(openWorkout ? Array.from(new Set(openWorkout.sets.map((s) => s.exerciseId))) : []);
     setAddingExercise(false);
-    setCreatingExercise(false);
-    setPickedExerciseId("");
     setDistanceOverride(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openWorkout?.id]);
 
   const exerciseById = new Map(localExercises.map((e) => [e.id, e]));
-  const byCategory = new Map<string, Exercise[]>();
-  for (const ex of localExercises) {
-    if (!byCategory.has(ex.category)) byCategory.set(ex.category, []);
-    byCategory.get(ex.category)!.push(ex);
-  }
 
   return (
     <div className="space-y-8">
@@ -453,7 +529,7 @@ export function WorkoutTracker({
                 <p className="text-sm text-ink-muted">Strength workout</p>
                 <EditableLabel workoutId={openWorkout.id} label={openWorkout.label} />
               </div>
-              <p className="font-serif text-3xl font-semibold tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
+              <p className="font-serif text-3xl font-semibold tabular-nums text-ink">{formatClock(elapsedSeconds)}</p>
             </div>
             <div className="mt-4 flex items-center gap-2">
               <button
@@ -498,71 +574,24 @@ export function WorkoutTracker({
             {!addingExercise ? (
               <button
                 onClick={() => setAddingExercise(true)}
-                className="rounded-xl border border-dashed border-line px-3.5 py-2.5 text-sm text-ink-muted hover:border-workout hover:text-workout"
+                className="rounded-xl border border-dashed border-line px-3.5 py-3 text-sm text-ink-muted hover:border-workout hover:text-workout"
               >
                 + Add exercise
               </button>
             ) : (
-              <div className="rounded-xl border border-line bg-card p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={pickedExerciseId}
-                    onChange={(e) => setPickedExerciseId(e.target.value)}
-                    className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
-                  >
-                    <option value="">Choose an exercise…</option>
-                    {Array.from(byCategory.entries()).map(([category, exs]) => (
-                      <optgroup key={category} label={category}>
-                        {exs.map((ex) => (
-                          <option key={ex.id} value={ex.id}>
-                            {ex.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    disabled={!pickedExerciseId}
-                    onClick={() => {
-                      setActiveExerciseIds((ids) => (ids.includes(pickedExerciseId) ? ids : [...ids, pickedExerciseId]));
-                      setPickedExerciseId("");
-                      setAddingExercise(false);
-                    }}
-                    className="rounded-lg bg-workout px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-                  >
-                    Add
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingExercise(false);
-                      setCreatingExercise(false);
-                    }}
-                    className="text-sm text-ink-muted hover:text-accent"
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {!creatingExercise ? (
-                  <button
-                    type="button"
-                    onClick={() => setCreatingExercise(true)}
-                    className="mt-2 text-xs text-ink-muted underline decoration-line hover:text-workout"
-                  >
-                    Can’t find it? Add a new exercise
-                  </button>
-                ) : (
-                  <AddExerciseForm
-                    onCreated={(ex) => {
-                      setLocalExercises((exs) => [...exs, ex]);
-                      setActiveExerciseIds((ids) => [...ids, ex.id]);
-                      setAddingExercise(false);
-                      setCreatingExercise(false);
-                    }}
-                  />
-                )}
-              </div>
+              <ExercisePicker
+                exercises={localExercises}
+                onCancel={() => setAddingExercise(false)}
+                onPick={(id) => {
+                  setActiveExerciseIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+                  setAddingExercise(false);
+                }}
+                onCreated={(ex) => {
+                  setLocalExercises((exs) => [...exs, ex]);
+                  setActiveExerciseIds((ids) => [...ids, ex.id]);
+                  setAddingExercise(false);
+                }}
+              />
             )}
           </div>
         </div>
@@ -574,7 +603,7 @@ export function WorkoutTracker({
           <div className="flex justify-center">
             <EditableLabel workoutId={openWorkout.id} label={openWorkout.label} />
           </div>
-          <p className="mt-3 font-serif text-5xl font-semibold tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
+          <p className="mt-3 font-serif text-5xl font-semibold tabular-nums text-ink">{formatClock(elapsedSeconds)}</p>
 
           <p className="mt-2 text-sm text-ink-muted">
             {gpsStatus === "tracking" &&
@@ -588,7 +617,7 @@ export function WorkoutTracker({
 
           {gpsPoints.length >= 2 && (
             <div className="mt-3">
-              <RouteMap points={gpsPoints} height={180} />
+              <RouteMap points={gpsPoints} height={260} live />
             </div>
           )}
 
@@ -647,84 +676,127 @@ export function WorkoutTracker({
 
       {history.length > 0 && (
         <div>
-          <h2 className="mb-2 text-sm font-medium text-ink-muted">Recent workouts</h2>
+          <h2 className="mb-2 text-sm font-medium text-ink-muted">Log</h2>
           <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
-            {history.map((w) => {
-              if (w.type === "CARDIO") {
-                const pace = formatPace(w.distanceKm, w.durationMinutes, distanceUnit);
-                const hasRoute = (w.route?.length ?? 0) >= 2;
-                const expanded = expandedRoutes.has(w.id);
-                return (
-                  <li key={w.id} className="px-4 py-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 shrink-0 rounded-full bg-workout" />
-                      <span className="text-ink">{w.label}</span>
-                      <span className="text-ink-muted">
-                        — {w.distanceKm ? `${formatDistance(w.distanceKm, distanceUnit)} · ` : ""}
-                        {formatMinutes(w.durationMinutes ?? 0)}
-                        {pace ? ` · ${pace}` : ""}
-                      </span>
-                      <span className="text-xs text-ink-muted">{dayLabel(w.dateISO)}</span>
-                      {hasRoute && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedRoutes((ids) => {
-                              const next = new Set(ids);
-                              if (next.has(w.id)) next.delete(w.id);
-                              else next.add(w.id);
-                              return next;
-                            })
-                          }
-                          className="ml-auto text-xs text-workout hover:underline"
-                        >
-                          {expanded ? "Hide route" : "View route"}
-                        </button>
-                      )}
-                      <form action={deleteWorkout.bind(null, w.id)} className={hasRoute ? "" : "ml-auto"}>
-                        <button type="submit" title="Remove this workout" className="text-ink-muted hover:text-accent">
-                          ×
-                        </button>
-                      </form>
-                    </div>
-                    {expanded && w.route && (
-                      <div className="mt-2">
-                        <RouteMap points={w.route} />
-                      </div>
-                    )}
-                  </li>
-                );
-              }
-
-              const exerciseCount = new Set(w.sets.map((s) => s.exerciseName)).size;
-              const setCount = w.sets.filter((s) => !s.isWarmup).length;
-              const volume = computeVolume(w.sets);
-
-              return (
-                <li key={w.id} className="px-4 py-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-workout" />
-                    <span className="text-ink">{w.label}</span>
-                    <span className="text-ink-muted">
-                      — {exerciseCount} exercise{exerciseCount === 1 ? "" : "s"} · {setCount} set
-                      {setCount === 1 ? "" : "s"} · {formatMinutes(w.durationMinutes ?? 0)}
-                    </span>
-                    <span className="text-xs text-ink-muted">{dayLabel(w.dateISO)}</span>
-                    <form action={deleteWorkout.bind(null, w.id)} className="ml-auto">
-                      <button type="submit" title="Remove this workout" className="text-ink-muted hover:text-accent">
-                        ×
-                      </button>
-                    </form>
-                  </div>
-                  {volume > 0 && (
-                    <p className="ml-4 mt-1 text-xs text-ink-muted">{formatWeight(volume, weightUnit)} total volume</p>
-                  )}
-                </li>
-              );
-            })}
+            {history.map((w) => (
+              <WorkoutLogCard
+                key={w.id}
+                workout={w}
+                weightUnit={weightUnit}
+                distanceUnit={distanceUnit}
+                expanded={expandedWorkouts.has(w.id)}
+                onToggleExpand={() =>
+                  setExpandedWorkouts((ids) => {
+                    const next = new Set(ids);
+                    if (next.has(w.id)) next.delete(w.id);
+                    else next.add(w.id);
+                    return next;
+                  })
+                }
+              />
+            ))}
           </ul>
         </div>
       )}
     </div>
+  );
+}
+
+function WorkoutLogCard({
+  workout,
+  weightUnit,
+  distanceUnit,
+  expanded,
+  onToggleExpand,
+}: {
+  workout: HistoryWorkout;
+  weightUnit: WeightUnit;
+  distanceUnit: DistanceUnit;
+  expanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const isCardio = workout.type === "CARDIO";
+  const hasRoute = (workout.route?.length ?? 0) >= 2;
+  const pace = isCardio ? formatPace(workout.distanceKm, workout.durationMinutes, distanceUnit) : null;
+
+  // Group sets by exercise, in first-seen order, for the expanded detail
+  // view — a proper per-set breakdown like Hevy's own workout log, not
+  // just an aggregate count.
+  const exerciseOrder: string[] = [];
+  const setsByExercise = new Map<string, HistorySet[]>();
+  for (const s of workout.sets) {
+    if (!setsByExercise.has(s.exerciseName)) {
+      setsByExercise.set(s.exerciseName, []);
+      exerciseOrder.push(s.exerciseName);
+    }
+    setsByExercise.get(s.exerciseName)!.push(s);
+  }
+  const volume = computeVolume(workout.sets);
+
+  return (
+    <li className="p-4 text-sm">
+      <div className="flex items-start gap-3">
+        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isCardio ? "bg-workout" : "bg-ink"}`} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="font-medium text-ink">{workout.label}</p>
+            <p className="shrink-0 text-xs text-ink-muted">{dayLabel(workout.dateISO)}</p>
+          </div>
+          <p className="mt-0.5 text-ink-muted">
+            {isCardio ? (
+              <>
+                {workout.distanceKm ? `${formatDistance(workout.distanceKm, distanceUnit)} · ` : ""}
+                {formatMinutes(workout.durationMinutes ?? 0)}
+                {pace ? ` · ${pace}` : ""}
+              </>
+            ) : (
+              <>
+                {exerciseOrder.length} exercise{exerciseOrder.length === 1 ? "" : "s"} ·{" "}
+                {workout.sets.filter((s) => !s.isWarmup).length} sets · {formatMinutes(workout.durationMinutes ?? 0)}
+                {volume > 0 ? ` · ${formatWeight(volume, weightUnit)}` : ""}
+              </>
+            )}
+          </p>
+
+          {(!isCardio || hasRoute) && (
+            <button type="button" onClick={onToggleExpand} className="mt-1.5 py-1 text-xs font-medium text-workout hover:underline">
+              {expanded ? "Hide details" : isCardio ? "View route" : "Show sets"}
+            </button>
+          )}
+
+          {expanded && isCardio && workout.route && (
+            <div className="mt-2">
+              <RouteMap points={workout.route} />
+            </div>
+          )}
+
+          {expanded && !isCardio && (
+            <div className="mt-3 space-y-3 border-t border-line pt-3">
+              {exerciseOrder.map((name) => (
+                <div key={name}>
+                  <p className="text-sm font-medium text-ink">{name}</p>
+                  <ul className="mt-1 space-y-1">
+                    {setsByExercise.get(name)!.map((s, i) => (
+                      <li key={s.id} className="flex items-center gap-2 text-xs text-ink-muted">
+                        <span className="w-4 shrink-0">{i + 1}</span>
+                        <span>
+                          {formatWeight(s.weight, weightUnit)} × {s.reps}
+                          {s.isWarmup && " (warm-up)"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <form action={deleteWorkout.bind(null, workout.id)}>
+          <button type="submit" title="Remove this workout" className="rounded-lg p-2.5 -m-2.5 text-ink-muted hover:text-accent">
+            ×
+          </button>
+        </form>
+      </div>
+    </li>
   );
 }

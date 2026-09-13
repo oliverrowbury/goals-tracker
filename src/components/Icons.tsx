@@ -36,16 +36,25 @@ export function ClockIcon({ className }: IconProps) {
   );
 }
 
+// A real cog (ring + teeth), not the circle-with-radiating-lines shape
+// that reads as a sun — that one's reserved for ThemeToggle's light mode.
 export function GearIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M12 3.5v2.1M12 18.4v2.1M20.5 12h-2.1M5.6 12H3.5M17.7 6.3l-1.5 1.5M7.8 16.2l-1.5 1.5M17.7 17.7l-1.5-1.5M7.8 7.8 6.3 6.3"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+      <circle cx="12" cy="12" r="6.7" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.6" />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+        <rect
+          key={angle}
+          x="11"
+          y="0.8"
+          width="2"
+          height="3"
+          rx="0.6"
+          fill="currentColor"
+          transform={`rotate(${angle} 12 12)`}
+        />
+      ))}
     </svg>
   );
 }

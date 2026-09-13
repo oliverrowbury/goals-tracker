@@ -25,34 +25,34 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           <Link href="/" className="text-2xl text-ink transition-transform hover:scale-[1.02]">
             <Wordmark />
           </Link>
-          <nav className="flex items-center gap-3.5 text-sm text-ink-muted sm:gap-5">
-            <Link href="/journal" className="flex items-center gap-1.5 hover:text-accent">
-              <JournalIcon className="h-4 w-4" />
+          <nav className="flex items-center text-sm text-ink-muted">
+            <Link href="/journal" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-accent">
+              <JournalIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Journal</span>
             </Link>
-            <Link href="/goals" className="flex items-center gap-1.5 hover:text-goals">
-              <TargetIcon className="h-4 w-4" />
+            <Link href="/goals" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-goals">
+              <TargetIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Goals</span>
             </Link>
-            <Link href="/study" className="flex items-center gap-1.5 hover:text-study">
-              <ClockIcon className="h-4 w-4" />
+            <Link href="/study" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-study">
+              <ClockIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Study</span>
             </Link>
-            <Link href="/workout" className="flex items-center gap-1.5 hover:text-workout">
-              <DumbbellIcon className="h-4 w-4" />
+            <Link href="/workout" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-workout">
+              <DumbbellIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Workout</span>
             </Link>
-            <Link href="/calendar" className="flex items-center gap-1.5 hover:text-ink">
-              <CalendarIcon className="h-4 w-4" />
+            <Link href="/calendar" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-ink">
+              <CalendarIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Calendar</span>
             </Link>
-            <Link href="/settings" className="flex items-center gap-1.5 hover:text-ink">
-              <GearIcon className="h-4 w-4" />
+            <Link href="/settings" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-ink">
+              <GearIcon className="h-5 w-5" />
               <span className="hidden sm:inline">Settings</span>
             </Link>
-            <form action="/api/logout" method="POST">
-              <button type="submit" title="Sign out" className="flex items-center hover:text-accent">
-                <SignOutIcon className="h-4 w-4" />
+            <form action="/api/logout" method="POST" className="flex">
+              <button type="submit" title="Sign out" className="flex items-center p-2 -m-0.5 hover:text-accent">
+                <SignOutIcon className="h-5 w-5" />
               </button>
             </form>
             <ThemeToggle />

@@ -54,9 +54,9 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="flex h-5 w-5 items-center justify-center text-ink-muted hover:text-accent"
+      className="flex items-center justify-center p-2 -m-0.5 text-ink-muted hover:text-accent"
     >
-      {isDark ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
+      {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
     </button>
   );
 }

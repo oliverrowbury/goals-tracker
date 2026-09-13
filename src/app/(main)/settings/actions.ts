@@ -15,9 +15,7 @@ export async function changePassword(_prev: SettingsActionState, formData: FormD
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   const user = await getCurrentUser();
-  const currentOk = user.passwordHash
-    ? await verifyPassword(currentPassword, user.passwordHash)
-    : currentPassword === process.env.APP_PASSWORD;
+  const currentOk = await verifyPassword(currentPassword, user.passwordHash);
   if (!currentOk) return { error: "Current password is wrong." };
 
   if (newPassword.length < 6) return { error: "New password needs to be at least 6 characters." };

@@ -23,14 +23,14 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Everything except the login page itself, its API route, the legal
-  // pages (readable without an account, like any privacy policy/terms
+  // Everything except the login/signup pages and their API routes, the
+  // legal pages (readable without an account, like any privacy policy/terms
   // page), Next.js internals, the service worker, the cron route (called
   // by Vercel Cron, no session cookie — checks CRON_SECRET itself), and the
   // manifest/icon routes a browser fetches on its own before any cookie
   // exchange happens (Add to Home Screen, tab favicon) — gating those
   // behind login just makes them silently fail instead of 401ing visibly.
   matcher: [
-    "/((?!login|privacy|terms|api/login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon).*)",
+    "/((?!login|signup|privacy|terms|api/login|api/signup|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon).*)",
   ],
 };

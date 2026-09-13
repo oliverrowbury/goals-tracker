@@ -11,14 +11,30 @@ import { DeleteSubjectButton } from "./DeleteSubjectButton";
 import { GearIcon, ClockIcon, DumbbellIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon } from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
 import { computeJournalStreak } from "@/lib/journal";
+import { ADMIN_EMAIL } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
+  const isAdmin = user.email === ADMIN_EMAIL;
   const [subjects, feedback, journalDates, subjectMinutes] = await Promise.all([
     prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    prisma.feedback.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 5 }),
+    // The admin sees feedback from every account — otherwise another
+    // user's feedback would just sit in their own account, invisible to
+    // the one person who could actually act on it.
+    isAdmin
+      ? prisma.feedback.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: { user: { select: { name: true, email: true } } },
+        })
+      : prisma.feedback.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: { user: { select: { name: true, email: true } } },
+        }),
     prisma.journalEntry.findMany({
       where: { userId: user.id, bodyText: { not: "" } },
       select: { date: true },
@@ -227,12 +243,15 @@ export default async function SettingsPage() {
 
           {feedback.length > 0 && (
             <div className="mt-5">
-              <p className="mb-2 text-xs font-medium text-ink-muted">Previously sent</p>
+              <p className="mb-2 text-xs font-medium text-ink-muted">{isAdmin ? "All feedback" : "Previously sent"}</p>
               <ul className="-mx-6 divide-y divide-line border-t border-line">
                 {feedback.map((f) => (
                   <li key={f.id} className="px-6 py-2.5 text-sm">
                     <p className="text-ink">{f.message}</p>
-                    <p className="mt-1 text-xs text-ink-muted">{formatLong(f.createdAt.toISOString().slice(0, 10))}</p>
+                    <p className="mt-1 text-xs text-ink-muted">
+                      {isAdmin && `${f.user.name} (${f.user.email}) · `}
+                      {formatLong(f.createdAt.toISOString().slice(0, 10))}
+                    </p>
                   </li>
                 ))}
               </ul>

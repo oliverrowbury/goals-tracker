@@ -18,15 +18,28 @@ export default async function LoginPage({
         <h1 className="mb-1 text-3xl text-ink">
           <Wordmark />
         </h1>
-        <p className="mb-6 text-sm text-ink-muted">Enter the password to continue.</p>
+        <p className="mb-6 text-sm text-ink-muted">Sign in to continue.</p>
 
         {error && (
           <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-            Wrong password — try again.
+            Wrong email or password — try again.
           </p>
         )}
 
         <input type="hidden" name="from" value={from} />
+        <label className="mb-1 block text-sm font-medium text-ink" htmlFor="email">
+          Email
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          autoFocus
+          required
+          className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
+        />
+
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="password">
           Password
         </label>
@@ -34,7 +47,7 @@ export default async function LoginPage({
           id="password"
           name="password"
           type="password"
-          autoFocus
+          autoComplete="current-password"
           required
           className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
@@ -45,6 +58,13 @@ export default async function LoginPage({
         >
           Sign in
         </button>
+
+        <p className="mt-4 text-center text-sm text-ink-muted">
+          New here?{" "}
+          <Link href="/signup" className="font-medium text-accent hover:underline">
+            Create an account
+          </Link>
+        </p>
       </form>
 
       <p className="fixed inset-x-0 bottom-4 text-center text-xs text-ink-muted">
