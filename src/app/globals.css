@@ -90,6 +90,12 @@ body {
     radial-gradient(ellipse 800px 600px at 50% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent),
     radial-gradient(color-mix(in srgb, var(--ink) 10%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
     var(--paper);
+  /* Pinned to the viewport rather than scrolling with the page — on a tall
+     page Chromium tiles a scrolling background at viewport-height
+     boundaries, and the tile seam shows as a visible horizontal band. A
+     fixed attachment only ever renders one viewport's worth, so there's
+     nothing to seam. */
+  background-attachment: fixed;
   color: var(--ink);
 }
 

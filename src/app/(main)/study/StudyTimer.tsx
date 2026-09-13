@@ -11,7 +11,7 @@ import {
   logManualSession,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { todayISO } from "@/lib/dates";
+import { todayISO, shiftISO } from "@/lib/dates";
 import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
@@ -20,6 +20,7 @@ function ManualEntryForm({ subjects, onDone }: { subjects: Subject[]; onDone: ()
   const [state, formAction, isPending] = useActionState(logManualSession, null);
   const formRef = useRef<HTMLFormElement>(null);
   const wasPending = useRef(false);
+  const [date, setDate] = useState(todayISO());
 
   useEffect(() => {
     if (wasPending.current && !isPending && !state?.error) onDone();
@@ -69,10 +70,27 @@ function ManualEntryForm({ subjects, onDone }: { subjects: Subject[]; onDone: ()
           name="date"
           type="date"
           required
-          defaultValue={todayISO()}
+          value={date}
           max={todayISO()}
+          onChange={(e) => setDate(e.target.value)}
           className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm focus:border-study focus:outline-none"
         />
+      </div>
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => setDate(todayISO())}
+          className={`rounded-lg border px-2.5 py-1.5 text-xs ${date === todayISO() ? "border-study bg-study-soft text-study" : "border-line text-ink-muted hover:border-study"}`}
+        >
+          Today
+        </button>
+        <button
+          type="button"
+          onClick={() => setDate(shiftISO(todayISO(), -1))}
+          className={`rounded-lg border px-2.5 py-1.5 text-xs ${date === shiftISO(todayISO(), -1) ? "border-study bg-study-soft text-study" : "border-line text-ink-muted hover:border-study"}`}
+        >
+          Yesterday
+        </button>
       </div>
       <button
         type="submit"
@@ -280,20 +298,18 @@ export function StudyTimer({
             </button>
           </div>
           {addingSubject && <AddSubjectForm onAdded={() => setAddingSubject(false)} />}
+        </div>
+      )}
 
-          {subjects.length > 0 && (
-            <>
-              <button
-                onClick={() => setAddingManually((v) => !v)}
-                className="mt-3 text-xs text-ink-muted underline decoration-line hover:text-study"
-              >
-                Forgot to time it? Add minutes manually
-              </button>
-              {addingManually && (
-                <ManualEntryForm subjects={subjects} onDone={() => setAddingManually(false)} />
-              )}
-            </>
-          )}
+      {subjects.length > 0 && (
+        <div>
+          <button
+            onClick={() => setAddingManually((v) => !v)}
+            className="rounded-lg border border-dashed border-line px-3.5 py-2 text-sm text-ink-muted hover:border-study hover:text-study"
+          >
+            + Log time from earlier
+          </button>
+          {addingManually && <ManualEntryForm subjects={subjects} onDone={() => setAddingManually(false)} />}
         </div>
       )}
 

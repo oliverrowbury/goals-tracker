@@ -47,10 +47,12 @@ export async function updateName(formData: FormData) {
   revalidatePath("/settings");
 }
 
-export async function updateUnits(formData: FormData) {
+export type UnitsActionState = { weightUnit: "KG" | "LB"; distanceUnit: "KM" | "MI" } | null;
+
+export async function updateUnits(_prev: UnitsActionState, formData: FormData): Promise<UnitsActionState> {
   const weightUnit = String(formData.get("weightUnit") ?? "");
   const distanceUnit = String(formData.get("distanceUnit") ?? "");
-  if (!["KG", "LB"].includes(weightUnit) || !["KM", "MI"].includes(distanceUnit)) return;
+  if (!["KG", "LB"].includes(weightUnit) || !["KM", "MI"].includes(distanceUnit)) return null;
 
   const user = await getCurrentUser();
   await prisma.user.update({
@@ -60,6 +62,8 @@ export async function updateUnits(formData: FormData) {
   revalidatePath("/settings");
   revalidatePath("/workout");
   revalidatePath("/");
+
+  return { weightUnit: weightUnit as "KG" | "LB", distanceUnit: distanceUnit as "KM" | "MI" };
 }
 
 export async function renameSubject(subjectId: string, formData: FormData) {

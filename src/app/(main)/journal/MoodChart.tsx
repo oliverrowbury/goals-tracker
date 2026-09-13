@@ -52,20 +52,10 @@ export function MoodChart({ monthISO, entries }: { monthISO: string; entries: En
     return { dateISO, x: PAD_X + i * step, y: mood != null ? moodY(mood) : null, mood };
   });
 
-  // Split into runs of consecutive logged days — a gap in the data shows as
-  // a real gap in the line, not a straight bridge pretending there's a trend
-  // across days with nothing logged.
-  const segments: { x: number; y: number }[][] = [];
-  let current: { x: number; y: number }[] = [];
-  for (const p of points) {
-    if (p.y != null) {
-      current.push({ x: p.x, y: p.y });
-    } else if (current.length > 0) {
-      segments.push(current);
-      current = [];
-    }
-  }
-  if (current.length > 0) segments.push(current);
+  // Connect every logged day in order, skipping over days with no entry —
+  // a lone entry with days of silence on either side should still link up
+  // to its neighbours instead of floating as an unconnected dot.
+  const logged = points.filter((p): p is { dateISO: string; x: number; y: number; mood: number } => p.y != null);
 
   return (
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
@@ -95,17 +85,18 @@ export function MoodChart({ monthISO, entries }: { monthISO: string; entries: En
               />
             ))}
 
-            {segments.map((seg, i) => {
-              const path = smoothPath(seg);
-              const baseline = CHART_HEIGHT - PAD_BOTTOM;
-              const areaPath = `${path} L ${seg[seg.length - 1].x} ${baseline} L ${seg[0].x} ${baseline} Z`;
-              return (
-                <g key={i}>
-                  <path d={areaPath} fill="var(--calm-soft)" opacity="0.6" />
-                  <path d={path} fill="none" stroke="var(--calm)" strokeWidth="2.5" strokeLinecap="round" />
-                </g>
-              );
-            })}
+            {logged.length > 1 &&
+              (() => {
+                const path = smoothPath(logged);
+                const baseline = CHART_HEIGHT - PAD_BOTTOM;
+                const areaPath = `${path} L ${logged[logged.length - 1].x} ${baseline} L ${logged[0].x} ${baseline} Z`;
+                return (
+                  <g>
+                    <path d={areaPath} fill="var(--calm-soft)" opacity="0.6" />
+                    <path d={path} fill="none" stroke="var(--calm)" strokeWidth="2.5" strokeLinecap="round" />
+                  </g>
+                );
+              })()}
 
             {points.map(
               (p) =>
