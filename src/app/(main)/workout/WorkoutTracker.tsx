@@ -12,9 +12,9 @@ import {
   createExercise,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { formatPace, formatDistance, formatWeight, computeVolume, fromKm, haversineKm } from "@/lib/workout";
+import { formatPace, formatDistance, formatWeight, fromKg, computeVolume, fromKm, haversineKm } from "@/lib/workout";
 import { todayISO, shiftISO } from "@/lib/dates";
-import { TrashIcon } from "@/components/Icons";
+import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
 
@@ -55,6 +55,71 @@ function formatClock(totalSeconds: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+// A rest timer between sets, the way Hevy/Strong do it — one countdown for
+// the whole workout (not per exercise, which would mean juggling several),
+// started fresh each time any set is logged. Purely a client-side nicety:
+// nothing here is persisted, so refreshing the page loses it, same as
+// closing the app mid-rest in any gym app.
+const DEFAULT_REST_SECONDS = 90;
+
+function RestTimer({ endAt, onExtend, onDismiss }: { endAt: number; onExtend: (deltaSeconds: number) => void; onDismiss: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const remaining = Math.max(0, Math.ceil((endAt - now) / 1000));
+  useEffect(() => {
+    if (remaining === 0) {
+      const t = setTimeout(onDismiss, 1200);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remaining === 0]);
+
+  const total = DEFAULT_REST_SECONDS;
+  const pct = Math.min(100, Math.max(0, 100 * (1 - remaining / total)));
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-line bg-paper">
+      <div className="h-1 bg-line">
+        <div className="h-full bg-workout transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
+        <p className="text-sm text-ink-muted">
+          {remaining > 0 ? (
+            <>
+              Resting — <span className="font-mono font-medium tabular-nums text-ink">{formatClock(remaining)}</span>
+            </>
+          ) : (
+            "Rest done — go again"
+          )}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onExtend(-15)}
+            className="rounded-lg border border-line px-2 py-1 text-xs text-ink-muted hover:border-workout hover:text-workout"
+          >
+            −15s
+          </button>
+          <button
+            type="button"
+            onClick={() => onExtend(15)}
+            className="rounded-lg border border-line px-2 py-1 text-xs text-ink-muted hover:border-workout hover:text-workout"
+          >
+            +15s
+          </button>
+          <button type="button" onClick={onDismiss} className="rounded-lg px-2 py-1 text-ink-muted hover:text-accent" title="Skip rest">
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type GpsStatus = "idle" | "acquiring" | "tracking" | "denied" | "unsupported";
 
 // A single bad GPS fix shouldn't wreck the total or make the drawn route
@@ -78,17 +143,19 @@ const MIN_MOVEMENT_M = 5; // below this, treat it as jitter rather than real mov
 // phone in a pocket, not something this can paper over.
 function useGpsTrack(active: boolean): { distanceKm: number; status: GpsStatus; points: RoutePoint[] } {
   const [distanceKm, setDistanceKm] = useState(0);
-  const [status, setStatus] = useState<GpsStatus>("idle");
+  const [status, setStatus] = useState<GpsStatus>(() =>
+    typeof navigator !== "undefined" && "geolocation" in navigator ? "idle" : "unsupported",
+  );
   const [points, setPoints] = useState<RoutePoint[]>([]);
   const lastFix = useRef<{ lat: number; lon: number; t: number } | null>(null);
 
   useEffect(() => {
     if (!active) return;
-    if (!("geolocation" in navigator)) {
-      setStatus("unsupported");
-      return;
-    }
+    if (!("geolocation" in navigator)) return;
 
+    // Resetting tracking state here (not derived from props) is the point
+    // of this effect — it's what "start watching position" means.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDistanceKm(0);
     setPoints([]);
     setStatus("acquiring");
@@ -148,7 +215,11 @@ function EditableLabel({ workoutId, label }: { workoutId: string; label: string 
   const [value, setValue] = useState(label);
   const [, startTransition] = useTransition();
 
-  useEffect(() => setValue(label), [label]);
+  const [prevLabel, setPrevLabel] = useState(label);
+  if (label !== prevLabel) {
+    setPrevLabel(label);
+    setValue(label);
+  }
 
   if (editing) {
     return (
@@ -332,6 +403,60 @@ function ExercisePicker({
   );
 }
 
+// Plain number input flanked by −/+ buttons — quicker to nudge a weight or
+// rep count by feel than re-typing it, and much easier to tap accurately
+// mid-set than a bare <input type=number>'s tiny native spinner.
+function NumberStepper({
+  value,
+  onChange,
+  step,
+  min,
+  className,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  step: number;
+  min: number;
+  className?: string;
+}) {
+  const round = (n: number) => Math.round(n * 100) / 100;
+  const bump = (delta: number) => {
+    const current = parseFloat(value) || 0;
+    onChange(String(Math.max(min, round(current + delta))));
+  };
+  return (
+    <div className={`flex items-stretch overflow-hidden rounded-lg border border-line bg-paper ${className ?? ""}`}>
+      <button
+        type="button"
+        onClick={() => bump(-step)}
+        className="px-2.5 text-base text-ink-muted hover:bg-workout-soft hover:text-workout active:bg-workout-soft"
+        tabIndex={-1}
+      >
+        −
+      </button>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        type="number"
+        inputMode="decimal"
+        min={min}
+        step={step}
+        required
+        className="w-14 min-w-0 bg-transparent px-1 py-2 text-center text-base focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => bump(step)}
+        className="px-2.5 text-base text-ink-muted hover:bg-workout-soft hover:text-workout active:bg-workout-soft"
+        tabIndex={-1}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 function ExerciseSection({
   workoutId,
   exercise,
@@ -339,6 +464,7 @@ function ExerciseSection({
   lastPerformed,
   weightUnit,
   onRemove,
+  onSetLogged,
 }: {
   workoutId: string;
   exercise: Exercise;
@@ -346,7 +472,39 @@ function ExerciseSection({
   lastPerformed?: { dateISO: string; sets: { weight: number; reps: number; isWarmup: boolean }[] };
   weightUnit: WeightUnit;
   onRemove: () => void;
+  onSetLogged: () => void;
 }) {
+  const weightStep = weightUnit === "LB" ? 5 : 2.5;
+
+  // Seed the form from wherever a sensible default comes from: the set just
+  // logged this session, or failing that the last time this exercise was
+  // worked at all — so re-doing familiar work means tapping "Add set"
+  // rather than retyping the same numbers you used last week.
+  const seedSet = sets.length > 0 ? sets[sets.length - 1] : lastPerformed?.sets[lastPerformed.sets.length - 1];
+  const [weight, setWeight] = useState(() => (seedSet ? String(parseFloat(fromKg(seedSet.weight, weightUnit).toFixed(1))) : ""));
+  const [reps, setReps] = useState(() => (seedSet ? String(seedSet.reps) : ""));
+  const [isWarmup, setIsWarmup] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const wasPending = useRef(false);
+
+  useEffect(() => {
+    if (wasPending.current && !isPending) onSetLogged();
+    wasPending.current = isPending;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const fd = new FormData();
+    fd.set("weight", weight);
+    fd.set("reps", reps);
+    if (isWarmup) fd.set("isWarmup", "on");
+    startTransition(() => {
+      addSet(workoutId, exercise.id, fd);
+    });
+    setIsWarmup(false);
+  }
+
   return (
     <div className="rounded-xl border border-line bg-card p-4">
       <div className="flex items-start justify-between gap-2">
@@ -362,21 +520,23 @@ function ExerciseSection({
           )}
         </div>
         {sets.length === 0 && (
-          <button type="button" onClick={onRemove} className="text-xs text-ink-muted hover:text-accent">
+          <button type="button" onClick={onRemove} className="rounded-lg px-1.5 py-1 -m-1 text-xs text-ink-muted hover:text-accent">
             Remove
           </button>
         )}
       </div>
 
       {sets.length > 0 && (
-        <ul className="mt-3 space-y-1">
+        <ul className="mt-3 space-y-1.5">
           {sets.map((set) => (
-            <li key={set.id} className="flex items-center gap-2 text-sm text-ink">
-              <span className="w-5 shrink-0 text-ink-muted">{set.setNumber}</span>
-              <span>
-                {formatWeight(set.weight, weightUnit)} × {set.reps}
-                {set.isWarmup && <span className="ml-1 text-xs text-ink-muted">(warm-up)</span>}
+            <li key={set.id} className="flex items-center gap-2.5 rounded-lg bg-paper px-2.5 py-1.5 text-sm text-ink">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-workout-soft text-xs font-medium text-workout">
+                {set.setNumber}
               </span>
+              <span className="font-medium tabular-nums">
+                {formatWeight(set.weight, weightUnit)} × {set.reps}
+              </span>
+              {set.isWarmup && <span className="text-xs text-ink-muted">warm-up</span>}
               <form action={removeSet.bind(null, set.id)} className="ml-auto">
                 <button type="submit" className="rounded-lg p-2 -m-2 text-ink-muted hover:text-accent">
                   ×
@@ -387,36 +547,28 @@ function ExerciseSection({
         </ul>
       )}
 
-      <form action={addSet.bind(null, workoutId, exercise.id)} className="mt-3 flex flex-wrap items-end gap-2">
+      <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap items-end gap-2.5">
         <div>
           <label className="mb-1 block text-xs text-ink-muted">Weight ({weightUnit === "LB" ? "lb" : "kg"})</label>
-          <input
-            name="weight"
-            type="number"
-            min="0"
-            step="0.5"
-            required
-            className="w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
-          />
+          <NumberStepper value={weight} onChange={setWeight} step={weightStep} min={0} />
         </div>
         <div>
           <label className="mb-1 block text-xs text-ink-muted">Reps</label>
-          <input
-            name="reps"
-            type="number"
-            min="1"
-            step="1"
-            required
-            className="w-16 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
-          />
+          <NumberStepper value={reps} onChange={setReps} step={1} min={1} />
         </div>
-        <label className="mb-1.5 flex items-center gap-1.5 text-xs text-ink-muted">
-          <input type="checkbox" name="isWarmup" className="h-3.5 w-3.5 rounded border-line accent-workout" />
+        <label className="mb-2.5 flex items-center gap-1.5 text-xs text-ink-muted">
+          <input
+            type="checkbox"
+            checked={isWarmup}
+            onChange={(e) => setIsWarmup(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-line accent-workout"
+          />
           Warm-up
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-workout px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          disabled={isPending}
+          className="rounded-lg bg-workout px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
         >
           Add set
         </button>
@@ -451,6 +603,7 @@ export function WorkoutTracker({
   const [startTab, setStartTab] = useState<WorkoutType>("STRENGTH");
   const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
+  const [restEndAt, setRestEndAt] = useState<number | null>(null);
   const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null);
   const {
     distanceKm: gpsDistanceKm,
@@ -462,13 +615,17 @@ export function WorkoutTracker({
   // changes (a new one starts, or the current one finishes/is discarded) —
   // but not on every set added/removed, which leaves this workout's id
   // unchanged and would otherwise wipe out an exercise section that's been
-  // picked but has no sets logged yet.
-  useEffect(() => {
+  // picked but has no sets logged yet. Adjusted during render (rather than
+  // in an effect) since it's really just resetting derived state when one
+  // particular prop changes.
+  const [prevWorkoutId, setPrevWorkoutId] = useState(openWorkout?.id ?? null);
+  if ((openWorkout?.id ?? null) !== prevWorkoutId) {
+    setPrevWorkoutId(openWorkout?.id ?? null);
     setActiveExerciseIds(openWorkout ? Array.from(new Set(openWorkout.sets.map((s) => s.exerciseId))) : []);
     setAddingExercise(false);
     setDistanceOverride(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openWorkout?.id]);
+    setRestEndAt(null);
+  }
 
   const exerciseById = new Map(localExercises.map((e) => [e.id, e]));
 
@@ -476,49 +633,58 @@ export function WorkoutTracker({
     <div className="space-y-8">
       {!openWorkout && (
         <div>
-          <h2 className="mb-2 text-sm font-medium text-ink-muted">Start a workout</h2>
-          <div className="inline-flex rounded-xl border border-line bg-card p-1">
+          <h2 className="mb-3 text-sm font-medium text-ink-muted">Start a workout</h2>
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setStartTab("STRENGTH")}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                startTab === "STRENGTH" ? "bg-workout text-white" : "text-ink-muted hover:text-workout"
+              className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
+                startTab === "STRENGTH"
+                  ? "border-workout bg-workout-soft text-workout"
+                  : "border-line bg-card text-ink-muted hover:border-workout hover:text-workout"
               }`}
             >
-              Strength
+              <DumbbellIcon className="h-6 w-6" />
+              <span className="text-sm font-medium">Strength</span>
             </button>
             <button
               onClick={() => setStartTab("CARDIO")}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
-                startTab === "CARDIO" ? "bg-workout text-white" : "text-ink-muted hover:text-workout"
+              className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
+                startTab === "CARDIO"
+                  ? "border-workout bg-workout-soft text-workout"
+                  : "border-line bg-card text-ink-muted hover:border-workout hover:text-workout"
               }`}
             >
-              Cardio
+              <ActivityIcon className="h-6 w-6" />
+              <span className="text-sm font-medium">Cardio</span>
             </button>
           </div>
 
           {startTab === "STRENGTH" ? (
-            <div className="mt-3">
+            <div className="mt-4">
               <button
                 disabled={isPending}
                 onClick={() => startTransition(() => startWorkout("STRENGTH", "Workout"))}
-                className="rounded-xl bg-workout px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50"
+                className="w-full rounded-xl bg-workout py-3.5 text-base font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
               >
                 Start Workout
               </button>
               <p className="mt-1.5 text-xs text-ink-muted">You can rename it once it’s started.</p>
             </div>
           ) : (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {CARDIO_ACTIVITIES.map((activity) => (
-                <button
-                  key={activity}
-                  disabled={isPending}
-                  onClick={() => startTransition(() => startWorkout("CARDIO", activity))}
-                  className="rounded-lg border border-line bg-card px-3 py-1.5 text-sm text-ink hover:border-workout hover:text-workout disabled:opacity-50"
-                >
-                  {activity}
-                </button>
-              ))}
+            <div className="mt-4">
+              <p className="mb-2 text-xs text-ink-muted">What are you doing?</p>
+              <div className="flex flex-wrap gap-2">
+                {CARDIO_ACTIVITIES.map((activity) => (
+                  <button
+                    key={activity}
+                    disabled={isPending}
+                    onClick={() => startTransition(() => startWorkout("CARDIO", activity))}
+                    className="rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink hover:border-workout hover:text-workout disabled:opacity-50"
+                  >
+                    {activity}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -538,7 +704,7 @@ export function WorkoutTracker({
               <button
                 disabled={isPending}
                 onClick={() => startTransition(() => finishStrengthWorkout(openWorkout.id))}
-                className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                className="rounded-lg bg-ink-solid px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 Finish
               </button>
@@ -555,6 +721,13 @@ export function WorkoutTracker({
                 Started by accident? Discard it
               </button>
             </div>
+            {restEndAt && (
+              <RestTimer
+                endAt={restEndAt}
+                onExtend={(delta) => setRestEndAt((t) => (t ? t + delta * 1000 : t))}
+                onDismiss={() => setRestEndAt(null)}
+              />
+            )}
           </div>
 
           {activeExerciseIds.map((exerciseId) => {
@@ -569,6 +742,7 @@ export function WorkoutTracker({
                 lastPerformed={lastPerformed[exerciseId]}
                 weightUnit={weightUnit}
                 onRemove={() => setActiveExerciseIds((ids) => ids.filter((id) => id !== exerciseId))}
+                onSetLogged={() => setRestEndAt(Date.now() + DEFAULT_REST_SECONDS * 1000)}
               />
             );
           })}
@@ -639,7 +813,7 @@ export function WorkoutTracker({
               placeholder={`Distance (${distanceUnit === "MI" ? "mi" : "km"})`}
               className="w-32 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-workout focus:outline-none"
             />
-            <button type="submit" className="rounded-lg bg-ink px-5 py-2 text-sm font-medium text-white hover:opacity-90">
+            <button type="submit" className="rounded-lg bg-ink-solid px-5 py-2 text-sm font-medium text-white hover:opacity-90">
               Finish
             </button>
           </form>
@@ -739,7 +913,13 @@ function WorkoutLogCard({
   return (
     <li className="p-4 text-sm">
       <div className="flex items-start gap-3">
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isCardio ? "bg-workout" : "bg-ink"}`} />
+        <span
+          className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+            isCardio ? "bg-workout-soft text-workout" : "bg-line text-ink"
+          }`}
+        >
+          {isCardio ? <ActivityIcon className="h-3.5 w-3.5" /> : <DumbbellIcon className="h-3.5 w-3.5" />}
+        </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <p className="font-medium text-ink">{workout.label}</p>
@@ -762,8 +942,13 @@ function WorkoutLogCard({
           </p>
 
           {(!isCardio || hasRoute) && (
-            <button type="button" onClick={onToggleExpand} className="mt-1.5 py-1 text-xs font-medium text-workout hover:underline">
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="mt-1.5 flex items-center gap-1 py-1 text-xs font-medium text-workout hover:underline"
+            >
               {expanded ? "Hide details" : isCardio ? "View route" : "Show sets"}
+              <ChevronDownIcon className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
             </button>
           )}
 

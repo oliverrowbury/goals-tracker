@@ -30,6 +30,12 @@
   --calm: #8570b3;
   --calm-strong: #6c579a;
   --calm-soft: #ece7f5;
+
+  /* A "strong neutral" button background (Finish/Done actions) that stays
+     dark in both themes — unlike --ink, which deliberately flips light/dark
+     since it's body text color first and would otherwise put white text on
+     a near-white button in dark mode. */
+  --ink-solid: #2b2420;
 }
 
 .dark {
@@ -52,6 +58,8 @@
   --calm: #ab98d6;
   --calm-strong: #beafdf;
   --calm-soft: #2c2438;
+
+  --ink-solid: #3c342b;
 }
 
 @theme inline {
@@ -72,6 +80,7 @@
   --color-calm: var(--calm);
   --color-calm-strong: var(--calm-strong);
   --color-calm-soft: var(--calm-soft);
+  --color-ink-solid: var(--ink-solid);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-fraunces);

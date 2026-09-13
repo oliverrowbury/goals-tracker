@@ -253,7 +253,7 @@ export function StudyTimer({
             <button
               disabled={isPending}
               onClick={() => startTransition(() => finishStudySession(openSession.id))}
-              className="rounded-lg bg-ink px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="rounded-lg bg-ink-solid px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               Finish
             </button>
