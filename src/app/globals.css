@@ -21,6 +21,8 @@
   --goals-soft: #e4edf4;
   --study: #5f9e6f;
   --study-soft: #e6f0e8;
+  --workout: #b8474a;
+  --workout-soft: #f4e2e1;
 
   /* Wellness (mood + breathing) gets its own hue too — a fourth pillar
      alongside Journal/Goals/Study rather than borrowing the accent color. */
@@ -43,6 +45,8 @@
   --goals-soft: #22303e;
   --study: #86c896;
   --study-soft: #21302a;
+  --workout: #e08a8a;
+  --workout-soft: #3a2321;
 
   --calm: #ab98d6;
   --calm-strong: #beafdf;
@@ -62,6 +66,8 @@
   --color-goals-soft: var(--goals-soft);
   --color-study: var(--study);
   --color-study-soft: var(--study-soft);
+  --color-workout: var(--workout);
+  --color-workout-soft: var(--workout-soft);
   --color-calm: var(--calm);
   --color-calm-strong: var(--calm-strong);
   --color-calm-soft: var(--calm-soft);

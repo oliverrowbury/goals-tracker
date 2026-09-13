@@ -13,3 +13,11 @@ export type WeightUnit = (typeof WEIGHT_UNITS)[number];
 
 export const REMINDER_CHANNELS = ["PUSH", "EMAIL"] as const;
 export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
+
+export const WORKOUT_TYPES = ["STRENGTH", "CARDIO"] as const;
+export type WorkoutType = (typeof WORKOUT_TYPES)[number];
+
+export const WORKOUT_METRICS = ["SESSIONS", "MINUTES"] as const;
+export type WorkoutMetric = (typeof WORKOUT_METRICS)[number];
+
+export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"] as const;

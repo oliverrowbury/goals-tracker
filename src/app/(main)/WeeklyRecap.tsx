@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO, isoToDate, formatWeekRange, formatLong } from "@/lib/dates";
 import { weekRangeContaining, isGoalDueOn } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
+import { formatDistance, formatPace } from "@/lib/workout";
 import { ChartIcon } from "@/components/Icons";
 
 function snippet(text: string, max = 90): string {
@@ -21,7 +22,7 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
   const rangeStart = isoToDate(startISO);
   const rangeEnd = new Date(`${endISO}T23:59:59.999Z`);
 
-  const [entries, goals, sessions, subjects] = await Promise.all([
+  const [entries, goals, sessions, subjects, workouts] = await Promise.all([
     prisma.journalEntry.findMany({
       where: { userId: user.id, date: { gte: rangeStart, lte: rangeEnd } },
       orderBy: { date: "asc" },
@@ -31,6 +32,10 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
       where: { userId: user.id, endedAt: { not: null }, startedAt: { gte: rangeStart, lte: rangeEnd } },
     }),
     prisma.subject.findMany({ where: { userId: user.id } }),
+    prisma.workout.findMany({
+      where: { userId: user.id, endedAt: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
+      orderBy: { date: "asc" },
+    }),
   ]);
 
   const subjectById = new Map(subjects.map((s) => [s.id, s]));
@@ -40,14 +45,22 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
   }
   const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
 
+  const workoutSessionCount = workouts.length;
+  const workoutMinutes = workouts.reduce((sum, w) => sum + (w.durationMinutes ?? 0), 0);
+  const cardioKm = workouts.reduce((sum, w) => sum + (w.distanceKm ?? 0), 0);
+
   const goalSummaries = goals
     .map((goal) => {
       if (goal.frequencyType === "WEEKLY_TARGET") {
         const total = goal.subjectId
           ? (minutesBySubject.get(goal.subjectId) ?? 0)
-          : goal.logs
-              .filter((l) => days.includes(l.date.toISOString().slice(0, 10)))
-              .reduce((sum, l) => sum + (l.value ?? 0), 0);
+          : goal.workoutMetric === "SESSIONS"
+            ? workoutSessionCount
+            : goal.workoutMetric === "MINUTES"
+              ? workoutMinutes
+              : goal.logs
+                  .filter((l) => days.includes(l.date.toISOString().slice(0, 10)))
+                  .reduce((sum, l) => sum + (l.value ?? 0), 0);
         return { title: goal.title, hit: total >= (goal.targetValue ?? 0), detail: `${total}/${goal.targetValue} ${goal.unit ?? ""}` };
       }
       const dueDays = days.filter((d) => isGoalDueOn(goal, d) && d <= today);
@@ -133,6 +146,37 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
                   ))}
               </ul>
               <p className="mt-3 text-xs text-ink-muted">{formatMinutes(totalMinutes)} total this week</p>
+            </>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
+            <span className="h-2 w-2 rounded-full bg-workout" /> Workouts
+          </h3>
+          {workouts.length === 0 ? (
+            <p className="text-sm text-ink-muted">No workouts logged this week.</p>
+          ) : (
+            <>
+              <ul className="-mx-5 divide-y divide-line">
+                {workouts.map((w) => {
+                  const pace = formatPace(w.distanceKm, w.durationMinutes);
+                  return (
+                    <li key={w.id} className="flex items-center justify-between px-5 py-2 text-sm">
+                      <span className="text-ink">{w.label}</span>
+                      <span className="text-ink-muted">
+                        {w.type === "CARDIO" && w.distanceKm ? `${formatDistance(w.distanceKm)} · ` : ""}
+                        {formatMinutes(w.durationMinutes ?? 0)}
+                        {pace ? ` · ${pace}` : ""}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-xs text-ink-muted">
+                {workoutSessionCount} session{workoutSessionCount === 1 ? "" : "s"} · {formatMinutes(workoutMinutes)} total
+                {cardioKm > 0 && ` · ${formatDistance(cardioKm)} covered`}
+              </p>
             </>
           )}
         </section>

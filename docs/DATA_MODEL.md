@@ -35,6 +35,8 @@ combining this row with any `StudySession` / `Workout` rows on the same date.
 | target_days | day[] | used when `specific_days`, e.g. [Mon, Wed, Fri] |
 | target_value | number | e.g. `10` for "10 minutes"; null for simple yes/no goals |
 | unit | text | e.g. "minutes", "sessions"; null for yes/no goals |
+| subject_id | uuid, nullable | when set, weekly total auto-tracks from `StudySession` instead of manual `GoalLog.value` entry |
+| workout_metric | enum, nullable | `sessions` \| `minutes` — when set, weekly total auto-tracks from `Workout` instead; mutually exclusive with `subject_id` |
 | active | boolean | |
 | start_date / end_date | date | end_date nullable (ongoing) |
 | created_at | timestamp | |
@@ -91,10 +93,16 @@ Pre-loaded library plus user-added custom exercises.
 |---|---|---|
 | id | uuid | |
 | user_id | uuid | |
-| date | date | |
-| label | text | e.g. "Push day" |
-| started_at / ended_at | timestamp | nullable until finished |
+| type | enum | `strength` \| `cardio` |
+| date | date | the calendar day this counts toward |
+| label | text | e.g. "Push day" (strength) or "Run" (cardio) |
+| started_at / ended_at | timestamp | nullable until finished — live timer state |
+| duration_minutes | integer | derived from started_at/ended_at, stored for easy querying (same convention as `StudySession`) |
+| distance_km | number, nullable | cardio only, manually entered — no GPS tracking |
 | note | text | optional |
+
+For `type = strength`, has `WorkoutSet` rows. For `type = cardio`, `distance_km` +
+`duration_minutes` are the whole record — no sets.
 
 ## WorkoutSet
 | field | type | notes |
@@ -111,13 +119,18 @@ Pre-loaded library plus user-added custom exercises.
 Progression view = all `WorkoutSet` rows for one exercise, ordered by the parent
 workout's date, tracking max weight (or estimated 1RM) over time.
 
-## Reminder (Phase 2)
+## Reminder
+Per-goal, not global — each goal picks its own days. `time_of_day` is stored
+but not actually schedulable: the cron that sends these only runs once a day
+(Vercel Hobby plan), so every reminder fires on the same daily check regardless
+of what's in this column.
+
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
 | goal_id | uuid | |
 | days_of_week | day[] | |
-| time_of_day | time | |
+| time_of_day | time | stored, not actually used for scheduling — see above |
 | channel | enum | `push` \| `email` |
 | enabled | boolean | |
 

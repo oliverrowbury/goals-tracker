@@ -24,7 +24,15 @@ function readGoalFields(formData: FormData) {
   const targetValueRaw = String(formData.get("targetValue") ?? "").trim();
   const unit = String(formData.get("unit") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  const subjectId = String(formData.get("subjectId") ?? "").trim();
+
+  // One select covers both auto-track sources ("subject:<id>" or
+  // "workout:SESSIONS"/"workout:MINUTES") — a goal only ever links to one.
+  const autoTrack = String(formData.get("autoTrack") ?? "").trim();
+  const subjectId = autoTrack.startsWith("subject:") ? autoTrack.slice("subject:".length) : null;
+  const workoutMetric =
+    autoTrack === "workout:SESSIONS" || autoTrack === "workout:MINUTES"
+      ? (autoTrack.slice("workout:".length) as "SESSIONS" | "MINUTES")
+      : null;
 
   if (frequencyType === "WEEKLY_TARGET" && Number(targetValueRaw) <= 0) {
     throw new Error("Target amount needs to be more than 0");
@@ -37,7 +45,8 @@ function readGoalFields(formData: FormData) {
     targetDays: frequencyType === "SPECIFIC_DAYS" ? targetDays : [],
     targetValue: targetValueRaw ? Number(targetValueRaw) : null,
     unit: frequencyType === "WEEKLY_TARGET" ? unit || null : null,
-    subjectId: frequencyType === "WEEKLY_TARGET" && subjectId ? subjectId : null,
+    subjectId: frequencyType === "WEEKLY_TARGET" ? subjectId : null,
+    workoutMetric: frequencyType === "WEEKLY_TARGET" ? workoutMetric : null,
   };
 }
 

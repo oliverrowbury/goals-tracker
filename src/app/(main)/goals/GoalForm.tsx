@@ -11,6 +11,7 @@ type GoalFormValues = {
   targetValue: string;
   unit: string;
   subjectId: string;
+  workoutMetric: string;
   reminderEnabled: boolean;
   reminderDays: string[];
 };
@@ -23,6 +24,7 @@ const DEFAULTS: GoalFormValues = {
   targetValue: "",
   unit: "",
   subjectId: "",
+  workoutMetric: "",
   reminderEnabled: false,
   reminderDays: [],
 };
@@ -142,21 +144,28 @@ export function GoalForm({
         </div>
       )}
 
-      {frequencyType === "WEEKLY_TARGET" && subjects.length > 0 && (
+      {frequencyType === "WEEKLY_TARGET" && (
         <div>
-          <label className={labelClass} htmlFor="subjectId">
-            Auto-track from a study subject <span className="text-ink-muted">(optional)</span>
+          <label className={labelClass} htmlFor="autoTrack">
+            Auto-track from <span className="text-ink-muted">(optional)</span>
           </label>
-          <select id="subjectId" name="subjectId" defaultValue={values.subjectId} className={inputClass}>
-            <option value="">No — I'll log this myself</option>
+          <select
+            id="autoTrack"
+            name="autoTrack"
+            defaultValue={values.subjectId ? `subject:${values.subjectId}` : values.workoutMetric ? `workout:${values.workoutMetric}` : ""}
+            className={inputClass}
+          >
+            <option value="">No — I’ll log this myself</option>
             {subjects.map((subject) => (
-              <option key={subject.id} value={subject.id}>
-                {subject.name}
+              <option key={subject.id} value={`subject:${subject.id}`}>
+                {subject.name} (Study)
               </option>
             ))}
+            <option value="workout:SESSIONS">Workouts logged this week (Workout)</option>
+            <option value="workout:MINUTES">Workout minutes this week (Workout)</option>
           </select>
           <p className="mt-1 text-xs text-ink-muted">
-            When set, this goal's weekly total comes straight from time logged on the Study page instead of manual entry.
+            When set, this goal’s weekly total is computed automatically instead of needing manual entry.
           </p>
         </div>
       )}

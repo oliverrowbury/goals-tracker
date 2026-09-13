@@ -47,6 +47,16 @@ enum ReminderChannel {
   EMAIL
 }
 
+enum WorkoutType {
+  STRENGTH
+  CARDIO
+}
+
+enum WorkoutMetric {
+  SESSIONS
+  MINUTES
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -152,6 +162,12 @@ model Goal {
   subjectId String?
   subject   Subject? @relation(fields: [subjectId], references: [id])
 
+  // Same idea as subjectId, but for the Workout tracker — mutually
+  // exclusive with subjectId in practice (the form only ever sets one).
+  // SESSIONS counts finished Workout rows in the week; MINUTES sums their
+  // durationMinutes, mirroring the Study auto-track above.
+  workoutMetric WorkoutMetric?
+
   active    Boolean   @default(true)
   startDate DateTime  @default(now())
   endDate   DateTime?
@@ -224,11 +240,18 @@ model Workout {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  date      DateTime
-  label     String
-  startedAt DateTime?
-  endedAt   DateTime?
-  note      String?
+  type WorkoutType @default(STRENGTH)
+
+  date            DateTime
+  label           String
+  startedAt       DateTime?
+  endedAt         DateTime?
+  durationMinutes Int?
+  // Cardio only — distance covered, manually entered (no GPS tracking).
+  // Pace is derived at render time from this and durationMinutes rather
+  // than stored.
+  distanceKm Float?
+  note       String?
 
   sets WorkoutSet[]
 }

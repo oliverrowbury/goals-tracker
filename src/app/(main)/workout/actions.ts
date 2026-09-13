@@ -1,0 +1,116 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user";
+import { minutesBetween } from "@/lib/study";
+import type { WorkoutType } from "@/lib/constants";
+
+function revalidateWorkoutViews() {
+  revalidatePath("/workout");
+  revalidatePath("/journal");
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+// Same "only one timer at a time" rule as Study — closing out anything left
+// open (e.g. a tab closed mid-workout) before starting a new one.
+async function closeStrayOpenWorkouts(userId: string) {
+  const open = await prisma.workout.findMany({ where: { userId, endedAt: null } });
+  for (const workout of open) {
+    const endedAt = new Date();
+    await prisma.workout.update({
+      where: { id: workout.id },
+      data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },
+    });
+  }
+}
+
+export async function startWorkout(type: WorkoutType, label: string) {
+  const user = await getCurrentUser();
+  await closeStrayOpenWorkouts(user.id);
+
+  await prisma.workout.create({
+    data: { userId: user.id, type, label: label.trim() || "Workout", date: new Date(), startedAt: new Date() },
+  });
+
+  revalidateWorkoutViews();
+}
+
+export async function addSet(workoutId: string, exerciseId: string, formData: FormData) {
+  const weight = Number(formData.get("weight"));
+  const reps = Number(formData.get("reps"));
+  const isWarmup = formData.get("isWarmup") === "on";
+  if (!Number.isFinite(weight) || weight < 0 || !Number.isFinite(reps) || reps <= 0) return;
+
+  const count = await prisma.workoutSet.count({ where: { workoutId, exerciseId } });
+  await prisma.workoutSet.create({
+    data: { workoutId, exerciseId, setNumber: count + 1, weight, reps, isWarmup },
+  });
+  revalidateWorkoutViews();
+}
+
+export async function removeSet(setId: string) {
+  await prisma.workoutSet.delete({ where: { id: setId } });
+  revalidateWorkoutViews();
+}
+
+export async function finishStrengthWorkout(workoutId: string) {
+  const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
+  const endedAt = new Date();
+
+  await prisma.workout.update({
+    where: { id: workoutId },
+    data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },
+  });
+
+  revalidateWorkoutViews();
+}
+
+export async function finishCardioWorkout(workoutId: string, formData: FormData) {
+  const distanceKm = Number(formData.get("distanceKm"));
+  const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
+  const endedAt = new Date();
+
+  await prisma.workout.update({
+    where: { id: workoutId },
+    data: {
+      endedAt,
+      durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt),
+      distanceKm: Number.isFinite(distanceKm) && distanceKm > 0 ? distanceKm : null,
+    },
+  });
+
+  revalidateWorkoutViews();
+}
+
+// Used both for "started by accident, discard it" on an open session and
+// for deleting a finished workout from history — same operation either way.
+export async function deleteWorkout(workoutId: string) {
+  await prisma.$transaction([
+    prisma.workoutSet.deleteMany({ where: { workoutId } }),
+    prisma.workout.delete({ where: { id: workoutId } }),
+  ]);
+  revalidateWorkoutViews();
+}
+
+export type CreateExerciseState =
+  | { error: string; exercise?: undefined }
+  | { error?: undefined; exercise: { id: string; name: string; category: string } }
+  | null;
+
+export async function createExercise(_prev: CreateExerciseState, formData: FormData): Promise<CreateExerciseState> {
+  const user = await getCurrentUser();
+  const name = String(formData.get("name") ?? "").trim();
+  const category = String(formData.get("category") ?? "").trim() || "Other";
+  if (!name) return { error: "Exercise name is required" };
+
+  const existing = await prisma.exercise.findFirst({
+    where: { name: { equals: name, mode: "insensitive" }, OR: [{ userId: null }, { userId: user.id }] },
+  });
+  if (existing) return { error: `"${existing.name}" already exists — pick it from the list instead` };
+
+  const created = await prisma.exercise.create({ data: { userId: user.id, name, category, isCustom: true } });
+  revalidatePath("/workout");
+  return { exercise: { id: created.id, name: created.name, category: created.category } };
+}

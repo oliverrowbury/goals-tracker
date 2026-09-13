@@ -9,12 +9,14 @@ import { getCurrentUser } from "@/lib/user";
 export async function GET() {
   const user = await getCurrentUser();
 
-  const [journalEntries, goals, goalLogs, subjects, studySessions, feedback] = await Promise.all([
+  const [journalEntries, goals, goalLogs, subjects, studySessions, workouts, workoutSets, feedback] = await Promise.all([
     prisma.journalEntry.findMany({ where: { userId: user.id }, orderBy: { date: "asc" } }),
     prisma.goal.findMany({ where: { userId: user.id } }),
     prisma.goalLog.findMany({ where: { goal: { userId: user.id } } }),
     prisma.subject.findMany({ where: { userId: user.id } }),
     prisma.studySession.findMany({ where: { userId: user.id } }),
+    prisma.workout.findMany({ where: { userId: user.id } }),
+    prisma.workoutSet.findMany({ where: { workout: { userId: user.id } } }),
     prisma.feedback.findMany({ where: { userId: user.id } }),
   ]);
 
@@ -26,6 +28,8 @@ export async function GET() {
     goalLogs,
     subjects,
     studySessions,
+    workouts,
+    workoutSets,
     feedback,
   };
 
