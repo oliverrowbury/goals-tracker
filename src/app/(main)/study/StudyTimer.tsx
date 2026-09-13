@@ -8,9 +8,83 @@ import {
   finishStudySession,
   deleteStudySession,
   createSubject,
+  logManualSession,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
+import { todayISO } from "@/lib/dates";
 import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
+
+type Subject = { id: string; name: string; color: string };
+
+function ManualEntryForm({ subjects, onDone }: { subjects: Subject[]; onDone: () => void }) {
+  const [state, formAction, isPending] = useActionState(logManualSession, null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const wasPending = useRef(false);
+
+  useEffect(() => {
+    if (wasPending.current && !isPending && !state?.error) onDone();
+    wasPending.current = isPending;
+  }, [isPending, state, onDone]);
+
+  return (
+    <form ref={formRef} action={formAction} className="mt-3 flex flex-wrap items-end gap-2">
+      <div>
+        <label className="mb-1 block text-xs text-ink-muted" htmlFor="manual-subject">
+          Subject
+        </label>
+        <select
+          id="manual-subject"
+          name="subjectId"
+          required
+          className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm focus:border-study focus:outline-none"
+        >
+          {subjects.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-ink-muted" htmlFor="manual-minutes">
+          Minutes
+        </label>
+        <input
+          id="manual-minutes"
+          name="minutes"
+          type="number"
+          min="1"
+          step="1"
+          required
+          placeholder="30"
+          className="w-20 rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm focus:border-study focus:outline-none"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-ink-muted" htmlFor="manual-date">
+          Date
+        </label>
+        <input
+          id="manual-date"
+          name="date"
+          type="date"
+          required
+          defaultValue={todayISO()}
+          max={todayISO()}
+          className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm focus:border-study focus:outline-none"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={isPending}
+        className="rounded-lg bg-study px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+      >
+        {isPending ? "Adding…" : "Add"}
+      </button>
+      {state?.error && <p className="w-full text-xs text-accent">{state.error}</p>}
+    </form>
+  );
+}
 
 function AddSubjectForm({ onAdded }: { onAdded: () => void }) {
   const [state, formAction, isPending] = useActionState(createSubject, null);
@@ -45,7 +119,6 @@ function AddSubjectForm({ onAdded }: { onAdded: () => void }) {
   );
 }
 
-type Subject = { id: string; name: string; color: string };
 type OpenSession = { id: string; subjectId: string; startedAt: string; pausedAt: string | null } | null;
 
 // Tab hidden this long while a session is running auto-pauses it. This is
@@ -88,6 +161,7 @@ export function StudyTimer({
 }) {
   const [isPending, startTransition] = useTransition();
   const [addingSubject, setAddingSubject] = useState(false);
+  const [addingManually, setAddingManually] = useState(false);
   const [autoPaused, setAutoPaused] = useState(false);
   const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, openSession?.pausedAt ?? null);
 
@@ -206,6 +280,20 @@ export function StudyTimer({
             </button>
           </div>
           {addingSubject && <AddSubjectForm onAdded={() => setAddingSubject(false)} />}
+
+          {subjects.length > 0 && (
+            <>
+              <button
+                onClick={() => setAddingManually((v) => !v)}
+                className="mt-3 text-xs text-ink-muted underline decoration-line hover:text-study"
+              >
+                Forgot to time it? Add minutes manually
+              </button>
+              {addingManually && (
+                <ManualEntryForm subjects={subjects} onDone={() => setAddingManually(false)} />
+              )}
+            </>
+          )}
         </div>
       )}
 

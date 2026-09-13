@@ -3,6 +3,41 @@ import { moodFace } from "@/lib/mood";
 
 type Entry = { dateISO: string; mood: number | null };
 
+const WIDTH = 700;
+const CHART_HEIGHT = 170;
+const LABEL_HEIGHT = 20;
+const HEIGHT = CHART_HEIGHT + LABEL_HEIGHT;
+const PAD_X = 14;
+const PAD_TOP = 14;
+const PAD_BOTTOM = 8;
+
+function moodY(mood: number): number {
+  const usable = CHART_HEIGHT - PAD_TOP - PAD_BOTTOM;
+  return PAD_TOP + usable * (1 - (mood - 1) / 4);
+}
+
+// Catmull-Rom through the given points, converted to cubic bezier segments —
+// gives a smoothly interlinking curve instead of straight jagged segments,
+// without needing a charting library for one small line.
+function smoothPath(points: { x: number; y: number }[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
 export function MoodChart({ monthISO, entries }: { monthISO: string; entries: Entry[] }) {
   const moodByDate = new Map(entries.filter((e) => e.mood != null).map((e) => [e.dateISO, e.mood as number]));
   const daysInMonth = monthGridDays(monthISO).filter((d) => monthISOOf(d) === monthISO);
@@ -10,6 +45,27 @@ export function MoodChart({ monthISO, entries }: { monthISO: string; entries: En
 
   const values = [...moodByDate.values()];
   const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+
+  const step = daysInMonth.length > 1 ? (WIDTH - PAD_X * 2) / (daysInMonth.length - 1) : 0;
+  const points = daysInMonth.map((dateISO, i) => {
+    const mood = moodByDate.get(dateISO);
+    return { dateISO, x: PAD_X + i * step, y: mood != null ? moodY(mood) : null, mood };
+  });
+
+  // Split into runs of consecutive logged days — a gap in the data shows as
+  // a real gap in the line, not a straight bridge pretending there's a trend
+  // across days with nothing logged.
+  const segments: { x: number; y: number }[][] = [];
+  let current: { x: number; y: number }[] = [];
+  for (const p of points) {
+    if (p.y != null) {
+      current.push({ x: p.x, y: p.y });
+    } else if (current.length > 0) {
+      segments.push(current);
+      current = [];
+    }
+  }
+  if (current.length > 0) segments.push(current);
 
   return (
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
@@ -24,20 +80,71 @@ export function MoodChart({ monthISO, entries }: { monthISO: string; entries: En
       {values.length === 0 ? (
         <p className="text-sm text-ink-muted">No moods logged yet this month.</p>
       ) : (
-        <div className="flex items-end gap-[3px]" style={{ height: 64 }}>
-          {daysInMonth.map((dateISO) => {
-            const mood = moodByDate.get(dateISO);
-            const isFuture = dateISO > today;
-            return (
-              <div
-                key={dateISO}
-                title={`${dateISO}${mood ? ` — ${moodFace(mood)}` : ""}`}
-                className={`flex-1 rounded-sm ${mood ? "bg-calm" : isFuture ? "" : "bg-line"}`}
-                style={{ height: mood ? `${(mood / 5) * 100}%` : isFuture ? 0 : 4, opacity: mood ? 0.35 + mood * 0.13 : 1 }}
+        <>
+          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="block w-full h-auto">
+            {/* Faint reference lines for the 5 mood levels */}
+            {[1, 2, 3, 4, 5].map((m) => (
+              <line
+                key={m}
+                x1={PAD_X}
+                x2={WIDTH - PAD_X}
+                y1={moodY(m)}
+                y2={moodY(m)}
+                stroke="var(--line)"
+                strokeWidth="1"
               />
-            );
-          })}
-        </div>
+            ))}
+
+            {segments.map((seg, i) => {
+              const path = smoothPath(seg);
+              const baseline = CHART_HEIGHT - PAD_BOTTOM;
+              const areaPath = `${path} L ${seg[seg.length - 1].x} ${baseline} L ${seg[0].x} ${baseline} Z`;
+              return (
+                <g key={i}>
+                  <path d={areaPath} fill="var(--calm-soft)" opacity="0.6" />
+                  <path d={path} fill="none" stroke="var(--calm)" strokeWidth="2.5" strokeLinecap="round" />
+                </g>
+              );
+            })}
+
+            {points.map(
+              (p) =>
+                p.y != null && (
+                  <circle
+                    key={p.dateISO}
+                    cx={p.x}
+                    cy={p.y}
+                    r={p.dateISO === today ? 5 : 3.5}
+                    fill="var(--calm)"
+                    stroke="var(--card)"
+                    strokeWidth="1.5"
+                  >
+                    <title>
+                      {p.dateISO} — {moodFace(p.mood!)}
+                    </title>
+                  </circle>
+                ),
+            )}
+
+            {points.map((p, i) => {
+              // Every day at the start, otherwise thin out so labels don't
+              // collide on months with 30+ days.
+              if (i !== 0 && i % 5 !== 0) return null;
+              return (
+                <text
+                  key={p.dateISO}
+                  x={p.x}
+                  y={CHART_HEIGHT + LABEL_HEIGHT - 4}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fill="var(--ink-muted)"
+                >
+                  {Number(p.dateISO.slice(8, 10))}
+                </text>
+              );
+            })}
+          </svg>
+        </>
       )}
     </div>
   );

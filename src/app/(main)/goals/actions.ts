@@ -41,13 +41,42 @@ function readGoalFields(formData: FormData) {
   };
 }
 
+// Vercel Hobby cron only runs once a day (see vercel.json), so a per-goal
+// time-of-day isn't actually deliverable — only which days a goal reminds
+// on is real. timeOfDay is required by the schema but unused for scheduling;
+// it's set to match the cron's one daily run purely so the column isn't null.
+const REMINDER_TIME_PLACEHOLDER = "18:00";
+
+function readReminderFields(formData: FormData) {
+  const enabled = formData.get("reminderEnabled") === "on";
+  const daysOfWeek = formData
+    .getAll("reminderDays")
+    .map(String)
+    .filter((d): d is Weekday => (WEEKDAYS as readonly string[]).includes(d));
+  return { enabled: enabled && daysOfWeek.length > 0, daysOfWeek };
+}
+
+async function saveGoalReminder(goalId: string, formData: FormData) {
+  const { enabled, daysOfWeek } = readReminderFields(formData);
+  const existing = await prisma.reminder.findFirst({ where: { goalId } });
+
+  if (existing) {
+    await prisma.reminder.update({ where: { id: existing.id }, data: { enabled, daysOfWeek } });
+  } else if (enabled) {
+    await prisma.reminder.create({
+      data: { goalId, enabled, daysOfWeek, channel: "PUSH", timeOfDay: REMINDER_TIME_PLACEHOLDER },
+    });
+  }
+}
+
 export async function createGoal(formData: FormData) {
   const user = await getCurrentUser();
   const fields = readGoalFields(formData);
 
-  await prisma.goal.create({
+  const goal = await prisma.goal.create({
     data: { ...fields, userId: user.id, startDate: new Date() },
   });
+  await saveGoalReminder(goal.id, formData);
 
   revalidatePath("/goals");
   revalidatePath("/journal");
@@ -58,6 +87,7 @@ export async function updateGoal(goalId: string, formData: FormData) {
   const fields = readGoalFields(formData);
 
   await prisma.goal.update({ where: { id: goalId }, data: fields });
+  await saveGoalReminder(goalId, formData);
 
   revalidatePath("/goals");
   revalidatePath("/journal");

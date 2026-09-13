@@ -7,6 +7,7 @@ import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
+import { DeleteSubjectButton } from "./DeleteSubjectButton";
 import { GearIcon, ClockIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon } from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
 import { computeJournalStreak } from "@/lib/journal";
@@ -15,16 +16,22 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const user = await getCurrentUser();
-  const [subjects, feedback, journalDates] = await Promise.all([
+  const [subjects, feedback, journalDates, subjectMinutes] = await Promise.all([
     prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
     prisma.feedback.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.journalEntry.findMany({
       where: { userId: user.id, bodyText: { not: "" } },
       select: { date: true },
     }),
+    prisma.studySession.groupBy({
+      by: ["subjectId"],
+      where: { userId: user.id, durationMinutes: { not: null } },
+      _sum: { durationMinutes: true },
+    }),
   ]);
   const active = subjects.filter((s) => s.active);
   const archived = subjects.filter((s) => !s.active);
+  const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
   const journaledDateSet = new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10)));
   const streak = computeJournalStreak(journaledDateSet, todayISO());
@@ -90,8 +97,8 @@ export default async function SettingsPage() {
           <BellIcon className="h-4 w-4 text-accent" />
           Notifications
         </h2>
-        <p className="mb-4 text-sm text-ink-muted">A daily nudge to check in, sent as a browser push.</p>
-        <NotificationsForm reminderEnabled={user.reminderEnabled} reminderTime={user.reminderTime} />
+        <p className="mb-4 text-sm text-ink-muted">Reminders for individual goals, sent as a browser push.</p>
+        <NotificationsForm />
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
@@ -127,6 +134,7 @@ export default async function SettingsPage() {
                   Archive
                 </button>
               </form>
+              <DeleteSubjectButton subjectId={subject.id} name={subject.name} minutes={minutesBySubject.get(subject.id) ?? 0} />
             </li>
           ))}
         </ul>
@@ -140,11 +148,14 @@ export default async function SettingsPage() {
               {archived.map((subject) => (
                 <li key={subject.id} className="flex items-center justify-between text-sm">
                   <span className="text-ink-muted">{subject.name}</span>
-                  <form action={setSubjectActive.bind(null, subject.id, true)}>
-                    <button type="submit" className="text-ink-muted hover:text-accent">
-                      Reactivate
-                    </button>
-                  </form>
+                  <div className="flex items-center gap-3">
+                    <form action={setSubjectActive.bind(null, subject.id, true)}>
+                      <button type="submit" className="text-ink-muted hover:text-accent">
+                        Reactivate
+                      </button>
+                    </form>
+                    <DeleteSubjectButton subjectId={subject.id} name={subject.name} minutes={minutesBySubject.get(subject.id) ?? 0} />
+                  </div>
                 </li>
               ))}
             </ul>

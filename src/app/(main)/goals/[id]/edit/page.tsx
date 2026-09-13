@@ -8,6 +8,7 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const goal = await prisma.goal.findUnique({ where: { id } });
   if (!goal) notFound();
+  const reminder = await prisma.reminder.findFirst({ where: { goalId: id } });
 
   // Keep the goal's already-linked subject selectable even if it's since
   // been archived, so editing doesn't silently drop that link. Guard
@@ -42,6 +43,8 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
           targetValue: goal.targetValue?.toString() ?? "",
           unit: goal.unit ?? "",
           subjectId: goal.subjectId ?? "",
+          reminderEnabled: reminder?.enabled ?? false,
+          reminderDays: reminder?.daysOfWeek ?? [],
         }}
       />
     </div>

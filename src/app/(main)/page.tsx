@@ -7,6 +7,7 @@ import { formatMinutes } from "@/lib/study";
 import { JournalIcon, TargetIcon, ClockIcon } from "@/components/Icons";
 import { promptForDate } from "@/lib/prompts";
 import { PromptOfDayCard } from "./PromptOfDayCard";
+import { WeeklyRecap } from "./WeeklyRecap";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,12 @@ function greeting(): string {
   return "Good evening";
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const { week } = await searchParams;
   const user = await getCurrentUser();
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
@@ -103,6 +109,8 @@ export default async function HomePage() {
           <p className="mt-3 text-sm text-study group-hover:underline">Start a session →</p>
         </Link>
       </div>
+
+      <WeeklyRecap anchorISO={week ?? today} />
     </div>
   );
 }

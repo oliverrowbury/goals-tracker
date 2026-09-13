@@ -32,8 +32,8 @@ const FAQS = [
     a: "Freewrite is a normal text box. List mode turns each full stop into a new bullet point automatically as you type — handy for jotting a few separate things quickly. The two journal boxes each have their own toggle, so you can mix and match.",
   },
   {
-    q: "Will my reminder arrive at the exact time I set?",
-    a: "Not precisely — reminders are currently checked once a day rather than continuously, so treat the time you set as a rough target. Also double check you've hit \"Enable notifications\" in Settings on each device you want reminded on.",
+    q: "How do goal reminders work?",
+    a: "Each goal has its own reminder, turned on from that goal's Edit page, where you also pick which days it should nudge you. They're all sent from one daily check rather than at a specific time, so treat it as \"sometime that day\" rather than an exact moment. Also double check you've hit \"Enable notifications\" in Settings on each device you want reminded on.",
   },
   {
     q: "Is my data private — can anyone else see it?",

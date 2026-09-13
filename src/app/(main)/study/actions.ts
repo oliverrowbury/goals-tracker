@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { minutesBetween } from "@/lib/study";
+import { isoToDate } from "@/lib/dates";
 
 function revalidateStudyViews() {
   revalidatePath("/study");
@@ -89,6 +90,36 @@ export async function deleteStudySession(sessionId: string) {
   }
 
   revalidateStudyViews();
+}
+
+export type LogManualSessionState = { error: string } | null;
+
+// For "forgot to start the timer" — creates a normal, already-finished
+// session rather than a separate kind of record, so it shows up in stats,
+// streaks, goal auto-tracking, and Recap exactly like a timed one would.
+export async function logManualSession(
+  _prev: LogManualSessionState,
+  formData: FormData,
+): Promise<LogManualSessionState> {
+  const user = await getCurrentUser();
+  const subjectId = String(formData.get("subjectId") ?? "");
+  const minutes = Number(formData.get("minutes"));
+  const dateISO = String(formData.get("date") ?? "");
+
+  if (!subjectId) return { error: "Choose a subject" };
+  if (!Number.isFinite(minutes) || minutes <= 0) return { error: "Enter how many minutes" };
+  if (!dateISO) return { error: "Choose a date" };
+
+  const startedAt = isoToDate(dateISO);
+  startedAt.setUTCHours(12); // midday, so it never lands on a day boundary
+  const endedAt = new Date(startedAt.getTime() + minutes * 60_000);
+
+  await prisma.studySession.create({
+    data: { userId: user.id, subjectId, startedAt, endedAt, durationMinutes: minutes },
+  });
+
+  revalidateStudyViews();
+  return null;
 }
 
 export type CreateSubjectState = { error: string } | null;

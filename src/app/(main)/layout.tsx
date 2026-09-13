@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
-import { JournalIcon, TargetIcon, ClockIcon, GearIcon, CalendarIcon, ChartIcon, SignOutIcon } from "@/components/Icons";
+import { JournalIcon, TargetIcon, ClockIcon, GearIcon, CalendarIcon, SignOutIcon } from "@/components/Icons";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate } from "@/lib/dates";
@@ -41,10 +41,6 @@ export default async function MainLayout({ children }: { children: React.ReactNo
             <Link href="/calendar" className="flex items-center gap-1.5 hover:text-ink">
               <CalendarIcon className="h-4 w-4" />
               <span className="hidden sm:inline">Calendar</span>
-            </Link>
-            <Link href="/recap" className="flex items-center gap-1.5 hover:text-ink">
-              <ChartIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Recap</span>
             </Link>
             <Link href="/settings" className="flex items-center gap-1.5 hover:text-ink">
               <GearIcon className="h-4 w-4" />

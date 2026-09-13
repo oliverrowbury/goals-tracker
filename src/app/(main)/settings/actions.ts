@@ -64,17 +64,23 @@ export async function setSubjectActive(subjectId: string, active: boolean) {
   revalidatePath("/study");
 }
 
-export async function updateReminder(formData: FormData) {
-  const enabled = formData.get("reminderEnabled") === "on";
-  const time = String(formData.get("reminderTime") ?? "").trim();
+export async function deleteSubject(subjectId: string) {
+  // A goal auto-tracked from this subject falls back to manual logging
+  // rather than blocking the delete; study sessions for it go with it —
+  // the confirm dialog on the client warns about that before calling this.
+  await prisma.$transaction([
+    prisma.goal.updateMany({ where: { subjectId }, data: { subjectId: null } }),
+    prisma.studySession.deleteMany({ where: { subjectId } }),
+    prisma.subject.delete({ where: { id: subjectId } }),
+  ]);
 
-  const user = await getCurrentUser();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { reminderEnabled: enabled && !!time, reminderTime: time || null },
-  });
   revalidatePath("/settings");
+  revalidatePath("/study");
+  revalidatePath("/goals");
+  revalidatePath("/journal");
+  revalidatePath("/");
 }
+
 
 export async function savePushSubscription(subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) {
   const user = await getCurrentUser();

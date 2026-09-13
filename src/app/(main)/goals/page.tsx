@@ -5,6 +5,7 @@ import { todayISO, shiftISO } from "@/lib/dates";
 import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { setGoalActive } from "./actions";
 import { DeleteGoalButton } from "./DeleteGoalButton";
+import { GoalTodayCheckbox } from "./GoalTodayCheckbox";
 import { TargetIcon, FlameIcon } from "@/components/Icons";
 
 const HISTORY_DAYS = 14;
@@ -106,6 +107,8 @@ export default async function GoalsPage() {
             }
           }
 
+          const dueToday = goal.frequencyType !== "WEEKLY_TARGET" && isGoalDueOn(goal, today);
+
           return (
             <div key={goal.id} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
               <div className="flex items-start justify-between gap-4">
@@ -114,7 +117,10 @@ export default async function GoalsPage() {
                   <p className="text-sm text-ink-muted">{describeFrequency(goal)}</p>
                   {goal.description && <p className="mt-1 text-sm text-ink-muted">{goal.description}</p>}
                 </div>
-                <div className="flex shrink-0 items-center gap-2 text-sm">
+                <div className="flex shrink-0 items-center gap-3 text-sm">
+                  {dueToday && (
+                    <GoalTodayCheckbox goalId={goal.id} dateISO={today} initialCompleted={completedDates.has(today)} />
+                  )}
                   {streak !== null && streak > 0 && (
                     <span className="flex items-center gap-1 rounded-full bg-goals-soft px-2.5 py-1 font-medium text-goals">
                       <FlameIcon className="h-3.5 w-3.5" />

@@ -6,22 +6,14 @@ import { weekRangeContaining, isGoalDueOn } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { ChartIcon } from "@/components/Icons";
 
-export const dynamic = "force-dynamic";
-
 function snippet(text: string, max = 90): string {
   const trimmed = text.trim();
   if (trimmed.length <= max) return trimmed;
   return trimmed.slice(0, max).trimEnd() + "…";
 }
 
-export default async function RecapPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ date?: string }>;
-}) {
-  const { date } = await searchParams;
-  const anchor = date ?? todayISO();
-  const { startISO, endISO } = weekRangeContaining(anchor);
+export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
+  const { startISO, endISO } = weekRangeContaining(anchorISO);
   const today = todayISO();
   const days = Array.from({ length: 7 }, (_, i) => shiftISO(startISO, i));
 
@@ -70,27 +62,29 @@ export default async function RecapPage({
     .map((d) => ({ dateISO: d, entry: entries.find((e) => e.date.toISOString().slice(0, 10) === d) }))
     .filter((d) => d.entry && (d.entry.bodyText.trim() || d.entry.improveText?.trim()));
 
+  const isCurrentWeek = startISO === weekRangeContaining(today).startISO;
+
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mt-10">
+      <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <ChartIcon className="h-5 w-5 shrink-0 text-ink-muted" />
-          <h1 className="font-serif text-2xl font-semibold text-ink">Week of {formatWeekRange(startISO, endISO)}</h1>
+          <h2 className="font-serif text-xl font-semibold text-ink">Week of {formatWeekRange(startISO, endISO)}</h2>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Link
-            href={`/recap?date=${shiftISO(startISO, -7)}`}
+            href={`/?week=${shiftISO(startISO, -7)}`}
             className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
           >
             ← Prev
           </Link>
-          {startISO !== weekRangeContaining(today).startISO && (
-            <Link href="/recap" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
+          {!isCurrentWeek && (
+            <Link href="/" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
               This week
             </Link>
           )}
           <Link
-            href={`/recap?date=${shiftISO(endISO, 1)}`}
+            href={`/?week=${shiftISO(endISO, 1)}`}
             className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
           >
             Next →
@@ -100,9 +94,9 @@ export default async function RecapPage({
 
       <div className="space-y-6">
         <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-goals" /> Goals
-          </h2>
+          </h3>
           {goalSummaries.length === 0 ? (
             <p className="text-sm text-ink-muted">No goals due this week.</p>
           ) : (
@@ -118,9 +112,9 @@ export default async function RecapPage({
         </section>
 
         <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-study" /> Study time
-          </h2>
+          </h3>
           {sessions.length === 0 ? (
             <p className="text-sm text-ink-muted">No study time logged this week.</p>
           ) : (
@@ -144,9 +138,9 @@ export default async function RecapPage({
         </section>
 
         <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-accent" /> Journal highlights
-          </h2>
+          </h3>
           {journaledDays.length === 0 ? (
             <p className="text-sm text-ink-muted">No journal entries this week.</p>
           ) : (

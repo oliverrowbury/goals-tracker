@@ -11,6 +11,8 @@ type GoalFormValues = {
   targetValue: string;
   unit: string;
   subjectId: string;
+  reminderEnabled: boolean;
+  reminderDays: string[];
 };
 
 const DEFAULTS: GoalFormValues = {
@@ -21,6 +23,8 @@ const DEFAULTS: GoalFormValues = {
   targetValue: "",
   unit: "",
   subjectId: "",
+  reminderEnabled: false,
+  reminderDays: [],
 };
 
 const inputClass =
@@ -40,6 +44,7 @@ export function GoalForm({
 }) {
   const values = { ...DEFAULTS, ...initialValues };
   const [frequencyType, setFrequencyType] = useState(values.frequencyType);
+  const [reminderEnabled, setReminderEnabled] = useState(values.reminderEnabled);
 
   return (
     <form action={action} className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
@@ -155,6 +160,41 @@ export function GoalForm({
           </p>
         </div>
       )}
+
+      <div className="border-t border-line pt-4">
+        <label className="flex items-center gap-2 text-sm font-medium text-ink">
+          <input
+            type="checkbox"
+            name="reminderEnabled"
+            checked={reminderEnabled}
+            onChange={(e) => setReminderEnabled(e.target.checked)}
+            className="h-4 w-4 rounded border-line accent-goals"
+          />
+          Remind me about this goal
+        </label>
+        {reminderEnabled && (
+          <div className="mt-3">
+            <span className="mb-1 block text-xs text-ink-muted">On which days? (sent as a push notification, once daily)</span>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAYS.map((day) => (
+                <label
+                  key={day}
+                  className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-goals has-[:checked]:bg-goals has-[:checked]:text-white"
+                >
+                  <input
+                    type="checkbox"
+                    name="reminderDays"
+                    value={day}
+                    defaultChecked={values.reminderDays.includes(day)}
+                    className="sr-only"
+                  />
+                  {day}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <button type="submit" className="rounded-lg bg-goals px-4 py-2 text-sm font-medium text-white hover:opacity-90">
         {submitLabel}

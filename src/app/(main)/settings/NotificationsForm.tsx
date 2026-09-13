@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { updateReminder, savePushSubscription, removePushSubscription } from "./actions";
+import { useEffect, useState } from "react";
+import { savePushSubscription, removePushSubscription } from "./actions";
 
 function urlBase64ToUint8Array(base64: string): BufferSource {
   const padding = "=".repeat((4 - (base64.length % 4)) % 4);
@@ -14,15 +14,8 @@ function urlBase64ToUint8Array(base64: string): BufferSource {
 
 type Status = "unsupported" | "unsubscribed" | "subscribed" | "denied";
 
-export function NotificationsForm({
-  reminderEnabled,
-  reminderTime,
-}: {
-  reminderEnabled: boolean;
-  reminderTime: string | null;
-}) {
+export function NotificationsForm() {
   const [status, setStatus] = useState<Status>("unsubscribed");
-  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -101,36 +94,9 @@ export function NotificationsForm({
         </div>
       )}
 
-      <form
-        action={(formData) => startTransition(() => updateReminder(formData))}
-        className="flex flex-wrap items-center gap-3 border-t border-line pt-4"
-      >
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            name="reminderEnabled"
-            defaultChecked={reminderEnabled}
-            className="h-4 w-4 rounded border-line accent-accent"
-          />
-          Daily reminder at
-        </label>
-        <input
-          type="time"
-          name="reminderTime"
-          step={900}
-          defaultValue={reminderTime ?? "18:00"}
-          className="rounded-lg border border-line bg-paper px-2 py-1.5 text-sm focus:border-accent focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:border-accent hover:text-accent disabled:opacity-50"
-        >
-          Save
-        </button>
-      </form>
-      <p className="text-xs text-ink-muted">
-        Reminder times are UK local time, snapped to 15-minute slots. You still need to enable notifications on each
+      <p className="border-t border-line pt-4 text-sm text-ink-muted">
+        Reminders are set per goal now, since different goals need different days — turn one on from that goal’s{" "}
+        <span className="font-medium text-ink">Edit</span> page. You still need to enable notifications on each
         device you want reminded on.
       </p>
     </div>
