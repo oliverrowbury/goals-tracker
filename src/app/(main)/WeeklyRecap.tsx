@@ -160,12 +160,12 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
             <>
               <ul className="-mx-5 divide-y divide-line">
                 {workouts.map((w) => {
-                  const pace = formatPace(w.distanceKm, w.durationMinutes);
+                  const pace = formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit);
                   return (
                     <li key={w.id} className="flex items-center justify-between px-5 py-2 text-sm">
                       <span className="text-ink">{w.label}</span>
                       <span className="text-ink-muted">
-                        {w.type === "CARDIO" && w.distanceKm ? `${formatDistance(w.distanceKm)} · ` : ""}
+                        {w.type === "CARDIO" && w.distanceKm ? `${formatDistance(w.distanceKm, user.distanceUnit)} · ` : ""}
                         {formatMinutes(w.durationMinutes ?? 0)}
                         {pace ? ` · ${pace}` : ""}
                       </span>
@@ -175,7 +175,7 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
               </ul>
               <p className="mt-3 text-xs text-ink-muted">
                 {workoutSessionCount} session{workoutSessionCount === 1 ? "" : "s"} · {formatMinutes(workoutMinutes)} total
-                {cardioKm > 0 && ` · ${formatDistance(cardioKm)} covered`}
+                {cardioKm > 0 && ` · ${formatDistance(cardioKm, user.distanceUnit)} covered`}
               </p>
             </>
           )}

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { updateName, renameSubject, setSubjectActive } from "./actions";
+import { updateName, updateUnits, renameSubject, setSubjectActive } from "./actions";
 import { PasswordForm } from "./PasswordForm";
 import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
-import { GearIcon, ClockIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon } from "@/components/Icons";
+import { GearIcon, ClockIcon, DumbbellIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon } from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
 import { computeJournalStreak } from "@/lib/journal";
 
@@ -161,6 +161,50 @@ export default async function SettingsPage() {
             </ul>
           </div>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <DumbbellIcon className="h-4 w-4 text-workout" />
+          Workout units
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">What weight and distance are shown in on the Workout page.</p>
+        <form action={updateUnits} className="flex flex-wrap gap-4">
+          <div>
+            <label className="mb-1 block text-xs text-ink-muted" htmlFor="weightUnit">
+              Weight
+            </label>
+            <select
+              id="weightUnit"
+              name="weightUnit"
+              defaultValue={user.weightUnit}
+              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm focus:border-workout focus:outline-none"
+            >
+              <option value="KG">Kilograms (kg)</option>
+              <option value="LB">Pounds (lb)</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-ink-muted" htmlFor="distanceUnit">
+              Distance
+            </label>
+            <select
+              id="distanceUnit"
+              name="distanceUnit"
+              defaultValue={user.distanceUnit}
+              className="rounded-lg border border-line bg-paper px-3 py-1.5 text-sm focus:border-workout focus:outline-none"
+            >
+              <option value="KM">Kilometres (km)</option>
+              <option value="MI">Miles (mi)</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="self-end rounded-lg bg-workout px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          >
+            Save
+          </button>
+        </form>
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

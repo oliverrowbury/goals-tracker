@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { minutesBetween } from "@/lib/study";
+import { toKg, toKm } from "@/lib/workout";
 import type { WorkoutType } from "@/lib/constants";
 
 function revalidateWorkoutViews() {
@@ -38,10 +39,16 @@ export async function startWorkout(type: WorkoutType, label: string) {
 }
 
 export async function addSet(workoutId: string, exerciseId: string, formData: FormData) {
-  const weight = Number(formData.get("weight"));
+  const enteredWeight = Number(formData.get("weight"));
   const reps = Number(formData.get("reps"));
   const isWarmup = formData.get("isWarmup") === "on";
-  if (!Number.isFinite(weight) || weight < 0 || !Number.isFinite(reps) || reps <= 0) return;
+  if (!Number.isFinite(enteredWeight) || enteredWeight < 0 || !Number.isFinite(reps) || reps <= 0) return;
+
+  // The form takes the weight in whatever unit the user has set in
+  // Settings — convert to canonical kg before storing, so weightUnit on
+  // the row can just stay at its KG default and every set is comparable.
+  const user = await getCurrentUser();
+  const weight = toKg(enteredWeight, user.weightUnit);
 
   const count = await prisma.workoutSet.count({ where: { workoutId, exerciseId } });
   await prisma.workoutSet.create({
@@ -52,6 +59,13 @@ export async function addSet(workoutId: string, exerciseId: string, formData: Fo
 
 export async function removeSet(setId: string) {
   await prisma.workoutSet.delete({ where: { id: setId } });
+  revalidateWorkoutViews();
+}
+
+export async function renameWorkout(workoutId: string, label: string) {
+  const trimmed = label.trim();
+  if (!trimmed) return;
+  await prisma.workout.update({ where: { id: workoutId }, data: { label: trimmed } });
   revalidateWorkoutViews();
 }
 
@@ -68,16 +82,21 @@ export async function finishStrengthWorkout(workoutId: string) {
 }
 
 export async function finishCardioWorkout(workoutId: string, formData: FormData) {
-  const distanceKm = Number(formData.get("distanceKm"));
+  const enteredDistance = Number(formData.get("distance"));
+  const user = await getCurrentUser();
   const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
   const endedAt = new Date();
+
+  // Same unit-at-the-edges rule as addSet — the input is in the user's
+  // chosen distance unit, converted to canonical km for storage.
+  const distanceKm = Number.isFinite(enteredDistance) && enteredDistance > 0 ? toKm(enteredDistance, user.distanceUnit) : null;
 
   await prisma.workout.update({
     where: { id: workoutId },
     data: {
       endedAt,
       durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt),
-      distanceKm: Number.isFinite(distanceKm) && distanceKm > 0 ? distanceKm : null,
+      distanceKm,
     },
   });
 

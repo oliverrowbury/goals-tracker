@@ -20,4 +20,7 @@ export type WorkoutType = (typeof WORKOUT_TYPES)[number];
 export const WORKOUT_METRICS = ["SESSIONS", "MINUTES"] as const;
 export type WorkoutMetric = (typeof WORKOUT_METRICS)[number];
 
+export const DISTANCE_UNITS = ["KM", "MI"] as const;
+export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
+
 export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"] as const;

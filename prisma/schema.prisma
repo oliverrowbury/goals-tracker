@@ -57,6 +57,11 @@ enum WorkoutMetric {
   MINUTES
 }
 
+enum DistanceUnit {
+  KM
+  MI
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -80,6 +85,12 @@ model User {
   // up to yet.
   reminderTime    String?
   reminderEnabled Boolean @default(false)
+
+  // Display/input preference for the Workout tracker — everything is
+  // still stored canonically in kg/km regardless of this, converted at
+  // the UI's edges (see src/lib/workout.ts).
+  weightUnit   WeightUnit   @default(KG)
+  distanceUnit DistanceUnit @default(KM)
 
   journalEntries    JournalEntry[]
   goals             Goal[]

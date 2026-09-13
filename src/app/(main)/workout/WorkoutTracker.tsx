@@ -5,16 +5,17 @@ import {
   startWorkout,
   addSet,
   removeSet,
+  renameWorkout,
   finishStrengthWorkout,
   finishCardioWorkout,
   deleteWorkout,
   createExercise,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { formatPace, formatDistance, computeVolume } from "@/lib/workout";
+import { formatPace, formatDistance, formatWeight, computeVolume } from "@/lib/workout";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { TrashIcon } from "@/components/Icons";
-import { CARDIO_ACTIVITIES, type WorkoutType } from "@/lib/constants";
+import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
@@ -49,6 +50,49 @@ function formatClock(totalSeconds: number): string {
   const s = totalSeconds % 60;
   const pad = (n: number) => n.toString().padStart(2, "0");
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function EditableLabel({ workoutId, label }: { workoutId: string; label: string }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(label);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => setValue(label), [label]);
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onBlur={() => {
+          setEditing(false);
+          const trimmed = value.trim();
+          if (trimmed && trimmed !== label) startTransition(() => renameWorkout(workoutId, trimmed));
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            setValue(label);
+            setEditing(false);
+          }
+        }}
+        className="w-full border-b border-dashed border-workout bg-transparent font-serif text-xl font-semibold text-ink focus:outline-none"
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      title="Rename"
+      className="text-left font-serif text-xl font-semibold text-ink hover:text-workout"
+    >
+      {label}
+    </button>
+  );
 }
 
 function dayLabel(dateISO: string): string {
@@ -88,13 +132,18 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
         />
         <select
           name="category"
-          defaultValue="Push"
+          defaultValue="Chest"
           className="rounded-lg border border-line bg-card px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
         >
-          <option value="Push">Push</option>
-          <option value="Pull">Pull</option>
+          <option value="Chest">Chest</option>
+          <option value="Back">Back</option>
+          <option value="Shoulders">Shoulders</option>
+          <option value="Biceps">Biceps</option>
+          <option value="Triceps">Triceps</option>
           <option value="Legs">Legs</option>
+          <option value="Glutes">Glutes</option>
           <option value="Core">Core</option>
+          <option value="Olympic & Full Body">Olympic & Full Body</option>
           <option value="Other">Other</option>
         </select>
         <button
@@ -115,12 +164,14 @@ function ExerciseSection({
   exercise,
   sets,
   lastPerformed,
+  weightUnit,
   onRemove,
 }: {
   workoutId: string;
   exercise: Exercise;
   sets: SetRow[];
   lastPerformed?: { dateISO: string; sets: { weight: number; reps: number; isWarmup: boolean }[] };
+  weightUnit: WeightUnit;
   onRemove: () => void;
 }) {
   return (
@@ -131,7 +182,9 @@ function ExerciseSection({
           {lastPerformed && (
             <p className="mt-0.5 text-xs text-ink-muted">
               Last time ({dayLabel(lastPerformed.dateISO)}):{" "}
-              {lastPerformed.sets.map((s) => `${s.weight}kg×${s.reps}${s.isWarmup ? " (w)" : ""}`).join(", ")}
+              {lastPerformed.sets
+                .map((s) => `${formatWeight(s.weight, weightUnit)}×${s.reps}${s.isWarmup ? " (w)" : ""}`)
+                .join(", ")}
             </p>
           )}
         </div>
@@ -148,7 +201,7 @@ function ExerciseSection({
             <li key={set.id} className="flex items-center gap-2 text-sm text-ink">
               <span className="w-5 shrink-0 text-ink-muted">{set.setNumber}</span>
               <span>
-                {set.weight}kg × {set.reps}
+                {formatWeight(set.weight, weightUnit)} × {set.reps}
                 {set.isWarmup && <span className="ml-1 text-xs text-ink-muted">(warm-up)</span>}
               </span>
               <form action={removeSet.bind(null, set.id)} className="ml-auto">
@@ -163,7 +216,7 @@ function ExerciseSection({
 
       <form action={addSet.bind(null, workoutId, exercise.id)} className="mt-3 flex flex-wrap items-end gap-2">
         <div>
-          <label className="mb-1 block text-xs text-ink-muted">Weight (kg)</label>
+          <label className="mb-1 block text-xs text-ink-muted">Weight ({weightUnit === "LB" ? "lb" : "kg"})</label>
           <input
             name="weight"
             type="number"
@@ -200,12 +253,16 @@ function ExerciseSection({
 }
 
 export function WorkoutTracker({
+  weightUnit,
+  distanceUnit,
   exercises,
   openWorkout,
   lastPerformed,
   weekSummary,
   history,
 }: {
+  weightUnit: WeightUnit;
+  distanceUnit: DistanceUnit;
   exercises: Exercise[];
   openWorkout: OpenWorkout;
   lastPerformed: LastPerformed;
@@ -220,7 +277,7 @@ export function WorkoutTracker({
   const [addingExercise, setAddingExercise] = useState(false);
   const [creatingExercise, setCreatingExercise] = useState(false);
   const [pickedExerciseId, setPickedExerciseId] = useState("");
-  const [startingCardio, setStartingCardio] = useState(false);
+  const [startTab, setStartTab] = useState<WorkoutType>("STRENGTH");
   const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null);
 
   // Reset the exercise picker state whenever the open workout itself
@@ -247,28 +304,38 @@ export function WorkoutTracker({
     <div className="space-y-8">
       {!openWorkout && (
         <div>
-          <h2 className="mb-1 text-sm font-medium text-ink-muted">Start a workout</h2>
-          <div className="flex flex-wrap gap-2.5">
+          <h2 className="mb-2 text-sm font-medium text-ink-muted">Start a workout</h2>
+          <div className="inline-flex rounded-xl border border-line bg-card p-1">
             <button
-              disabled={isPending}
-              onClick={() => {
-                const label = window.prompt("Name this workout", "Workout");
-                if (label === null) return;
-                startTransition(() => startWorkout("STRENGTH", label));
-              }}
-              className="rounded-xl border border-line bg-card px-4 py-2.5 text-sm text-ink shadow-sm hover:-translate-y-0.5 hover:border-workout hover:shadow-md disabled:opacity-50"
+              onClick={() => setStartTab("STRENGTH")}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                startTab === "STRENGTH" ? "bg-workout text-white" : "text-ink-muted hover:text-workout"
+              }`}
             >
-              Strength workout
+              Strength
             </button>
             <button
-              disabled={isPending}
-              onClick={() => setStartingCardio((v) => !v)}
-              className="rounded-xl border border-dashed border-line px-4 py-2.5 text-sm text-ink-muted hover:border-workout hover:text-workout"
+              onClick={() => setStartTab("CARDIO")}
+              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition ${
+                startTab === "CARDIO" ? "bg-workout text-white" : "text-ink-muted hover:text-workout"
+              }`}
             >
-              Cardio session
+              Cardio
             </button>
           </div>
-          {startingCardio && (
+
+          {startTab === "STRENGTH" ? (
+            <div className="mt-3">
+              <button
+                disabled={isPending}
+                onClick={() => startTransition(() => startWorkout("STRENGTH", "Workout"))}
+                className="rounded-xl bg-workout px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50"
+              >
+                Start Workout
+              </button>
+              <p className="mt-1.5 text-xs text-ink-muted">You can rename it once it’s started.</p>
+            </div>
+          ) : (
             <div className="mt-3 flex flex-wrap gap-2">
               {CARDIO_ACTIVITIES.map((activity) => (
                 <button
@@ -291,9 +358,9 @@ export function WorkoutTracker({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-ink-muted">Strength workout</p>
-                <p className="font-serif text-xl font-semibold text-ink">{openWorkout.label}</p>
+                <EditableLabel workoutId={openWorkout.id} label={openWorkout.label} />
               </div>
-              <p className="font-mono text-2xl tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
+              <p className="font-serif text-3xl font-semibold tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
             </div>
             <div className="mt-4 flex items-center gap-2">
               <button
@@ -328,6 +395,7 @@ export function WorkoutTracker({
                 exercise={exercise}
                 sets={openWorkout.sets.filter((s) => s.exerciseId === exerciseId)}
                 lastPerformed={lastPerformed[exerciseId]}
+                weightUnit={weightUnit}
                 onRemove={() => setActiveExerciseIds((ids) => ids.filter((id) => id !== exerciseId))}
               />
             );
@@ -410,18 +478,20 @@ export function WorkoutTracker({
       {openWorkout && openWorkout.type === "CARDIO" && (
         <div className="rounded-2xl border border-line bg-card p-6 shadow-sm text-center">
           <p className="text-sm text-ink-muted">Cardio session</p>
-          <p className="font-serif text-xl font-semibold text-ink">{openWorkout.label}</p>
-          <p className="mt-3 font-mono text-4xl tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
+          <div className="flex justify-center">
+            <EditableLabel workoutId={openWorkout.id} label={openWorkout.label} />
+          </div>
+          <p className="mt-3 font-serif text-5xl font-semibold tabular-nums text-workout">{formatClock(elapsedSeconds)}</p>
           <form
             action={finishCardioWorkout.bind(null, openWorkout.id)}
             className="mt-5 flex items-center justify-center gap-2"
           >
             <input
-              name="distanceKm"
+              name="distance"
               type="number"
               min="0"
               step="0.01"
-              placeholder="Distance (km)"
+              placeholder={`Distance (${distanceUnit === "MI" ? "mi" : "km"})`}
               className="w-32 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-workout focus:outline-none"
             />
             <button type="submit" className="rounded-lg bg-ink px-5 py-2 text-sm font-medium text-white hover:opacity-90">
@@ -453,7 +523,8 @@ export function WorkoutTracker({
           <div className="rounded-2xl border border-line bg-card px-4 py-3 text-sm text-ink-muted">
             {weekSummary.sessions} session{weekSummary.sessions === 1 ? "" : "s"} · {formatMinutes(weekSummary.minutes)}
             {weekSummary.strengthCount > 0 && ` · ${weekSummary.strengthCount} strength`}
-            {weekSummary.cardioCount > 0 && ` · ${weekSummary.cardioCount} cardio (${formatDistance(weekSummary.cardioKm)})`}
+            {weekSummary.cardioCount > 0 &&
+              ` · ${weekSummary.cardioCount} cardio (${formatDistance(weekSummary.cardioKm, distanceUnit)})`}
           </div>
         )}
       </div>
@@ -464,13 +535,13 @@ export function WorkoutTracker({
           <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
             {history.map((w) => {
               if (w.type === "CARDIO") {
-                const pace = formatPace(w.distanceKm, w.durationMinutes);
+                const pace = formatPace(w.distanceKm, w.durationMinutes, distanceUnit);
                 return (
                   <li key={w.id} className="flex items-center gap-2 px-4 py-3 text-sm">
                     <span className="h-2 w-2 shrink-0 rounded-full bg-workout" />
                     <span className="text-ink">{w.label}</span>
                     <span className="text-ink-muted">
-                      — {w.distanceKm ? `${formatDistance(w.distanceKm)} · ` : ""}
+                      — {w.distanceKm ? `${formatDistance(w.distanceKm, distanceUnit)} · ` : ""}
                       {formatMinutes(w.durationMinutes ?? 0)}
                       {pace ? ` · ${pace}` : ""}
                     </span>
@@ -504,7 +575,9 @@ export function WorkoutTracker({
                       </button>
                     </form>
                   </div>
-                  {volume > 0 && <p className="ml-4 mt-1 text-xs text-ink-muted">{volume.toLocaleString()}kg total volume</p>}
+                  {volume > 0 && (
+                    <p className="ml-4 mt-1 text-xs text-ink-muted">{formatWeight(volume, weightUnit)} total volume</p>
+                  )}
                 </li>
               );
             })}

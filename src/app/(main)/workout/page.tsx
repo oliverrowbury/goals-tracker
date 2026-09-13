@@ -71,6 +71,8 @@ export default async function WorkoutPage() {
       </div>
 
       <WorkoutTracker
+        weightUnit={user.weightUnit}
+        distanceUnit={user.distanceUnit}
         exercises={exercises.map((e) => ({ id: e.id, name: e.name, category: e.category }))}
         openWorkout={
           openWorkout
