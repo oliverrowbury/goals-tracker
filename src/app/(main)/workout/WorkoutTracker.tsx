@@ -231,10 +231,13 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
           <option value="Shoulders">Shoulders</option>
           <option value="Biceps">Biceps</option>
           <option value="Triceps">Triceps</option>
-          <option value="Legs">Legs</option>
+          <option value="Forearms">Forearms</option>
+          <option value="Quadriceps">Quadriceps</option>
+          <option value="Hamstrings">Hamstrings</option>
+          <option value="Calves">Calves</option>
           <option value="Glutes">Glutes</option>
-          <option value="Core">Core</option>
-          <option value="Olympic & Full Body">Olympic & Full Body</option>
+          <option value="Abdominals">Abdominals</option>
+          <option value="Full Body & Olympic">Full Body & Olympic</option>
           <option value="Other">Other</option>
         </select>
         <button
