@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { setGoalActive } from "./actions";
+import { DeleteGoalButton } from "./DeleteGoalButton";
 import { TargetIcon, FlameIcon } from "@/components/Icons";
 
 const HISTORY_DAYS = 14;
@@ -128,6 +129,7 @@ export default async function GoalsPage() {
                       Archive
                     </button>
                   </form>
+                  <DeleteGoalButton goalId={goal.id} title={goal.title} />
                 </div>
               </div>
 
@@ -191,18 +193,18 @@ export default async function GoalsPage() {
       {archived.length > 0 && (
         <div className="mt-10">
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Archived</h2>
-          <div className="space-y-2">
+          <div className="divide-y divide-line rounded-2xl border border-line bg-card">
             {archived.map((goal) => (
-              <div
-                key={goal.id}
-                className="flex items-center justify-between rounded-xl border border-line bg-paper px-4 py-2.5 text-sm"
-              >
+              <div key={goal.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                 <span className="text-ink-muted">{goal.title}</span>
-                <form action={setGoalActive.bind(null, goal.id, true)}>
-                  <button type="submit" className="text-ink-muted hover:text-goals">
-                    Reactivate
-                  </button>
-                </form>
+                <div className="flex items-center gap-3">
+                  <form action={setGoalActive.bind(null, goal.id, true)}>
+                    <button type="submit" className="text-ink-muted hover:text-goals">
+                      Reactivate
+                    </button>
+                  </form>
+                  <DeleteGoalButton goalId={goal.id} title={goal.title} />
+                </div>
               </div>
             ))}
           </div>

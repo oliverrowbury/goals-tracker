@@ -64,6 +64,19 @@ export async function updateGoal(goalId: string, formData: FormData) {
   redirect("/goals");
 }
 
+export async function deleteGoal(goalId: string) {
+  // GoalLog/Reminder rows reference this goal without cascade delete, so
+  // they have to go first or the delete hits a foreign-key error.
+  await prisma.$transaction([
+    prisma.goalLog.deleteMany({ where: { goalId } }),
+    prisma.reminder.deleteMany({ where: { goalId } }),
+    prisma.goal.delete({ where: { id: goalId } }),
+  ]);
+
+  revalidatePath("/goals");
+  revalidatePath("/journal");
+}
+
 export async function setGoalActive(goalId: string, active: boolean) {
   await prisma.goal.update({ where: { id: goalId }, data: { active } });
   revalidatePath("/goals");
