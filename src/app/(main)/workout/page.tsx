@@ -101,6 +101,7 @@ export default async function WorkoutPage() {
           dateISO: w.date.toISOString().slice(0, 10),
           durationMinutes: w.durationMinutes,
           distanceKm: w.distanceKm,
+          route: (w.route as { lat: number; lng: number }[] | null) ?? null,
           sets: w.sets.map((s) => ({
             id: s.id,
             exerciseName: s.exercise.name,

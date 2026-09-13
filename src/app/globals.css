@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 /* Manual (class-based) dark mode instead of the default prefers-color-scheme
    variant — .dark is toggled by ThemeToggle and persisted in localStorage. */

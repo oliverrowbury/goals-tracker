@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 
@@ -20,7 +20,19 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Proudly",
-  description: "A daily journal for what you're proud of, with goals and study tracking alongside it.",
+  description: "A daily journal for what you're proud of, with goals, study, and workout tracking alongside it.",
+  // Add to Home Screen → its own standalone window/icon, not a bookmarked
+  // tab — see app/manifest.ts and the note on WorkoutTracker's GPS tracking
+  // about why that matters for a session staying alive.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Proudly",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#c1592f",
 };
 
 // Runs before paint so there's no flash of the wrong theme — can't do this

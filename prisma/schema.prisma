@@ -258,11 +258,16 @@ model Workout {
   startedAt       DateTime?
   endedAt         DateTime?
   durationMinutes Int?
-  // Cardio only — distance covered, manually entered (no GPS tracking).
-  // Pace is derived at render time from this and durationMinutes rather
+  // Cardio only — distance is tracked live via the browser's geolocation
+  // API while the session runs (or entered by hand as a fallback), and
+  // pace is derived at render time from this and durationMinutes rather
   // than stored.
   distanceKm Float?
-  note       String?
+  // Cardio only — the tracked GPS points ({lat, lng}[], in order), null if
+  // GPS wasn't available/used for this session. Just enough to draw the
+  // route on a map; no elevation, timestamps, or per-point accuracy kept.
+  route Json?
+  note  String?
 
   sets WorkoutSet[]
 }

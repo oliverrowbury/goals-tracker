@@ -16,6 +16,7 @@ import { formatPace, formatDistance, formatWeight, computeVolume, fromKm, havers
 import { todayISO, shiftISO } from "@/lib/dates";
 import { TrashIcon } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
+import { RouteMap } from "./RouteMap";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
@@ -23,6 +24,7 @@ type OpenWorkout = { id: string; type: WorkoutType; label: string; startedAt: st
 type LastPerformed = Record<string, { dateISO: string; sets: { weight: number; reps: number; isWarmup: boolean }[] }>;
 type WeekSummary = { sessions: number; minutes: number; strengthCount: number; cardioCount: number; cardioKm: number };
 type HistorySet = { id: string; exerciseName: string; weight: number; reps: number; isWarmup: boolean };
+type RoutePoint = { lat: number; lng: number };
 type HistoryWorkout = {
   id: string;
   type: WorkoutType;
@@ -30,6 +32,7 @@ type HistoryWorkout = {
   dateISO: string;
   durationMinutes: number | null;
   distanceKm: number | null;
+  route: RoutePoint[] | null;
   sets: HistorySet[];
 };
 
@@ -62,14 +65,16 @@ type GpsStatus = "idle" | "acquiring" | "tracking" | "denied" | "unsupported";
 const MAX_GPS_ACCURACY_M = 30;
 const MAX_PLAUSIBLE_SPEED_MPS = 12; // ~43km/h — generous enough for a hard bike leg
 
-// Live-tracks distance for a cardio session via the browser's geolocation
-// API — no route/map, just a running total (see haversineKm), which is
-// all "how far did I go" actually needs. Requires the tab to stay open and
+// Live-tracks distance and the route itself for a cardio session via the
+// browser's geolocation API — a running total (see haversineKm) plus the
+// accepted fixes in order, which is enough to draw a line on a map without
+// needing a server round-trip per fix. Requires the tab to stay open and
 // the OS to keep granting fixes; that's a real limitation on a locked
 // phone in a pocket, not something this can paper over.
-function useGpsDistance(active: boolean): { distanceKm: number; status: GpsStatus } {
+function useGpsTrack(active: boolean): { distanceKm: number; status: GpsStatus; points: RoutePoint[] } {
   const [distanceKm, setDistanceKm] = useState(0);
   const [status, setStatus] = useState<GpsStatus>("idle");
+  const [points, setPoints] = useState<RoutePoint[]>([]);
   const lastFix = useRef<{ lat: number; lon: number; t: number } | null>(null);
 
   useEffect(() => {
@@ -80,6 +85,7 @@ function useGpsDistance(active: boolean): { distanceKm: number; status: GpsStatu
     }
 
     setDistanceKm(0);
+    setPoints([]);
     setStatus("acquiring");
     lastFix.current = null;
 
@@ -93,6 +99,7 @@ function useGpsDistance(active: boolean): { distanceKm: number; status: GpsStatu
         const prev = lastFix.current;
         if (!prev) {
           lastFix.current = { lat: latitude, lon: longitude, t };
+          setPoints((pts) => [...pts, { lat: latitude, lng: longitude }]);
           return;
         }
 
@@ -101,6 +108,7 @@ function useGpsDistance(active: boolean): { distanceKm: number; status: GpsStatu
         const speedMps = seconds > 0 ? (km * 1000) / seconds : 0;
         if (speedMps <= MAX_PLAUSIBLE_SPEED_MPS) {
           setDistanceKm((d) => d + km);
+          setPoints((pts) => [...pts, { lat: latitude, lng: longitude }]);
           lastFix.current = { lat: latitude, lon: longitude, t };
         }
         // else: drop this one fix as a likely glitch, but keep the old
@@ -126,7 +134,7 @@ function useGpsDistance(active: boolean): { distanceKm: number; status: GpsStatu
     };
   }, [active]);
 
-  return { distanceKm, status };
+  return { distanceKm, status, points };
 }
 
 function EditableLabel({ workoutId, label }: { workoutId: string; label: string }) {
@@ -356,10 +364,13 @@ export function WorkoutTracker({
   const [pickedExerciseId, setPickedExerciseId] = useState("");
   const [startTab, setStartTab] = useState<WorkoutType>("STRENGTH");
   const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
+  const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null);
-  const { distanceKm: gpsDistanceKm, status: gpsStatus } = useGpsDistance(
-    !!openWorkout && openWorkout.type === "CARDIO",
-  );
+  const {
+    distanceKm: gpsDistanceKm,
+    status: gpsStatus,
+    points: gpsPoints,
+  } = useGpsTrack(!!openWorkout && openWorkout.type === "CARDIO");
 
   // Reset the exercise picker state whenever the open workout itself
   // changes (a new one starts, or the current one finishes/is discarded) —
@@ -575,10 +586,17 @@ export function WorkoutTracker({
             {gpsStatus === "unsupported" && "Your browser can't track location — enter distance yourself below"}
           </p>
 
+          {gpsPoints.length >= 2 && (
+            <div className="mt-3">
+              <RouteMap points={gpsPoints} height={180} />
+            </div>
+          )}
+
           <form
             action={finishCardioWorkout.bind(null, openWorkout.id)}
             className="mt-5 flex items-center justify-center gap-2"
           >
+            <input type="hidden" name="route" value={JSON.stringify(gpsPoints)} />
             <input
               name="distance"
               type="number"
@@ -634,21 +652,46 @@ export function WorkoutTracker({
             {history.map((w) => {
               if (w.type === "CARDIO") {
                 const pace = formatPace(w.distanceKm, w.durationMinutes, distanceUnit);
+                const hasRoute = (w.route?.length ?? 0) >= 2;
+                const expanded = expandedRoutes.has(w.id);
                 return (
-                  <li key={w.id} className="flex items-center gap-2 px-4 py-3 text-sm">
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-workout" />
-                    <span className="text-ink">{w.label}</span>
-                    <span className="text-ink-muted">
-                      — {w.distanceKm ? `${formatDistance(w.distanceKm, distanceUnit)} · ` : ""}
-                      {formatMinutes(w.durationMinutes ?? 0)}
-                      {pace ? ` · ${pace}` : ""}
-                    </span>
-                    <span className="text-xs text-ink-muted">{dayLabel(w.dateISO)}</span>
-                    <form action={deleteWorkout.bind(null, w.id)} className="ml-auto">
-                      <button type="submit" title="Remove this workout" className="text-ink-muted hover:text-accent">
-                        ×
-                      </button>
-                    </form>
+                  <li key={w.id} className="px-4 py-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-workout" />
+                      <span className="text-ink">{w.label}</span>
+                      <span className="text-ink-muted">
+                        — {w.distanceKm ? `${formatDistance(w.distanceKm, distanceUnit)} · ` : ""}
+                        {formatMinutes(w.durationMinutes ?? 0)}
+                        {pace ? ` · ${pace}` : ""}
+                      </span>
+                      <span className="text-xs text-ink-muted">{dayLabel(w.dateISO)}</span>
+                      {hasRoute && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedRoutes((ids) => {
+                              const next = new Set(ids);
+                              if (next.has(w.id)) next.delete(w.id);
+                              else next.add(w.id);
+                              return next;
+                            })
+                          }
+                          className="ml-auto text-xs text-workout hover:underline"
+                        >
+                          {expanded ? "Hide route" : "View route"}
+                        </button>
+                      )}
+                      <form action={deleteWorkout.bind(null, w.id)} className={hasRoute ? "" : "ml-auto"}>
+                        <button type="submit" title="Remove this workout" className="text-ink-muted hover:text-accent">
+                          ×
+                        </button>
+                      </form>
+                    </div>
+                    {expanded && w.route && (
+                      <div className="mt-2">
+                        <RouteMap points={w.route} />
+                      </div>
+                    )}
                   </li>
                 );
               }

@@ -81,8 +81,27 @@ export async function finishStrengthWorkout(workoutId: string) {
   revalidateWorkoutViews();
 }
 
+// Trusts the client-tracked GPS points as-is (already filtered for
+// accuracy/plausible speed by useGpsTrack) — just checks the shape so a
+// malformed or missing value can't crash the update. Anything short of two
+// points isn't a route worth drawing, so it's dropped rather than stored.
+function parseRoute(raw: string): { lat: number; lng: number }[] | undefined {
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return undefined;
+    const points = parsed.filter(
+      (p): p is { lat: number; lng: number } =>
+        p && typeof p.lat === "number" && typeof p.lng === "number" && Number.isFinite(p.lat) && Number.isFinite(p.lng),
+    );
+    return points.length >= 2 ? points : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function finishCardioWorkout(workoutId: string, formData: FormData) {
   const enteredDistance = Number(formData.get("distance"));
+  const route = parseRoute(String(formData.get("route") ?? ""));
   const user = await getCurrentUser();
   const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
   const endedAt = new Date();
@@ -97,6 +116,7 @@ export async function finishCardioWorkout(workoutId: string, formData: FormData)
       endedAt,
       durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt),
       distanceKm,
+      route,
     },
   });
 
