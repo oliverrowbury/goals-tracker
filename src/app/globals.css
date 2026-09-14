@@ -36,6 +36,13 @@
      since it's body text color first and would otherwise put white text on
      a near-white button in dark mode. */
   --ink-solid: #2b2420;
+
+  /* Shadow strength, referenced by the shadow-* utilities below — a flat
+     5% shadow reads fine on a pale background but disappears entirely
+     against a dark one, so this needs to be a runtime variable rather than
+     a value baked into the utility at build time. */
+  --shadow-opacity: 0.06;
+  --shadow-opacity-strong: 0.13;
 }
 
 .dark {
@@ -60,6 +67,9 @@
   --calm-soft: #2c2438;
 
   --ink-solid: #3c342b;
+
+  --shadow-opacity: 0.3;
+  --shadow-opacity-strong: 0.45;
 }
 
 @theme inline {
@@ -84,6 +94,15 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-fraunces);
+
+  /* A softer, warmer elevation than Tailwind's defaults — two layers (a
+     tight contact shadow plus a broader ambient one) instead of one flat
+     blur, so cards read as sitting slightly above the page rather than
+     just outlined. Opacity comes from --shadow-opacity so dark mode gets a
+     shadow strong enough to actually show up against a dark background. */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / calc(var(--shadow-opacity) * 0.7)), 0 3px 10px rgb(0 0 0 / var(--shadow-opacity));
+  --shadow-md: 0 2px 6px rgb(0 0 0 / var(--shadow-opacity)), 0 14px 32px rgb(0 0 0 / var(--shadow-opacity-strong));
+  --shadow-lg: 0 8px 16px rgb(0 0 0 / var(--shadow-opacity)), 0 28px 56px rgb(0 0 0 / var(--shadow-opacity-strong));
 }
 
 body {
@@ -106,6 +125,23 @@ body {
      nothing to seam. */
   background-attachment: fixed;
   color: var(--ink);
+}
+
+/* A default color/border transition on every interactive element, so hover
+   and focus states ease in instead of snapping — most links and buttons in
+   this app don't set their own `transition`, so without this the (many)
+   color changes on hover feel abrupt rather than sleek. Layout-affecting
+   properties (transform, box-shadow) are opted into per-component instead,
+   since transitioning `all` invites jank on properties that shouldn't
+   animate. */
+a,
+button,
+input,
+select,
+textarea {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
 }
 
 @keyframes fade-up {

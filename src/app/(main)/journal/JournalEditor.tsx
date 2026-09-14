@@ -36,6 +36,12 @@ function useFieldMode(storageKey: string) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(storageKey);
+      // Deferred to an effect (not a lazy useState initializer) on purpose —
+      // the server always renders "freewrite", so reading localStorage
+      // during render here would mean the client's first render disagrees
+      // with it and React flags a hydration mismatch. Doing it after mount
+      // instead just means a brief flash to the stored mode, no mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored === "list" || stored === "freewrite") setMode(stored);
     } catch {
       // ignore — just falls back to freewrite
@@ -208,7 +214,7 @@ export function JournalEditor({
         />
       )}
 
-      <p className="mb-2 mt-5 text-sm font-medium text-ink-muted">What didn't go well / what to improve</p>
+      <p className="mb-2 mt-5 text-sm font-medium text-ink-muted">What didn&apos;t go well / what to improve</p>
       <ModeToggle mode={improveMode} onChange={changeImproveMode} />
       {improveMode === "list" ? (
         <ListEditor value={improveText} onChange={setImproveText} placeholder="What could've gone better today?" />
@@ -226,7 +232,7 @@ export function JournalEditor({
         <button
           onClick={save}
           disabled={isPending}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98] disabled:opacity-50"
         >
           {isPending ? "Saving…" : "Save"}
         </button>

@@ -68,10 +68,14 @@ export function StudyStats({
                   </span>
                   <span className="text-ink-muted">{formatMinutes(row.minutes)}</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-line/40">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-line/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]">
                   <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${Math.max(4, (row.minutes / max) * 100)}%`, backgroundColor: row.color }}
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${Math.max(4, (row.minutes / max) * 100)}%`,
+                      backgroundColor: row.color,
+                      boxShadow: `0 0 8px ${row.color}`,
+                    }}
                   />
                 </div>
               </div>

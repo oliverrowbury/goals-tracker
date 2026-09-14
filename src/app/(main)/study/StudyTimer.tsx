@@ -12,6 +12,7 @@ import {
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import { todayISO, shiftISO } from "@/lib/dates";
+import { useClockOffsetMs } from "@/lib/time";
 import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
@@ -148,13 +149,13 @@ type OpenSession = { id: string; subjectId: string; startedAt: string; pausedAt:
 // normal cross-tab studying.
 const AUTO_PAUSE_AFTER_MS = 10 * 60_000;
 
-function useElapsedSeconds(startedAt: string | null, pausedAt: string | null) {
-  const [now, setNow] = useState(() => Date.now());
+function useElapsedSeconds(startedAt: string | null, pausedAt: string | null, clockOffsetMs: number) {
+  const [now, setNow] = useState(() => Date.now() - clockOffsetMs);
   useEffect(() => {
     if (!startedAt || pausedAt) return; // frozen while paused
-    const interval = setInterval(() => setNow(Date.now()), 1000);
+    const interval = setInterval(() => setNow(Date.now() - clockOffsetMs), 1000);
     return () => clearInterval(interval);
-  }, [startedAt, pausedAt]);
+  }, [startedAt, pausedAt, clockOffsetMs]);
   if (!startedAt) return 0;
   const end = pausedAt ? new Date(pausedAt).getTime() : now;
   return Math.max(0, Math.floor((end - new Date(startedAt).getTime()) / 1000));
@@ -172,16 +173,19 @@ export function StudyTimer({
   subjects,
   openSession,
   weekTotals,
+  serverNow,
 }: {
   subjects: Subject[];
   openSession: OpenSession;
   weekTotals: Record<string, number>;
+  serverNow: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [addingSubject, setAddingSubject] = useState(false);
   const [addingManually, setAddingManually] = useState(false);
   const [autoPaused, setAutoPaused] = useState(false);
-  const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, openSession?.pausedAt ?? null);
+  const clockOffsetMs = useClockOffsetMs(serverNow);
+  const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, openSession?.pausedAt ?? null, clockOffsetMs);
 
   const activeSubject = subjects.find((s) => s.id === openSession?.subjectId);
   const isRunning = !!openSession && !openSession.pausedAt;

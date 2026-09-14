@@ -7,10 +7,10 @@ export function Wordmark({ className = "" }: { className?: string }) {
     <span className={`inline-flex items-center gap-[0.28em] font-serif font-semibold ${className}`}>
       <span>Proudly</span>
       <span className="inline-flex items-end gap-[0.07em]" aria-hidden="true">
-        <span className="block w-[0.13em] rounded-t-[1px] bg-accent" style={{ height: "0.16em" }} />
-        <span className="block w-[0.13em] rounded-t-[1px] bg-accent" style={{ height: "0.28em" }} />
-        <span className="block w-[0.13em] rounded-t-[1px] bg-accent" style={{ height: "0.4em" }} />
-        <span className="block w-[0.13em] rounded-t-[1px] bg-accent" style={{ height: "0.54em" }} />
+        <span className="block w-[0.13em] rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong" style={{ height: "0.16em" }} />
+        <span className="block w-[0.13em] rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong" style={{ height: "0.28em" }} />
+        <span className="block w-[0.13em] rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong" style={{ height: "0.4em" }} />
+        <span className="block w-[0.13em] rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong" style={{ height: "0.54em" }} />
       </span>
     </span>
   );

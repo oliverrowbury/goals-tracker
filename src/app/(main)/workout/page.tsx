@@ -74,6 +74,7 @@ export default async function WorkoutPage() {
         weightUnit={user.weightUnit}
         distanceUnit={user.distanceUnit}
         exercises={exercises.map((e) => ({ id: e.id, name: e.name, category: e.category }))}
+        serverNow={new Date().toISOString()}
         openWorkout={
           openWorkout
             ? {

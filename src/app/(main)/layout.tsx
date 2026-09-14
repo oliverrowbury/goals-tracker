@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
-import { JournalIcon, TargetIcon, ClockIcon, DumbbellIcon, GearIcon, CalendarIcon, SignOutIcon } from "@/components/Icons";
+import { SignOutIcon } from "@/components/Icons";
+import { NavLinks } from "@/components/NavLinks";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate } from "@/lib/dates";
@@ -25,31 +26,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           <Link href="/" className="text-2xl text-ink transition-transform hover:scale-[1.02]">
             <Wordmark />
           </Link>
-          <nav className="flex items-center text-sm text-ink-muted">
-            <Link href="/journal" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-accent">
-              <JournalIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Journal</span>
-            </Link>
-            <Link href="/goals" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-goals">
-              <TargetIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Goals</span>
-            </Link>
-            <Link href="/study" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-study">
-              <ClockIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Study</span>
-            </Link>
-            <Link href="/workout" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-workout">
-              <DumbbellIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Workout</span>
-            </Link>
-            <Link href="/calendar" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-ink">
-              <CalendarIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Calendar</span>
-            </Link>
-            <Link href="/settings" className="flex items-center gap-1.5 p-2 -m-0.5 hover:text-ink">
-              <GearIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Settings</span>
-            </Link>
+          <nav className="flex items-center gap-0.5 text-sm text-ink-muted">
+            <NavLinks />
             <form action="/api/logout" method="POST" className="flex">
               <button type="submit" title="Sign out" className="flex items-center p-2 -m-0.5 hover:text-accent">
                 <SignOutIcon className="h-5 w-5" />

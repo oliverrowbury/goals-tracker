@@ -20,11 +20,11 @@ export default async function SignupPage({
             : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
+    <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <form
         action="/api/signup"
         method="POST"
-        className="w-full max-w-sm rounded-2xl border border-line bg-card p-7 shadow-sm"
+        className="w-full max-w-sm animate-[fade-up_0.5s_ease-out_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
       >
         <h1 className="mb-1 text-3xl text-ink">
           <Wordmark />
@@ -87,7 +87,7 @@ export default async function SignupPage({
 
         <button
           type="submit"
-          className="w-full rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+          className="w-full rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98]"
         >
           Create account
         </button>

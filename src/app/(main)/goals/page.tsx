@@ -67,7 +67,7 @@ export default async function GoalsPage() {
         </div>
         <Link
           href="/goals/new"
-          className="rounded-lg bg-goals px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+          className="rounded-lg bg-goals px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
         >
           New goal
         </Link>
@@ -155,9 +155,9 @@ export default async function GoalsPage() {
 
               {goal.frequencyType === "WEEKLY_TARGET" && weekTotal !== null && (
                 <div className="mt-3">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]">
                     <div
-                      className="h-full rounded-full bg-goals"
+                      className="h-full rounded-full bg-gradient-to-r from-goals to-accent shadow-[0_0_8px_var(--color-goals)] transition-all duration-500 ease-out"
                       style={{ width: `${Math.min(100, ((weekTotal / (goal.targetValue || 1)) * 100))}%` }}
                     />
                   </div>
@@ -171,9 +171,9 @@ export default async function GoalsPage() {
 
               {goal.frequencyType !== "WEEKLY_TARGET" && weekDueTotal > 0 && (
                 <div className="mt-3">
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]">
                     <div
-                      className="h-full rounded-full bg-goals transition-all"
+                      className="h-full rounded-full bg-gradient-to-r from-goals to-accent shadow-[0_0_8px_var(--color-goals)] transition-all duration-500 ease-out"
                       style={{ width: `${(weekDoneTotal / weekDueTotal) * 100}%` }}
                     />
                   </div>

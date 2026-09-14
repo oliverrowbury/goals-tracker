@@ -63,6 +63,7 @@ export default async function StudyPage() {
       </div>
       <StudyTimer
         subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
+        serverNow={new Date().toISOString()}
         openSession={
           openSession
             ? {

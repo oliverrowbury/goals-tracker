@@ -13,6 +13,7 @@ import {
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import { formatPace, formatDistance, formatWeight, fromKg, computeVolume, fromKm, haversineKm } from "@/lib/workout";
+import { useClockOffsetMs } from "@/lib/time";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
@@ -36,13 +37,13 @@ type HistoryWorkout = {
   sets: HistorySet[];
 };
 
-function useElapsedSeconds(startedAt: string | null): number {
-  const [now, setNow] = useState(() => Date.now());
+function useElapsedSeconds(startedAt: string | null, clockOffsetMs: number): number {
+  const [now, setNow] = useState(() => Date.now() - clockOffsetMs);
   useEffect(() => {
     if (!startedAt) return;
-    const interval = setInterval(() => setNow(Date.now()), 1000);
+    const interval = setInterval(() => setNow(Date.now() - clockOffsetMs), 1000);
     return () => clearInterval(interval);
-  }, [startedAt]);
+  }, [startedAt, clockOffsetMs]);
   if (!startedAt) return 0;
   return Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
 }
@@ -585,6 +586,7 @@ export function WorkoutTracker({
   lastPerformed,
   weekSummary,
   history,
+  serverNow,
 }: {
   weightUnit: WeightUnit;
   distanceUnit: DistanceUnit;
@@ -593,6 +595,7 @@ export function WorkoutTracker({
   lastPerformed: LastPerformed;
   weekSummary: WeekSummary;
   history: HistoryWorkout[];
+  serverNow: string;
 }) {
   const [isPending, startTransition] = useTransition();
   const [localExercises, setLocalExercises] = useState(exercises);
@@ -604,7 +607,8 @@ export function WorkoutTracker({
   const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
   const [restEndAt, setRestEndAt] = useState<number | null>(null);
-  const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null);
+  const clockOffsetMs = useClockOffsetMs(serverNow);
+  const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null, clockOffsetMs);
   const {
     distanceKm: gpsDistanceKm,
     status: gpsStatus,
