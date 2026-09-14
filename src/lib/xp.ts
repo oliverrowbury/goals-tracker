@@ -8,6 +8,7 @@ export const XP_AWARDS = {
   STUDY_SESSION: 15,
   WORKOUT: 20,
   GOAL_COMPLETE: 5,
+  DEADLINE_COMPLETE: 15,
 } as const;
 
 const XP_PER_LEVEL = 100;

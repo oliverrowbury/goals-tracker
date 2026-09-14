@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { JournalIcon, TargetIcon, ClockIcon, DumbbellIcon, GearIcon, CalendarIcon } from "@/components/Icons";
+import { JournalIcon, TargetIcon, ClockIcon, DumbbellIcon, GearIcon, CalendarIcon, AlarmIcon } from "@/components/Icons";
 
 const LINKS = [
   { href: "/journal", label: "Journal", Icon: JournalIcon, color: "accent" },
   { href: "/goals", label: "Goals", Icon: TargetIcon, color: "goals" },
+  { href: "/deadlines", label: "Deadlines", Icon: AlarmIcon, color: "accent" },
   { href: "/study", label: "Study", Icon: ClockIcon, color: "study" },
   { href: "/workout", label: "Workout", Icon: DumbbellIcon, color: "workout" },
   { href: "/calendar", label: "Calendar", Icon: CalendarIcon, color: "ink" },
@@ -44,7 +45,7 @@ export function NavLinks() {
           <Link
             key={href}
             href={href}
-            className={`flex items-center gap-1.5 rounded-lg p-2 -m-0.5 transition-colors ${
+            className={`flex items-center gap-1.5 rounded-lg p-1.5 -m-0.5 transition-colors sm:p-2 ${
               active ? ACTIVE_CLASSES[color] : `text-ink-muted ${HOVER_CLASSES[color]}`
             }`}
           >

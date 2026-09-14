@@ -14,6 +14,14 @@ export function dateToISO(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+// Whole days from `fromISO` to `toISO` — negative when `toISO` is earlier.
+// Both are midnight-UTC dates already, so a plain ms-diff is exact with no
+// DST/timezone edge cases to account for.
+export function daysBetween(fromISO: string, toISO: string): number {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((isoToDate(toISO).getTime() - isoToDate(fromISO).getTime()) / msPerDay);
+}
+
 export function shiftISO(iso: string, days: number): string {
   const date = isoToDate(iso);
   date.setUTCDate(date.getUTCDate() + days);

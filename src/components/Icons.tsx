@@ -218,6 +218,16 @@ export function SignOutIcon({ className }: IconProps) {
   );
 }
 
+export function AlarmIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="13" r="7.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12 9.5V13l2.5 1.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 4 2.5 6.5M19 4l2.5 2.5M9 3h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function PaletteIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">

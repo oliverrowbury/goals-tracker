@@ -4,8 +4,9 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, formatLong } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
-import { JournalIcon, TargetIcon, ClockIcon } from "@/components/Icons";
+import { JournalIcon, TargetIcon, ClockIcon, AlarmIcon } from "@/components/Icons";
 import { promptForDate } from "@/lib/prompts";
+import { daysBetween, dateToISO } from "@/lib/dates";
 import { PromptOfDayCard } from "./PromptOfDayCard";
 import { WeeklyRecap } from "./WeeklyRecap";
 
@@ -28,7 +29,7 @@ export default async function HomePage({
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
 
-  const [entry, goals, weekSessions] = await Promise.all([
+  const [entry, goals, weekSessions, nextDeadline] = await Promise.all([
     prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(today) } } }),
     prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
@@ -38,6 +39,10 @@ export default async function HomePage({
         startedAt: { gte: new Date(`${startISO}T00:00:00.000Z`), lte: new Date(`${endISO}T23:59:59.999Z`) },
       },
     }),
+    prisma.deadline.findFirst({
+      where: { userId: user.id, completed: false },
+      orderBy: { dueDate: "asc" },
+    }),
   ]);
 
   const dueToday = goals.filter((g) => isGoalDueOn(g, today) && g.frequencyType !== "WEEKLY_TARGET");
@@ -45,6 +50,21 @@ export default async function HomePage({
   const weekMinutes = weekSessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
 
   const journalStatus = entry?.bodyText.trim() ? "Written today" : "Not started yet";
+
+  // Only surfaced here when it's actually close — otherwise it'd be
+  // permanent clutter on the busiest page for the common case of nothing
+  // being due soon. Everything else lives on /deadlines regardless.
+  const deadlineDays = nextDeadline ? daysBetween(today, dateToISO(nextDeadline.dueDate)) : null;
+  const deadlineLabel =
+    deadlineDays === null
+      ? null
+      : deadlineDays < 0
+        ? `was due ${-deadlineDays} day${deadlineDays === -1 ? "" : "s"} ago`
+        : deadlineDays === 0
+          ? "is due today"
+          : deadlineDays === 1
+            ? "is due tomorrow"
+            : `is due in ${deadlineDays} days`;
 
   return (
     <div>
@@ -67,6 +87,18 @@ export default async function HomePage({
           What are you proud of today?
         </p>
       </div>
+
+      {nextDeadline && deadlineDays !== null && deadlineDays <= 3 && (
+        <Link
+          href="/deadlines"
+          className="mb-6 flex animate-[fade-up_0.5s_ease-out_0.02s_both] items-center gap-3 rounded-2xl border border-accent/30 bg-accent-soft px-5 py-3.5 text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <AlarmIcon className="h-5 w-5 shrink-0 text-accent" />
+          <span className="text-ink">
+            <span className="font-medium">{nextDeadline.title}</span> {deadlineLabel}
+          </span>
+        </Link>
+      )}
 
       <PromptOfDayCard dateISO={today} prompt={promptForDate(today)} initialResponse={entry?.promptResponse ?? ""} />
 
