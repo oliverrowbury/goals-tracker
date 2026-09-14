@@ -4,8 +4,20 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { minutesBetween } from "@/lib/study";
-import { isoToDate } from "@/lib/dates";
+import { isoToDate, todayISO } from "@/lib/dates";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
+import { awardBadge, awardStreakBadges } from "@/lib/badges";
+import { computeStreak } from "@/lib/streaks";
+
+async function awardStudyBadges(userId: string) {
+  const sessions = await prisma.studySession.findMany({
+    where: { userId, durationMinutes: { not: null } },
+    select: { startedAt: true },
+  });
+  if (sessions.length === 1) await awardBadge(userId, "FIRST_STUDY_SESSION");
+  const streak = computeStreak(new Set(sessions.map((s) => s.startedAt.toISOString().slice(0, 10))), todayISO());
+  await awardStreakBadges(userId, "STUDY", streak);
+}
 
 function revalidateStudyViews() {
   revalidatePath("/study");
@@ -74,7 +86,10 @@ export async function finishStudySession(sessionId: string) {
 
   // A sub-minute session isn't worth awarding — mainly guards against
   // immediately starting and finishing a timer to farm XP.
-  if (durationMinutes >= 1) await awardXp(session.userId, XP_AWARDS.STUDY_SESSION);
+  if (durationMinutes >= 1) {
+    await awardXp(session.userId, XP_AWARDS.STUDY_SESSION);
+    await awardStudyBadges(session.userId);
+  }
 
   revalidateStudyViews();
 }
@@ -124,6 +139,7 @@ export async function logManualSession(
     data: { userId: user.id, subjectId, startedAt, endedAt, durationMinutes: minutes },
   });
   await awardXp(user.id, XP_AWARDS.STUDY_SESSION);
+  await awardStudyBadges(user.id);
 
   revalidateStudyViews();
   return null;

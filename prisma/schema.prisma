@@ -62,18 +62,6 @@ enum DistanceUnit {
   MI
 }
 
-// A curated set of accent-color presets a user can pick in Settings, rather
-// than a free-form color picker — keeps every combination looking
-// intentional and keeps contrast/accessibility guaranteed, since each is
-// hand-picked rather than user-mixed. TERRACOTTA is the original default.
-enum AccentTheme {
-  TERRACOTTA
-  OCEAN
-  FOREST
-  BERRY
-  SLATE
-}
-
 // Fixed times of day a reminder can fire at, rather than an arbitrary
 // "HH:mm" — see the Reminder model below for why: Vercel's Hobby cron plan
 // only allows each individual cron job to fire once a day, but a project
@@ -90,6 +78,10 @@ enum ReminderSlot {
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  // Public handle — used for finding/adding friends without exposing an
+  // email address (see /friends). Set at signup; distinct from `name`,
+  // which is just a display name and doesn't have to be unique.
+  username  String   @unique
   name      String
   createdAt DateTime @default(now())
 
@@ -105,10 +97,6 @@ model User {
   // the UI's edges (see src/lib/workout.ts).
   weightUnit   WeightUnit   @default(KG)
   distanceUnit DistanceUnit @default(KM)
-
-  // Which preset color palette the app renders in for this user — applied
-  // as a data attribute on the app shell, see globals.css.
-  accentTheme AccentTheme @default(TERRACOTTA)
 
   // Simple points total — +XP for finishing a study session or workout,
   // completing a goal for the day, or writing a journal entry (see each
@@ -133,9 +121,12 @@ model User {
   pushSubscriptions PushSubscription[]
   feedback          Feedback[]
   deadlines         Deadline[]
+  badges            UserBadge[]
 
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
   receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
+  cheersSent             Cheer[]      @relation("CheerFrom")
+  cheersReceived         Cheer[]      @relation("CheerTo")
 }
 
 model PushSubscription {
@@ -355,10 +346,37 @@ model Deadline {
   subjectId String?
   subject   Subject? @relation(fields: [subjectId], references: [id])
 
-  dueDate   DateTime
+  dueDate DateTime
+  // "HH:mm", 24h, always set (defaults to end of day) — reminders are
+  // computed as offsets from dueDate+dueTime, so a real time is needed
+  // even though the UI treats it as optional (end of day is a sensible
+  // default for "due the 15th" with no time given).
+  dueTime   String   @default("23:59")
   notes     String?
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  remindersSent DeadlineReminderSent[]
+}
+
+enum DeadlineReminderKind {
+  WEEK_BEFORE
+  DAY_BEFORE
+  HOUR_BEFORE
+}
+
+// One row per (deadline, kind) once that reminder has actually been sent —
+// checked by the cron route before sending, so an hourly check that spans
+// the target moment more than once (or catches up after a gap) never
+// double-sends.
+model DeadlineReminderSent {
+  id         String                @id @default(uuid())
+  deadlineId String
+  deadline   Deadline              @relation(fields: [deadlineId], references: [id])
+  kind       DeadlineReminderKind
+  sentAt     DateTime              @default(now())
+
+  @@unique([deadlineId, kind])
 }
 
 enum FriendshipStatus {
@@ -384,4 +402,52 @@ model Friendship {
   createdAt DateTime         @default(now())
 
   @@unique([requesterId, addresseeId])
+}
+
+// A friend's on-brand equivalent of Strava kudos — capped at one per friend
+// per calendar day (the @@unique below) rather than per individual
+// activity, since there's no per-activity feed to react to, just each
+// other's aggregate streaks/level on the Friends page.
+model Cheer {
+  id String @id @default(uuid())
+
+  fromUserId String
+  fromUser   User   @relation("CheerFrom", fields: [fromUserId], references: [id])
+  toUserId   String
+  toUser     User   @relation("CheerTo", fields: [toUserId], references: [id])
+
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([fromUserId, toUserId, date])
+}
+
+// A curated, fixed set of milestones rather than an open-ended point
+// system — same reasoning as the old accent-theme presets: each one is
+// hand-picked to mean something specific, rather than derived from a
+// formula that could quietly change what a badge "means" later.
+enum Badge {
+  FIRST_JOURNAL_ENTRY
+  FIRST_STUDY_SESSION
+  FIRST_WORKOUT
+  FIRST_GOAL_COMPLETE
+  FIRST_DEADLINE_COMPLETE
+  JOURNAL_STREAK_7
+  JOURNAL_STREAK_30
+  STUDY_STREAK_7
+  WORKOUT_STREAK_7
+  LEVEL_5
+  LEVEL_10
+}
+
+model UserBadge {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  badge  Badge
+
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badge])
 }

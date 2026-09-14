@@ -6,6 +6,7 @@ import { todayISO } from "@/lib/dates";
 type DeadlineFormValues = {
   title: string;
   dueDate: string;
+  dueTime: string;
   subjectId: string;
   notes: string;
 };
@@ -13,6 +14,7 @@ type DeadlineFormValues = {
 const DEFAULTS: DeadlineFormValues = {
   title: "",
   dueDate: todayISO(),
+  dueTime: "23:59",
   subjectId: "",
   notes: "",
 };
@@ -72,22 +74,29 @@ export function DeadlineForm({
           </label>
           <input id="dueDate" name="dueDate" type="date" defaultValue={values.dueDate} required className={inputClass} />
         </div>
-        {subjects.length > 0 && (
-          <div className="flex-1">
-            <label className={labelClass} htmlFor="subjectId">
-              Subject <span className="text-ink-muted">(optional)</span>
-            </label>
-            <select id="subjectId" name="subjectId" defaultValue={values.subjectId} className={inputClass}>
-              <option value="">None</option>
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        <div className="flex-1">
+          <label className={labelClass} htmlFor="dueTime">
+            Due time <span className="text-ink-muted">(optional)</span>
+          </label>
+          <input id="dueTime" name="dueTime" type="time" defaultValue={values.dueTime} className={inputClass} />
+        </div>
       </div>
+
+      {subjects.length > 0 && (
+        <div>
+          <label className={labelClass} htmlFor="subjectId">
+            Subject <span className="text-ink-muted">(optional)</span>
+          </label>
+          <select id="subjectId" name="subjectId" defaultValue={values.subjectId} className={inputClass}>
+            <option value="">None</option>
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className={labelClass} htmlFor="notes">

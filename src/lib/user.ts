@@ -16,15 +16,3 @@ export async function getCurrentUser() {
 
   return prisma.user.findUniqueOrThrow({ where: { sessionToken: token } });
 }
-
-// Same lookup as getCurrentUser, but returns null instead of throwing when
-// there's no session — for the root layout, which also renders signed-out
-// pages (/login, /signup) and just needs "is someone logged in, and if so
-// what's their accent theme" rather than a hard requirement.
-export async function getOptionalUser() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE)?.value;
-  if (!token) return null;
-
-  return prisma.user.findUnique({ where: { sessionToken: token } });
-}

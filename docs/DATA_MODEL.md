@@ -8,9 +8,9 @@ gated by an accepted friendship plus the other user's own `share_activity` opt-i
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
-| email | text | |
-| name | text | |
-| accent_theme | enum | `terracotta` \| `ocean` \| `forest` \| `berry` \| `slate` — Settings → Appearance |
+| email | text | private — never shown to other users, including friends |
+| username | text | public handle, unique — how friends find/add each other (`/friends/add/[username]`) |
+| name | text | display name, not unique |
 | xp | integer | simple points total; level is derived from this at display time rather than stored |
 | share_activity | boolean | opt-in: whether accepted friends can see this user's streaks/level |
 | created_at | timestamp | |
@@ -150,9 +150,24 @@ is a recurring habit rather than a one-off with a due date.
 | title | text | |
 | subject_id | uuid, nullable | optional link to a Subject, same idea as `Goal.subject_id` |
 | due_date | date | |
+| due_time | text | "HH:mm", defaults to end of day — combined with due_date for reminder timing |
 | notes | text | optional |
 | completed | boolean | |
 | created_at | timestamp | |
+
+## DeadlineReminderSent
+Tracks which reminders have actually gone out for a deadline, so an hourly
+cron check (see `vercel.json` and `src/app/api/cron/deadline-reminders/route.ts`)
+never double-sends the same one.
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| deadline_id | uuid | |
+| kind | enum | `week_before` \| `day_before` \| `hour_before` |
+| sent_at | timestamp | |
+
+Unique on `(deadline_id, kind)`.
 
 ## Friendship
 One row per pair, not two — whoever adds first is the requester. `status`
@@ -172,6 +187,36 @@ two crossed pending rows for the same pair.
 Unique on `(requester_id, addressee_id)` — direction-specific, so the "already
 requested the other way" case is checked in application code, not the schema.
 
+## Cheer
+Proudly's own take on Strava kudos — one friend giving another a "Proud of
+you" on the Friends page. Capped at once per friend per calendar day (there's
+no per-activity feed to react to individually, just aggregate streaks/level).
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| from_user_id | uuid | |
+| to_user_id | uuid | |
+| date | date | the calendar day this cheer counts against |
+| created_at | timestamp | |
+
+Unique on `(from_user_id, to_user_id, date)`.
+
+## UserBadge
+A fixed, curated set of milestones (first journal entry, 7-day streaks,
+reaching level 5, etc. — the full list and copy lives in `src/lib/badges.ts`)
+rather than an open-ended point system, so each badge means something
+specific. Awarded automatically from the same actions that award XP.
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| user_id | uuid | |
+| badge | enum | see `src/lib/badges.ts` for the full set and their descriptions |
+| earned_at | timestamp | |
+
+Unique on `(user_id, badge)`.
+
 ## Relationships
 
 ```
@@ -181,7 +226,10 @@ User 1─* Subject 1─* StudySession
 User 1─* Exercise (custom only)
 User 1─* Workout 1─* WorkoutSet *─1 Exercise
 User 1─* Deadline *─1 Subject (optional)
+Deadline 1─* DeadlineReminderSent
 User 1─* Friendship (as requester) *─1 User (as addressee)
+User 1─* Cheer (as sender) *─1 User (as recipient)
+User 1─* UserBadge
 Goal 1─* Reminder
 ```
 

@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Fraunces } from "next/font/google";
-import { getOptionalUser } from "@/lib/user";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -47,21 +46,11 @@ try {
 } catch {}
 `;
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  // Known server-side (unlike dark mode, which depends on localStorage/
-  // system preference the server can't see) — so this can be set directly
-  // on <html>, applying to the very first paint with no flash and, unlike
-  // scoping it further down the tree, actually reaching the body background
-  // gradient in globals.css, which reads --accent at the body element and
-  // wouldn't see an override set on a descendant.
-  const user = await getOptionalUser();
-  const accent = (user?.accentTheme ?? "TERRACOTTA").toLowerCase();
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       suppressHydrationWarning
-      data-accent={accent}
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <head>

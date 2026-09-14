@@ -37,9 +37,7 @@ export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
 
 export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"] as const;
 
-// Curated accent-color presets — see the AccentTheme comment in
-// schema.prisma for why these are fixed rather than a free-form picker.
-// Label/swatch pairs live in AccentThemeForm.tsx, next to the CSS overrides
-// they correspond to in globals.css.
-export const ACCENT_THEMES = ["TERRACOTTA", "OCEAN", "FOREST", "BERRY", "SLATE"] as const;
-export type AccentTheme = (typeof ACCENT_THEMES)[number];
+// Lowercase letters/digits/underscores, starting with a letter — keeps a
+// username readable in a URL (/friends/add/[username]) with nothing to
+// URL-encode. Shared between signup and the Settings username field.
+export const USERNAME_RE = /^[a-z][a-z0-9_]{2,19}$/;

@@ -3,9 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { isoToDate } from "@/lib/dates";
+import { isoToDate, todayISO } from "@/lib/dates";
 import { uploadJournalPhoto, deleteJournalPhoto } from "@/lib/storage";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
+import { awardBadge, awardStreakBadges } from "@/lib/badges";
+import { computeStreak } from "@/lib/streaks";
 
 export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string) {
   const user = await getCurrentUser();
@@ -22,6 +24,14 @@ export async function saveJournalEntry(dateISO: string, bodyText: string, improv
   // otherwise every autosave keystroke would re-award it.
   if (bodyText.trim() && !existing?.bodyText.trim()) {
     await awardXp(user.id, XP_AWARDS.JOURNAL_ENTRY);
+
+    const journaledDates = await prisma.journalEntry.findMany({
+      where: { userId: user.id, bodyText: { not: "" } },
+      select: { date: true },
+    });
+    if (journaledDates.length === 1) await awardBadge(user.id, "FIRST_JOURNAL_ENTRY");
+    const streak = computeStreak(new Set(journaledDates.map((e) => e.date.toISOString().slice(0, 10))), todayISO());
+    await awardStreakBadges(user.id, "JOURNAL", streak);
   }
 
   revalidatePath("/journal");

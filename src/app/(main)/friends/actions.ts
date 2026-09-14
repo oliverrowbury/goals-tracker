@@ -3,48 +3,98 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
+import { todayISO, isoToDate } from "@/lib/dates";
 
-export type FriendRequestState = { error?: string; success?: string } | null;
+export type FriendSearchResult = {
+  id: string;
+  name: string;
+  username: string;
+  status: "none" | "pending_sent" | "pending_received" | "friends";
+};
 
-export async function sendFriendRequest(_prev: FriendRequestState, formData: FormData): Promise<FriendRequestState> {
-  const email = String(formData.get("email") ?? "")
-    .trim()
-    .toLowerCase();
-  if (!email) return { error: "Enter an email address" };
+// Username matches as a prefix (like most apps' public-handle search) so
+// someone can be found without knowing their exact spelling; email only
+// matches exactly, so this can't be used to enumerate every account by
+// guessing partial addresses — an email has to already be known to add by it.
+export async function searchUsers(query: string): Promise<FriendSearchResult[]> {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
 
   const user = await getCurrentUser();
-  if (email === user.email.toLowerCase()) return { error: "That's your own email" };
+  const candidates = await prisma.user.findMany({
+    where: {
+      id: { not: user.id },
+      OR: [{ username: { startsWith: q } }, { email: q }],
+    },
+    select: { id: true, name: true, username: true },
+    take: 8,
+  });
+  if (candidates.length === 0) return [];
 
-  const other = await prisma.user.findUnique({ where: { email } });
-  if (!other) return { error: "No Proudly account with that email" };
-
-  // One row per pair regardless of direction — check both orderings.
-  const existing = await prisma.friendship.findFirst({
+  const friendships = await prisma.friendship.findMany({
     where: {
       OR: [
-        { requesterId: user.id, addresseeId: other.id },
-        { requesterId: other.id, addresseeId: user.id },
+        { requesterId: user.id, addresseeId: { in: candidates.map((c) => c.id) } },
+        { addresseeId: user.id, requesterId: { in: candidates.map((c) => c.id) } },
       ],
     },
   });
 
-  if (existing?.status === "ACCEPTED") return { error: `You're already friends with ${other.name}` };
+  return candidates.map((c) => {
+    const f = friendships.find((f) => f.requesterId === c.id || f.addresseeId === c.id);
+    let status: FriendSearchResult["status"] = "none";
+    if (f?.status === "ACCEPTED") status = "friends";
+    else if (f?.requesterId === user.id) status = "pending_sent";
+    else if (f) status = "pending_received";
+    return { ...c, status };
+  });
+}
 
-  if (existing && existing.requesterId === user.id) {
-    return { error: `You've already sent ${other.name} a request` };
-  }
+export type FriendRequestState = { error?: string; success?: string } | null;
 
-  if (existing && existing.requesterId === other.id) {
+async function createOrAcceptRequest(userId: string, otherId: string, otherName: string): Promise<FriendRequestState> {
+  const existing = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { requesterId: userId, addresseeId: otherId },
+        { requesterId: otherId, addresseeId: userId },
+      ],
+    },
+  });
+
+  if (existing?.status === "ACCEPTED") return { error: `You're already friends with ${otherName}` };
+  if (existing && existing.requesterId === userId) return { error: `You've already sent ${otherName} a request` };
+
+  if (existing && existing.requesterId === otherId) {
     // They already requested you — this is a mutual add, accept it
     // outright instead of leaving two crossed pending requests.
     await prisma.friendship.update({ where: { id: existing.id }, data: { status: "ACCEPTED" } });
     revalidatePath("/friends");
-    return { success: `You and ${other.name} are now friends` };
+    return { success: `You and ${otherName} are now friends` };
   }
 
-  await prisma.friendship.create({ data: { requesterId: user.id, addresseeId: other.id } });
+  await prisma.friendship.create({ data: { requesterId: userId, addresseeId: otherId } });
   revalidatePath("/friends");
-  return { success: `Request sent to ${other.name}` };
+  return { success: `Request sent to ${otherName}` };
+}
+
+// Used by search results and the /friends/add/[username] share link, where
+// the target is already a resolved user rather than free-typed text.
+export async function sendFriendRequestTo(targetUserId: string): Promise<FriendRequestState> {
+  const user = await getCurrentUser();
+  if (targetUserId === user.id) return { error: "That's you" };
+
+  const other = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!other) return { error: "That account doesn't exist" };
+
+  return createOrAcceptRequest(user.id, other.id, other.name);
+}
+
+// Same as sendFriendRequestTo but discards the result — for the
+// /friends/add/[username] page's plain <form action>, which (unlike
+// AddFriendSearch) has no client-side state to show a return value in.
+export async function sendFriendRequestToVoid(targetUserId: string): Promise<void> {
+  await sendFriendRequestTo(targetUserId);
 }
 
 export async function acceptFriendRequest(friendshipId: string) {
@@ -72,5 +122,33 @@ export async function removeFriendship(friendshipId: string) {
 export async function setShareActivity(share: boolean) {
   const user = await getCurrentUser();
   await prisma.user.update({ where: { id: user.id }, data: { shareActivity: share } });
+  revalidatePath("/friends");
+}
+
+// Proudly's own take on Strava kudos — since there's no per-activity feed
+// to react to (just each friend's aggregate streaks/level), this is capped
+// at once per friend per calendar day rather than once per activity. The
+// @@unique([fromUserId, toUserId, date]) constraint is what actually
+// enforces the cap; a second tap the same day just no-ops.
+export async function sendCheer(toUserId: string) {
+  const user = await getCurrentUser();
+  if (toUserId === user.id) return;
+
+  const friendship = await prisma.friendship.findFirst({
+    where: {
+      status: "ACCEPTED",
+      OR: [
+        { requesterId: user.id, addresseeId: toUserId },
+        { requesterId: toUserId, addresseeId: user.id },
+      ],
+    },
+  });
+  if (!friendship) return;
+
+  try {
+    await prisma.cheer.create({ data: { fromUserId: user.id, toUserId, date: isoToDate(todayISO()) } });
+  } catch {
+    // Already cheered this friend today — the unique constraint caught it.
+  }
   revalidatePath("/friends");
 }

@@ -7,6 +7,16 @@ import { minutesBetween } from "@/lib/study";
 import { toKg, toKm } from "@/lib/workout";
 import type { WorkoutType } from "@/lib/constants";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
+import { awardBadge, awardStreakBadges } from "@/lib/badges";
+import { computeStreak } from "@/lib/streaks";
+import { todayISO } from "@/lib/dates";
+
+async function awardWorkoutBadges(userId: string) {
+  const workouts = await prisma.workout.findMany({ where: { userId, endedAt: { not: null } }, select: { date: true } });
+  if (workouts.length === 1) await awardBadge(userId, "FIRST_WORKOUT");
+  const streak = computeStreak(new Set(workouts.map((w) => w.date.toISOString().slice(0, 10))), todayISO());
+  await awardStreakBadges(userId, "WORKOUT", streak);
+}
 
 function revalidateWorkoutViews() {
   revalidatePath("/workout");
@@ -90,6 +100,7 @@ export async function finishStrengthWorkout(workoutId: string) {
     data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },
   });
   await awardXp(workout.userId, XP_AWARDS.WORKOUT);
+  await awardWorkoutBadges(workout.userId);
 
   revalidateWorkoutViews();
 }
@@ -131,7 +142,10 @@ export async function finishCardioWorkout(workoutId: string, formData: FormData)
 
   // Same sub-minute guard as a study session — not worth awarding, and
   // guards against an instant start/finish to farm XP.
-  if (durationMinutes >= 1) await awardXp(user.id, XP_AWARDS.WORKOUT);
+  if (durationMinutes >= 1) {
+    await awardXp(user.id, XP_AWARDS.WORKOUT);
+    await awardWorkoutBadges(user.id);
+  }
 
   revalidateWorkoutViews();
 }

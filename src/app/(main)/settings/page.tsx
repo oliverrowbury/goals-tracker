@@ -3,10 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { updateName, renameSubject, setSubjectActive } from "./actions";
 import { PasswordForm } from "./PasswordForm";
+import { UsernameForm } from "./UsernameForm";
 import { UnitsForm } from "./UnitsForm";
 import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
-import { AccentThemeForm } from "./AccentThemeForm";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
@@ -18,13 +18,13 @@ import {
   HelpIcon,
   MessageIcon,
   FlameIcon,
-  PaletteIcon,
   JournalIcon,
   TargetIcon,
 } from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
+import { BADGE_INFO } from "@/lib/badges";
 import { ADMIN_EMAIL } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const isAdmin = user.email === ADMIN_EMAIL;
-  const [subjects, feedback, journalDates, subjectMinutes, studyDates, workoutDates, completedGoalDates] =
+  const [subjects, feedback, journalDates, subjectMinutes, studyDates, workoutDates, completedGoalDates, earnedBadges] =
     await Promise.all([
       prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
       // The admin sees feedback from every account — otherwise another
@@ -71,6 +71,7 @@ export default async function SettingsPage() {
         where: { completed: true, goal: { userId: user.id } },
         select: { date: true },
       }),
+      prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true } }),
     ]);
   const active = subjects.filter((s) => s.active);
   const archived = subjects.filter((s) => !s.active);
@@ -84,6 +85,7 @@ export default async function SettingsPage() {
   const workoutStreak = computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today);
   const goalsStreak = computeStreak(new Set(completedGoalDates.map((g) => g.date.toISOString().slice(0, 10))), today);
   const { level, xpIntoLevel, xpForNextLevel } = levelForXp(user.xp);
+  const earnedBadgeSet = new Set(earnedBadges.map((b) => b.badge));
 
   return (
     <div className="space-y-8">
@@ -146,6 +148,31 @@ export default async function SettingsPage() {
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Badges</h2>
+        <p className="mb-4 text-sm text-ink-muted">
+          {earnedBadgeSet.size} of {Object.keys(BADGE_INFO).length} earned
+        </p>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
+          {(Object.keys(BADGE_INFO) as (keyof typeof BADGE_INFO)[]).map((badge) => {
+            const info = BADGE_INFO[badge];
+            const earned = earnedBadgeSet.has(badge);
+            return (
+              <div
+                key={badge}
+                title={info.description}
+                className={`flex flex-col items-center gap-1 rounded-xl border px-2 py-3 text-center ${
+                  earned ? "border-accent-soft bg-accent-soft" : "border-line opacity-40 grayscale"
+                }`}
+              >
+                <span className="text-2xl">{info.emoji}</span>
+                <span className="text-[11px] font-medium leading-tight text-ink">{info.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Account</h2>
         <p className="mb-4 text-sm text-ink-muted">Your name, password, and a copy of your data.</p>
 
@@ -162,6 +189,11 @@ export default async function SettingsPage() {
         </form>
 
         <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-3 text-sm font-medium text-ink">Username</p>
+          <UsernameForm current={user.username} />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
           <p className="mb-3 text-sm font-medium text-ink">Password</p>
           <PasswordForm />
         </div>
@@ -176,15 +208,6 @@ export default async function SettingsPage() {
             Download my data (JSON)
           </a>
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
-          <PaletteIcon className="h-4 w-4 text-accent" />
-          Appearance
-        </h2>
-        <p className="mb-4 text-sm text-ink-muted">Pick an accent color for the whole app.</p>
-        <AccentThemeForm current={user.accentTheme} />
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

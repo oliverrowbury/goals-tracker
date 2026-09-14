@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { awardLevelBadges } from "@/lib/badges";
 
 // Flat amounts per action — simple on purpose (no streak multipliers, no
 // difficulty weighting) so the total stays easy to reason about. Goals are
@@ -26,4 +27,7 @@ export async function awardXp(userId: string, amount: number) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { xp: true } });
   const xp = Math.max(0, user.xp + amount);
   await prisma.user.update({ where: { id: userId }, data: { xp } });
+
+  const { level } = levelForXp(xp);
+  await awardLevelBadges(userId, level);
 }

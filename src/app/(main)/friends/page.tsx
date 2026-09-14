@@ -1,21 +1,26 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO } from "@/lib/dates";
+import { todayISO, isoToDate } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
 import { UsersIcon, FlameIcon, JournalIcon, ClockIcon, DumbbellIcon } from "@/components/Icons";
-import { AddFriendForm } from "./AddFriendForm";
+import { AddFriendSearch } from "./AddFriendSearch";
 import { ShareActivityToggle } from "./ShareActivityToggle";
 import { RemoveFriendButton } from "./RemoveFriendButton";
+import { CheerButton } from "./CheerButton";
+import { CopyLinkButton } from "./CopyLinkButton";
 import { acceptFriendRequest, removeFriendship } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type FriendUser = { id: string; name: string; email: string; shareActivity: boolean; xp: number };
+type FriendUser = { id: string; name: string; username: string; shareActivity: boolean; xp: number };
 
 // The only place in the app that reads another user's rows — gated behind
 // an ACCEPTED friendship (checked by the caller) and that user's own
 // shareActivity opt-in, so it's never reachable just by knowing a user id.
+// Journal *content* is never included here regardless — only whether an
+// entry exists on a given day, the same way the streak is already computed
+// for the signed-in user's own settings page.
 async function friendActivity(userId: string, today: string) {
   const [journalDates, studyDates, workoutDates] = await Promise.all([
     prisma.journalEntry.findMany({ where: { userId, bodyText: { not: "" } }, select: { date: true } }),
@@ -36,8 +41,8 @@ export default async function FriendsPage() {
   const friendships = await prisma.friendship.findMany({
     where: { OR: [{ requesterId: user.id }, { addresseeId: user.id }] },
     include: {
-      requester: { select: { id: true, name: true, email: true, shareActivity: true, xp: true } },
-      addressee: { select: { id: true, name: true, email: true, shareActivity: true, xp: true } },
+      requester: { select: { id: true, name: true, username: true, shareActivity: true, xp: true } },
+      addressee: { select: { id: true, name: true, username: true, shareActivity: true, xp: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -47,15 +52,25 @@ export default async function FriendsPage() {
   const accepted = friendships.filter((f) => f.status === "ACCEPTED");
   const incoming = friendships.filter((f) => f.status === "PENDING" && f.addresseeId === user.id);
   const outgoing = friendships.filter((f) => f.status === "PENDING" && f.requesterId === user.id);
+  const friendIds = accepted.map((f) => otherUser(f).id);
 
-  const activityByFriendId = new Map<string, Awaited<ReturnType<typeof friendActivity>>>();
-  await Promise.all(
-    accepted.map(async (f) => {
-      const other = otherUser(f);
-      if (!other.shareActivity) return;
-      activityByFriendId.set(other.id, await friendActivity(other.id, today));
-    }),
-  );
+  const [activityByFriendId, cheersGivenToday, cheerCounts] = await Promise.all([
+    (async () => {
+      const map = new Map<string, Awaited<ReturnType<typeof friendActivity>>>();
+      await Promise.all(
+        accepted.map(async (f) => {
+          const other = otherUser(f);
+          if (!other.shareActivity) return;
+          map.set(other.id, await friendActivity(other.id, today));
+        }),
+      );
+      return map;
+    })(),
+    prisma.cheer.findMany({ where: { fromUserId: user.id, toUserId: { in: friendIds }, date: isoToDate(today) } }),
+    prisma.cheer.groupBy({ by: ["toUserId"], where: { toUserId: { in: friendIds } }, _count: { toUserId: true } }),
+  ]);
+  const cheeredTodaySet = new Set(cheersGivenToday.map((c) => c.toUserId));
+  const cheerCountMap = new Map(cheerCounts.map((c) => [c.toUserId, c._count.toUserId]));
 
   return (
     <div>
@@ -67,11 +82,17 @@ export default async function FriendsPage() {
       <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Add a friend</h2>
         <p className="mb-4 text-sm text-ink-muted">
-          Enter their account email — if they&apos;ve already added you, you&apos;ll be friends right away.
+          Search by username, or share your own link below — either way, they have to accept before you&apos;re friends.
         </p>
-        <AddFriendForm />
+        <AddFriendSearch />
+        <div className="mt-4">
+          <CopyLinkButton path={`/friends/add/${user.username}`} />
+        </div>
         <div className="mt-6 border-t border-line pt-4">
           <ShareActivityToggle initial={user.shareActivity} />
+          <p className="mt-1.5 text-xs text-ink-muted">
+            Your journal is never visible to anyone, friends included — this only covers streaks and level.
+          </p>
         </div>
       </section>
 
@@ -84,7 +105,7 @@ export default async function FriendsPage() {
               return (
                 <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
                   <span className="text-ink">
-                    <span className="font-medium">{other.name}</span> <span className="text-ink-muted">({other.email})</span>
+                    <span className="font-medium">{other.name}</span> <span className="text-ink-muted">@{other.username}</span>
                   </span>
                   <div className="flex shrink-0 items-center gap-3">
                     <form action={acceptFriendRequest.bind(null, f.id)}>
@@ -152,7 +173,7 @@ export default async function FriendsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="font-medium text-ink">{other.name}</h3>
-                    <p className="text-sm text-ink-muted">{other.email}</p>
+                    <p className="text-sm text-ink-muted">@{other.username}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="rounded-full bg-calm-soft px-2.5 py-1 text-xs font-medium text-calm">Lv {level}</span>
@@ -181,6 +202,14 @@ export default async function FriendsPage() {
                     Activity is private
                   </p>
                 )}
+
+                <div className="mt-3 border-t border-line pt-3">
+                  <CheerButton
+                    friendUserId={other.id}
+                    count={cheerCountMap.get(other.id) ?? 0}
+                    cheeredToday={cheeredTodaySet.has(other.id)}
+                  />
+                </div>
               </div>
             );
           })}

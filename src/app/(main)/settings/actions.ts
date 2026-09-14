@@ -7,7 +7,7 @@ import { getCurrentUser } from "@/lib/user";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, verifyPassword, generateSessionToken } from "@/lib/password";
 import { sendPasswordChangedEmail } from "@/lib/email";
-import { ACCENT_THEMES, type AccentTheme } from "@/lib/constants";
+import { USERNAME_RE } from "@/lib/constants";
 
 export type SettingsActionState = { error?: string; success?: string } | null;
 
@@ -51,6 +51,25 @@ export async function updateName(formData: FormData) {
   revalidatePath("/settings");
 }
 
+export async function updateUsername(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
+  const username = String(formData.get("username") ?? "")
+    .trim()
+    .toLowerCase();
+  if (!USERNAME_RE.test(username)) {
+    return { error: "3-20 characters, starting with a letter — lowercase letters, numbers, and underscores only." };
+  }
+
+  const user = await getCurrentUser();
+  if (username === user.username) return { success: "That's already your username." };
+
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing) return { error: "That username is taken." };
+
+  await prisma.user.update({ where: { id: user.id }, data: { username } });
+  revalidatePath("/settings");
+  return { success: "Username updated." };
+}
+
 export type UnitsActionState = { weightUnit: "KG" | "LB"; distanceUnit: "KM" | "MI" } | null;
 
 export async function updateUnits(_prev: UnitsActionState, formData: FormData): Promise<UnitsActionState> {
@@ -68,19 +87,6 @@ export async function updateUnits(_prev: UnitsActionState, formData: FormData): 
   revalidatePath("/");
 
   return { weightUnit: weightUnit as "KG" | "LB", distanceUnit: distanceUnit as "KM" | "MI" };
-}
-
-export async function updateAccentTheme(formData: FormData) {
-  const accentTheme = String(formData.get("accentTheme") ?? "");
-  if (!(ACCENT_THEMES as readonly string[]).includes(accentTheme)) return;
-
-  const user = await getCurrentUser();
-  await prisma.user.update({ where: { id: user.id }, data: { accentTheme: accentTheme as AccentTheme } });
-
-  // The chosen color lives on <html> in the root layout, above every route
-  // — revalidating just /settings still refreshes it, since a layout is
-  // always re-rendered along with whichever page under it triggered this.
-  revalidatePath("/settings");
 }
 
 export async function renameSubject(subjectId: string, formData: FormData) {

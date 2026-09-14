@@ -18,7 +18,7 @@ function Field({
   error,
   defaultValue,
 }: {
-  id: "name" | "email" | "password" | "confirmPassword";
+  id: "name" | "username" | "email" | "password" | "confirmPassword";
   label: string;
   type: string;
   autoComplete: string;
@@ -75,6 +75,14 @@ export function SignupForm() {
       <p className="mb-6 text-sm text-ink-muted">Create your own account — your data stays yours alone.</p>
 
       <Field id="name" label="Name" type="text" autoComplete="name" autoFocus error={errors.name} defaultValue={state?.values.name} />
+      <Field
+        id="username"
+        label="Username"
+        type="text"
+        autoComplete="username"
+        error={errors.username}
+        defaultValue={state?.values.username}
+      />
       <Field id="email" label="Email" type="email" autoComplete="email" error={errors.email} defaultValue={state?.values.email} />
       <Field id="password" label="Password" type="password" autoComplete="new-password" error={errors.password} />
       <Field

@@ -37,6 +37,7 @@ export default async function EditDeadlinePage({ params }: { params: Promise<{ i
         initialValues={{
           title: deadline.title,
           dueDate: dateToISO(deadline.dueDate),
+          dueTime: deadline.dueTime,
           subjectId: deadline.subjectId ?? "",
           notes: deadline.notes ?? "",
         }}

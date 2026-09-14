@@ -75,7 +75,8 @@ export default async function DeadlinesPage() {
                     )}
                   </div>
                   <p className={`mt-0.5 text-sm ${urgent ? "font-medium text-accent" : "text-ink-muted"}`}>
-                    {formatLong(dueISO)} · {text}
+                    {formatLong(dueISO)}
+                    {deadline.dueTime !== "23:59" && ` at ${deadline.dueTime}`} · {text}
                   </p>
                   {deadline.notes && <p className="mt-1.5 text-sm text-ink-muted">{deadline.notes}</p>}
                 </div>

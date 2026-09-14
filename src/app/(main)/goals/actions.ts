@@ -14,6 +14,12 @@ import {
   type ReminderSlot,
 } from "@/lib/constants";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
+import { awardBadge } from "@/lib/badges";
+
+async function awardFirstGoalBadge(userId: string) {
+  const count = await prisma.goalLog.count({ where: { completed: true, goal: { userId } } });
+  if (count === 1) await awardBadge(userId, "FIRST_GOAL_COMPLETE");
+}
 
 function readGoalFields(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -146,6 +152,7 @@ export async function toggleGoalCompletion(goalId: string, dateISO: string) {
   // Award on the not-done → done transition, undo it on the reverse — so
   // ticking and un-ticking nets to zero instead of letting the total drift.
   await awardXp(goal.userId, nowCompleted ? XP_AWARDS.GOAL_COMPLETE : -XP_AWARDS.GOAL_COMPLETE);
+  if (nowCompleted) await awardFirstGoalBadge(goal.userId);
 
   revalidatePath("/journal");
   revalidatePath("/goals");
@@ -168,6 +175,7 @@ export async function setGoalLogValue(goalId: string, dateISO: string, value: nu
 
   if (nowCompleted !== wasCompleted) {
     await awardXp(goal.userId, nowCompleted ? XP_AWARDS.GOAL_COMPLETE : -XP_AWARDS.GOAL_COMPLETE);
+    if (nowCompleted) await awardFirstGoalBadge(goal.userId);
   }
 
   revalidatePath("/journal");
