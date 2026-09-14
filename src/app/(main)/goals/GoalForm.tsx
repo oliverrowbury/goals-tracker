@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { WEEKDAYS } from "@/lib/constants";
 
 type GoalFormValues = {
@@ -28,6 +29,24 @@ const DEFAULTS: GoalFormValues = {
   reminderEnabled: false,
   reminderDays: [],
 };
+
+// useFormStatus only reports the status of the nearest enclosing <form>, so
+// this has to be its own component rendered inside it — reading it in
+// GoalForm itself would always see `pending: false`. Without this, nothing
+// stopped a slow save (or an impatient extra tap) from submitting the same
+// form multiple times, each one creating its own goal.
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="rounded-lg bg-goals px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98] disabled:opacity-50"
+    >
+      {pending ? "Saving…" : label}
+    </button>
+  );
+}
 
 const inputClass =
   "w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:border-goals focus:outline-none";
@@ -205,9 +224,7 @@ export function GoalForm({
         )}
       </div>
 
-      <button type="submit" className="rounded-lg bg-goals px-4 py-2 text-sm font-medium text-white hover:opacity-90">
-        {submitLabel}
-      </button>
+      <SubmitButton label={submitLabel} />
     </form>
   );
 }

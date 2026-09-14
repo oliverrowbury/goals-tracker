@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, verifyPassword, generateSessionToken } from "@/lib/password";
+import { sendPasswordChangedEmail } from "@/lib/email";
 
 export type SettingsActionState = { error?: string; success?: string } | null;
 
@@ -34,6 +35,8 @@ export async function changePassword(_prev: SettingsActionState, formData: FormD
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
   });
+
+  await sendPasswordChangedEmail(user.email, user.name);
 
   return { success: "Password changed." };
 }
