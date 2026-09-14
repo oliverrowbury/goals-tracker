@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { JournalIcon, TargetIcon, ClockIcon, DumbbellIcon, GearIcon, CalendarIcon, AlarmIcon } from "@/components/Icons";
+import { JournalIcon, TargetIcon, ClockIcon, DumbbellIcon, GearIcon, CalendarIcon, AlarmIcon, UsersIcon } from "@/components/Icons";
 
 const LINKS = [
   { href: "/journal", label: "Journal", Icon: JournalIcon, color: "accent" },
@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/deadlines", label: "Deadlines", Icon: AlarmIcon, color: "accent" },
   { href: "/study", label: "Study", Icon: ClockIcon, color: "study" },
   { href: "/workout", label: "Workout", Icon: DumbbellIcon, color: "workout" },
+  { href: "/friends", label: "Friends", Icon: UsersIcon, color: "calm" },
   { href: "/calendar", label: "Calendar", Icon: CalendarIcon, color: "ink" },
   { href: "/settings", label: "Settings", Icon: GearIcon, color: "ink" },
 ] as const;
@@ -23,6 +24,7 @@ const ACTIVE_CLASSES: Record<(typeof LINKS)[number]["color"], string> = {
   goals: "bg-goals-soft text-goals",
   study: "bg-study-soft text-study",
   workout: "bg-workout-soft text-workout",
+  calm: "bg-calm-soft text-calm",
   ink: "bg-line text-ink",
 };
 
@@ -31,6 +33,7 @@ const HOVER_CLASSES: Record<(typeof LINKS)[number]["color"], string> = {
   goals: "hover:text-goals",
   study: "hover:text-study",
   workout: "hover:text-workout",
+  calm: "hover:text-calm",
   ink: "hover:text-ink",
 };
 
@@ -45,7 +48,7 @@ export function NavLinks() {
           <Link
             key={href}
             href={href}
-            className={`flex items-center gap-1.5 rounded-lg p-1.5 -m-0.5 transition-colors sm:p-2 ${
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg p-2 -m-0.5 transition-colors ${
               active ? ACTIVE_CLASSES[color] : `text-ink-muted ${HOVER_CLASSES[color]}`
             }`}
           >

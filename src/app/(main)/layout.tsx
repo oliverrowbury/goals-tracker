@@ -28,21 +28,32 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           <Link href="/" className="shrink-0 text-base text-ink transition-transform hover:scale-[1.02] sm:text-2xl">
             <Wordmark />
           </Link>
-          <nav className="flex items-center gap-0.5 text-sm text-ink-muted">
-            <NavLinks />
-            <Link
-              href="/settings"
-              title={`Level ${level} — see your XP and streaks`}
-              className="ml-1 mr-0.5 hidden shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent hover:opacity-80 sm:inline-block"
-            >
-              Lv {level}
-            </Link>
-            <form action="/api/logout" method="POST" className="flex">
-              <button type="submit" title="Sign out" className="flex items-center p-2 -m-0.5 hover:text-accent">
-                <SignOutIcon className="h-5 w-5" />
-              </button>
-            </form>
-            <ThemeToggle />
+          <nav className="flex min-w-0 items-center text-sm text-ink-muted">
+            {/* Section links scroll horizontally if they don't fit rather than
+                shrinking or pushing the account controls off-screen — the set
+                of sections grows over time (already up to eight), so a fixed
+                row that just barely fits today would break again with the
+                next one. The controls to the right (level, sign out, theme)
+                stay put regardless, since those should never require a
+                scroll to reach. */}
+            <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
+              <NavLinks />
+            </div>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <Link
+                href="/settings"
+                title={`Level ${level} — see your XP and streaks`}
+                className="ml-1 mr-0.5 hidden shrink-0 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent hover:opacity-80 sm:inline-block"
+              >
+                Lv {level}
+              </Link>
+              <form action="/api/logout" method="POST" className="flex">
+                <button type="submit" title="Sign out" className="flex items-center p-2 -m-0.5 hover:text-accent">
+                  <SignOutIcon className="h-5 w-5" />
+                </button>
+              </form>
+              <ThemeToggle />
+            </div>
           </nav>
         </div>
       </header>

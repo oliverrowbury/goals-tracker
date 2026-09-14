@@ -1,7 +1,8 @@
 # Data model
 
-One user for now, but every table is scoped by `user_id` so the app never has to be
-rewritten if that changes.
+Real multi-user accounts — every table is scoped by `user_id`, and nothing reads
+across users except the friends feed (`Friendship`, below), which is explicitly
+gated by an accepted friendship plus the other user's own `share_activity` opt-in.
 
 ## User
 | field | type | notes |
@@ -11,6 +12,7 @@ rewritten if that changes.
 | name | text | |
 | accent_theme | enum | `terracotta` \| `ocean` \| `forest` \| `berry` \| `slate` — Settings → Appearance |
 | xp | integer | simple points total; level is derived from this at display time rather than stored |
+| share_activity | boolean | opt-in: whether accepted friends can see this user's streaks/level |
 | created_at | timestamp | |
 
 ## JournalEntry
@@ -152,6 +154,24 @@ is a recurring habit rather than a one-off with a due date.
 | completed | boolean | |
 | created_at | timestamp | |
 
+## Friendship
+One row per pair, not two — whoever adds first is the requester. `status`
+starts `pending`; the addressee accepting flips the same row to `accepted`
+rather than creating a second row. If the addressee had *already* sent
+their own request first, adding back accepts that one instead of leaving
+two crossed pending rows for the same pair.
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| requester_id | uuid | the user who sent the request |
+| addressee_id | uuid | the user who received it |
+| status | enum | `pending` \| `accepted` |
+| created_at | timestamp | |
+
+Unique on `(requester_id, addressee_id)` — direction-specific, so the "already
+requested the other way" case is checked in application code, not the schema.
+
 ## Relationships
 
 ```
@@ -161,6 +181,7 @@ User 1─* Subject 1─* StudySession
 User 1─* Exercise (custom only)
 User 1─* Workout 1─* WorkoutSet *─1 Exercise
 User 1─* Deadline *─1 Subject (optional)
+User 1─* Friendship (as requester) *─1 User (as addressee)
 Goal 1─* Reminder
 ```
 

@@ -228,6 +228,21 @@ export function AlarmIcon({ className }: IconProps) {
   );
 }
 
+export function UsersIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M15.5 5.8c1.4.4 2.5 1.6 2.5 3.1s-1 2.7-2.3 3.1M17.5 14.3c2 .5 3.5 2.3 3.5 4.7"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function PaletteIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">

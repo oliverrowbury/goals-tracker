@@ -117,6 +117,13 @@ model User {
   // formula can change later without a migration.
   xp Int @default(0)
 
+  // Opt-in privacy for the friends feed: an accepted friend can always see
+  // *that* you're a friend, but only sees streaks/level/recent activity
+  // when this is on. Defaults on since the whole point of adding a friend
+  // is to see each other's progress, but this is the one switch to turn
+  // that back off without having to remove anyone.
+  shareActivity Boolean @default(true)
+
   journalEntries    JournalEntry[]
   goals             Goal[]
   subjects          Subject[]
@@ -126,6 +133,9 @@ model User {
   pushSubscriptions PushSubscription[]
   feedback          Feedback[]
   deadlines         Deadline[]
+
+  sentFriendRequests     Friendship[] @relation("FriendshipRequester")
+  receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
 }
 
 model PushSubscription {
@@ -349,4 +359,29 @@ model Deadline {
   notes     String?
   completed Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+// One row per pair, not two — requester sent it, addressee either accepts
+// (status flips to ACCEPTED, same row) or the row is deleted (declined, or
+// an accepted friendship removed). A pair is unique regardless of
+// direction, enforced in application code (see friends/actions.ts) rather
+// than the schema, since Postgres can't express "unordered pair unique" as
+// a plain constraint without also normalizing which id goes first.
+model Friendship {
+  id String @id @default(uuid())
+
+  requesterId String
+  requester   User   @relation("FriendshipRequester", fields: [requesterId], references: [id])
+  addresseeId String
+  addressee   User   @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+
+  status    FriendshipStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+
+  @@unique([requesterId, addresseeId])
 }
