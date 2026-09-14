@@ -5,16 +5,24 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { isoToDate } from "@/lib/dates";
 import { uploadJournalPhoto, deleteJournalPhoto } from "@/lib/storage";
+import { awardXp, XP_AWARDS } from "@/lib/xp";
 
 export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string) {
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
 
+  const existing = await prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } });
   await prisma.journalEntry.upsert({
     where: { userId_date: { userId: user.id, date } },
     update: { bodyText, improveText },
     create: { userId: user.id, date, bodyText, improveText },
   });
+
+  // Only the first time this day's entry goes from empty to written —
+  // otherwise every autosave keystroke would re-award it.
+  if (bodyText.trim() && !existing?.bodyText.trim()) {
+    await awardXp(user.id, XP_AWARDS.JOURNAL_ENTRY);
+  }
 
   revalidatePath("/journal");
 }

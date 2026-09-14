@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { minutesBetween } from "@/lib/study";
 import { isoToDate } from "@/lib/dates";
+import { awardXp, XP_AWARDS } from "@/lib/xp";
 
 function revalidateStudyViews() {
   revalidatePath("/study");
@@ -64,11 +65,16 @@ export async function resumeStudySession(sessionId: string) {
 export async function finishStudySession(sessionId: string) {
   const session = await prisma.studySession.findUniqueOrThrow({ where: { id: sessionId } });
   const endedAt = session.pausedAt ?? new Date();
+  const durationMinutes = minutesBetween(session.startedAt, endedAt);
 
   await prisma.studySession.update({
     where: { id: sessionId },
-    data: { endedAt, pausedAt: null, durationMinutes: minutesBetween(session.startedAt, endedAt) },
+    data: { endedAt, pausedAt: null, durationMinutes },
   });
+
+  // A sub-minute session isn't worth awarding — mainly guards against
+  // immediately starting and finishing a timer to farm XP.
+  if (durationMinutes >= 1) await awardXp(session.userId, XP_AWARDS.STUDY_SESSION);
 
   revalidateStudyViews();
 }
@@ -117,6 +123,7 @@ export async function logManualSession(
   await prisma.studySession.create({
     data: { userId: user.id, subjectId, startedAt, endedAt, durationMinutes: minutes },
   });
+  await awardXp(user.id, XP_AWARDS.STUDY_SESSION);
 
   revalidateStudyViews();
   return null;

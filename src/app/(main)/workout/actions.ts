@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/user";
 import { minutesBetween } from "@/lib/study";
 import { toKg, toKm } from "@/lib/workout";
 import type { WorkoutType } from "@/lib/constants";
+import { awardXp, XP_AWARDS } from "@/lib/xp";
 
 function revalidateWorkoutViews() {
   revalidatePath("/workout");
@@ -88,6 +89,7 @@ export async function finishStrengthWorkout(workoutId: string) {
     where: { id: workoutId },
     data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },
   });
+  await awardXp(workout.userId, XP_AWARDS.WORKOUT);
 
   revalidateWorkoutViews();
 }
@@ -120,16 +122,16 @@ export async function finishCardioWorkout(workoutId: string, formData: FormData)
   // Same unit-at-the-edges rule as addSet — the input is in the user's
   // chosen distance unit, converted to canonical km for storage.
   const distanceKm = Number.isFinite(enteredDistance) && enteredDistance > 0 ? toKm(enteredDistance, user.distanceUnit) : null;
+  const durationMinutes = minutesBetween(workout.startedAt ?? endedAt, endedAt);
 
   await prisma.workout.update({
     where: { id: workoutId },
-    data: {
-      endedAt,
-      durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt),
-      distanceKm,
-      route,
-    },
+    data: { endedAt, durationMinutes, distanceKm, route },
   });
+
+  // Same sub-minute guard as a study session — not worth awarding, and
+  // guards against an instant start/finish to farm XP.
+  if (durationMinutes >= 1) await awardXp(user.id, XP_AWARDS.WORKOUT);
 
   revalidateWorkoutViews();
 }

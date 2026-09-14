@@ -10,9 +10,21 @@ import { AccentThemeForm } from "./AccentThemeForm";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
-import { GearIcon, ClockIcon, DumbbellIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon, PaletteIcon } from "@/components/Icons";
+import {
+  GearIcon,
+  ClockIcon,
+  DumbbellIcon,
+  BellIcon,
+  HelpIcon,
+  MessageIcon,
+  FlameIcon,
+  PaletteIcon,
+  JournalIcon,
+  TargetIcon,
+} from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
-import { computeJournalStreak } from "@/lib/journal";
+import { computeStreak } from "@/lib/streaks";
+import { levelForXp } from "@/lib/xp";
 import { ADMIN_EMAIL } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -20,40 +32,58 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const isAdmin = user.email === ADMIN_EMAIL;
-  const [subjects, feedback, journalDates, subjectMinutes] = await Promise.all([
-    prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
-    // The admin sees feedback from every account — otherwise another
-    // user's feedback would just sit in their own account, invisible to
-    // the one person who could actually act on it.
-    isAdmin
-      ? prisma.feedback.findMany({
-          orderBy: { createdAt: "desc" },
-          take: 20,
-          include: { user: { select: { name: true, email: true } } },
-        })
-      : prisma.feedback.findMany({
-          where: { userId: user.id },
-          orderBy: { createdAt: "desc" },
-          take: 5,
-          include: { user: { select: { name: true, email: true } } },
-        }),
-    prisma.journalEntry.findMany({
-      where: { userId: user.id, bodyText: { not: "" } },
-      select: { date: true },
-    }),
-    prisma.studySession.groupBy({
-      by: ["subjectId"],
-      where: { userId: user.id, durationMinutes: { not: null } },
-      _sum: { durationMinutes: true },
-    }),
-  ]);
+  const [subjects, feedback, journalDates, subjectMinutes, studyDates, workoutDates, completedGoalDates] =
+    await Promise.all([
+      prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
+      // The admin sees feedback from every account — otherwise another
+      // user's feedback would just sit in their own account, invisible to
+      // the one person who could actually act on it.
+      isAdmin
+        ? prisma.feedback.findMany({
+            orderBy: { createdAt: "desc" },
+            take: 20,
+            include: { user: { select: { name: true, email: true } } },
+          })
+        : prisma.feedback.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: "desc" },
+            take: 5,
+            include: { user: { select: { name: true, email: true } } },
+          }),
+      prisma.journalEntry.findMany({
+        where: { userId: user.id, bodyText: { not: "" } },
+        select: { date: true },
+      }),
+      prisma.studySession.groupBy({
+        by: ["subjectId"],
+        where: { userId: user.id, durationMinutes: { not: null } },
+        _sum: { durationMinutes: true },
+      }),
+      prisma.studySession.findMany({
+        where: { userId: user.id, durationMinutes: { not: null } },
+        select: { startedAt: true },
+      }),
+      prisma.workout.findMany({
+        where: { userId: user.id, endedAt: { not: null } },
+        select: { date: true },
+      }),
+      prisma.goalLog.findMany({
+        where: { completed: true, goal: { userId: user.id } },
+        select: { date: true },
+      }),
+    ]);
   const active = subjects.filter((s) => s.active);
   const archived = subjects.filter((s) => !s.active);
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
+  const today = todayISO();
   const journaledDateSet = new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10)));
-  const streak = computeJournalStreak(journaledDateSet, todayISO());
+  const journalStreak = computeStreak(journaledDateSet, today);
   const totalEntries = journaledDateSet.size;
+  const studyStreak = computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today);
+  const workoutStreak = computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today);
+  const goalsStreak = computeStreak(new Set(completedGoalDates.map((g) => g.date.toISOString().slice(0, 10))), today);
+  const { level, xpIntoLevel, xpForNextLevel } = levelForXp(user.xp);
 
   return (
     <div className="space-y-8">
@@ -62,19 +92,57 @@ export default async function SettingsPage() {
         <h1 className="font-serif text-2xl font-semibold text-ink">Settings</h1>
       </div>
 
-      <div className="flex items-center gap-6 rounded-2xl border border-line bg-card px-6 py-4">
-        <div className="flex items-center gap-2">
-          <FlameIcon className="h-5 w-5 text-accent" />
+      <div className="rounded-2xl border border-line bg-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-serif text-lg font-semibold text-ink">{streak}</p>
-            <p className="text-xs text-ink-muted">day streak</p>
+            <p className="font-serif text-lg font-semibold text-ink">Level {level}</p>
+            <p className="text-xs text-ink-muted">{user.xp} XP total</p>
+          </div>
+          <div className="w-full max-w-[220px] sm:w-auto">
+            <div className="h-2 overflow-hidden rounded-full bg-line">
+              <div className="h-full rounded-full bg-accent" style={{ width: `${(xpIntoLevel / xpForNextLevel) * 100}%` }} />
+            </div>
+            <p className="mt-1 text-right text-[11px] text-ink-muted">
+              {xpIntoLevel}/{xpForNextLevel} to level {level + 1}
+            </p>
           </div>
         </div>
-        <div className="h-8 w-px bg-line" />
-        <div>
-          <p className="font-serif text-lg font-semibold text-ink">{totalEntries}</p>
-          <p className="text-xs text-ink-muted">{totalEntries === 1 ? "entry" : "entries"} written</p>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 sm:grid-cols-4">
+          <div className="flex items-center gap-2">
+            <JournalIcon className="h-5 w-5 shrink-0 text-accent" />
+            <div>
+              <p className="font-serif text-base font-semibold text-ink">{journalStreak}</p>
+              <p className="text-xs text-ink-muted">journal streak</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <ClockIcon className="h-5 w-5 shrink-0 text-study" />
+            <div>
+              <p className="font-serif text-base font-semibold text-ink">{studyStreak}</p>
+              <p className="text-xs text-ink-muted">study streak</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <DumbbellIcon className="h-5 w-5 shrink-0 text-workout" />
+            <div>
+              <p className="font-serif text-base font-semibold text-ink">{workoutStreak}</p>
+              <p className="text-xs text-ink-muted">workout streak</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <TargetIcon className="h-5 w-5 shrink-0 text-goals" />
+            <div>
+              <p className="font-serif text-base font-semibold text-ink">{goalsStreak}</p>
+              <p className="text-xs text-ink-muted">goals streak</p>
+            </div>
+          </div>
         </div>
+
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
+          <FlameIcon className="h-3.5 w-3.5 text-accent" />
+          {totalEntries} journal {totalEntries === 1 ? "entry" : "entries"} written in total
+        </p>
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

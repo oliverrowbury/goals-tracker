@@ -13,6 +13,7 @@ import {
   type Weekday,
   type ReminderSlot,
 } from "@/lib/constants";
+import { awardXp, XP_AWARDS } from "@/lib/xp";
 
 function readGoalFields(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -129,13 +130,22 @@ export async function setGoalActive(goalId: string, active: boolean) {
 
 export async function toggleGoalCompletion(goalId: string, dateISO: string) {
   const date = isoToDate(dateISO);
-  const existing = await prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } });
+  const [goal, existing] = await Promise.all([
+    prisma.goal.findUniqueOrThrow({ where: { id: goalId }, select: { userId: true } }),
+    prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } }),
+  ]);
+  const wasCompleted = existing?.completed ?? false;
+  const nowCompleted = !wasCompleted;
 
   if (existing) {
-    await prisma.goalLog.update({ where: { id: existing.id }, data: { completed: !existing.completed } });
+    await prisma.goalLog.update({ where: { id: existing.id }, data: { completed: nowCompleted } });
   } else {
     await prisma.goalLog.create({ data: { goalId, date, completed: true } });
   }
+
+  // Award on the not-done → done transition, undo it on the reverse — so
+  // ticking and un-ticking nets to zero instead of letting the total drift.
+  await awardXp(goal.userId, nowCompleted ? XP_AWARDS.GOAL_COMPLETE : -XP_AWARDS.GOAL_COMPLETE);
 
   revalidatePath("/journal");
   revalidatePath("/goals");
@@ -143,12 +153,22 @@ export async function toggleGoalCompletion(goalId: string, dateISO: string) {
 
 export async function setGoalLogValue(goalId: string, dateISO: string, value: number) {
   const date = isoToDate(dateISO);
+  const [goal, existing] = await Promise.all([
+    prisma.goal.findUniqueOrThrow({ where: { id: goalId }, select: { userId: true } }),
+    prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } }),
+  ]);
+  const wasCompleted = existing?.completed ?? false;
+  const nowCompleted = value > 0;
 
   await prisma.goalLog.upsert({
     where: { goalId_date: { goalId, date } },
-    update: { value, completed: value > 0 },
-    create: { goalId, date, value, completed: value > 0 },
+    update: { value, completed: nowCompleted },
+    create: { goalId, date, value, completed: nowCompleted },
   });
+
+  if (nowCompleted !== wasCompleted) {
+    await awardXp(goal.userId, nowCompleted ? XP_AWARDS.GOAL_COMPLETE : -XP_AWARDS.GOAL_COMPLETE);
+  }
 
   revalidatePath("/journal");
   revalidatePath("/goals");
