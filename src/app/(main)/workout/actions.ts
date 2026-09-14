@@ -71,8 +71,19 @@ export async function renameWorkout(workoutId: string, label: string) {
 
 export async function finishStrengthWorkout(workoutId: string) {
   const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
-  const endedAt = new Date();
+  const setCount = await prisma.workoutSet.count({ where: { workoutId } });
 
+  // Finishing with nothing logged (started it, then tapped Finish without
+  // adding any exercise/set) has no value to keep — treat it the same as
+  // discarding, rather than leaving a "0 exercises · 0 sets · 0m" row
+  // cluttering the log and inflating "sessions this week".
+  if (setCount === 0) {
+    await prisma.workout.delete({ where: { id: workoutId } });
+    revalidateWorkoutViews();
+    return;
+  }
+
+  const endedAt = new Date();
   await prisma.workout.update({
     where: { id: workoutId },
     data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },

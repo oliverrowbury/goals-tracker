@@ -1,4 +1,4 @@
-import { monthGridDays, formatMonth, monthISOOf, todayISO } from "@/lib/dates";
+import { monthGridDays, formatMonth, monthISOOf } from "@/lib/dates";
 import { moodFace } from "@/lib/mood";
 
 type Entry = { dateISO: string; mood: number | null };
@@ -38,10 +38,9 @@ function smoothPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
-export function MoodChart({ monthISO, entries }: { monthISO: string; entries: Entry[] }) {
+export function MoodChart({ monthISO, entries, today }: { monthISO: string; entries: Entry[]; today: string }) {
   const moodByDate = new Map(entries.filter((e) => e.mood != null).map((e) => [e.dateISO, e.mood as number]));
   const daysInMonth = monthGridDays(monthISO).filter((d) => monthISOOf(d) === monthISO);
-  const today = todayISO();
 
   const values = [...moodByDate.values()];
   const average = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;

@@ -17,6 +17,28 @@ function totalsBySubject(sessions: { subjectId: string; durationMinutes: number 
   return Object.fromEntries(totals);
 }
 
+// The day/week/month/year queries only pick up finished sessions
+// (endedAt not null) — reasonable for the query itself, but it meant the
+// "Time by subject" breakdown could say "No study time logged today" while
+// the timer above it was visibly running and counting up, which reads as
+// the page contradicting itself. This folds the open session's
+// elapsed-so-far minutes into whichever period buckets its start date
+// actually falls in.
+function withOpenSession(
+  totals: Record<string, number>,
+  openSession: { subjectId: string; startedAt: Date; pausedAt: Date | null } | null,
+  rangeStartISO: string,
+  rangeEndISO: string,
+): Record<string, number> {
+  if (!openSession) return totals;
+  const startedISO = openSession.startedAt.toISOString().slice(0, 10);
+  if (startedISO < rangeStartISO || startedISO > rangeEndISO) return totals;
+
+  const elapsedMs = (openSession.pausedAt ?? new Date()).getTime() - openSession.startedAt.getTime();
+  const elapsedMinutes = Math.max(0, Math.floor(elapsedMs / 60_000));
+  return { ...totals, [openSession.subjectId]: (totals[openSession.subjectId] ?? 0) + elapsedMinutes };
+}
+
 export default async function StudyPage() {
   const user = await getCurrentUser();
   const today = todayISO();
@@ -81,10 +103,15 @@ export default async function StudyPage() {
         <StudyStats
           subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
           totalsByPeriod={{
-            day: totalsBySubject(weekSessions.filter((s) => s.startedAt.toISOString().slice(0, 10) === today)),
-            week: totalsBySubject(weekSessions),
-            month: totalsBySubject(monthSessions),
-            year: totalsBySubject(yearSessions),
+            day: withOpenSession(
+              totalsBySubject(weekSessions.filter((s) => s.startedAt.toISOString().slice(0, 10) === today)),
+              openSession,
+              today,
+              today,
+            ),
+            week: withOpenSession(totalsBySubject(weekSessions), openSession, week.startISO, week.endISO),
+            month: withOpenSession(totalsBySubject(monthSessions), openSession, month.startISO, month.endISO),
+            year: withOpenSession(totalsBySubject(yearSessions), openSession, year.startISO, year.endISO),
           }}
         />
       </div>

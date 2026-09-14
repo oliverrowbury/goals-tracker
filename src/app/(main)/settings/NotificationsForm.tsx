@@ -14,18 +14,19 @@ function urlBase64ToUint8Array(base64: string): BufferSource {
 
 type Status = "unsupported" | "unsubscribed" | "subscribed" | "denied";
 
+function initialStatus(): Status {
+  if (typeof window === "undefined") return "unsubscribed"; // SSR — resolved properly on mount below
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return "unsupported";
+  if (Notification.permission === "denied") return "denied";
+  return "unsubscribed";
+}
+
 export function NotificationsForm() {
-  const [status, setStatus] = useState<Status>("unsubscribed");
+  const [status, setStatus] = useState<Status>(initialStatus);
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-      setStatus("unsupported");
-      return;
-    }
-    if (Notification.permission === "denied") {
-      setStatus("denied");
-      return;
-    }
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (Notification.permission === "denied") return;
     navigator.serviceWorker.getRegistration().then(async (reg) => {
       const sub = await reg?.pushManager.getSubscription();
       setStatus(sub ? "subscribed" : "unsubscribed");
@@ -71,11 +72,11 @@ export function NotificationsForm() {
   return (
     <div className="space-y-4">
       {status === "unsupported" && (
-        <p className="text-sm text-ink-muted">Your browser doesn't support push notifications.</p>
+        <p className="text-sm text-ink-muted">Your browser doesn&apos;t support push notifications.</p>
       )}
       {status === "denied" && (
         <p className="text-sm text-ink-muted">
-          Notifications are blocked for this site — allow them in your browser's site settings to enable reminders.
+          Notifications are blocked for this site — allow them in your browser&apos;s site settings to enable reminders.
         </p>
       )}
       {(status === "unsubscribed" || status === "subscribed") && (

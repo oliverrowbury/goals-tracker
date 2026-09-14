@@ -22,8 +22,9 @@ export default async function JournalPage({
   searchParams: Promise<{ date?: string }>;
 }) {
   const { date } = await searchParams;
-  const dateISO = date ?? todayISO();
-  const isToday = dateISO === todayISO();
+  const today = todayISO();
+  const dateISO = date ?? today;
+  const isToday = dateISO === today;
 
   const user = await getCurrentUser();
   const { startISO: weekStartISO, endISO: weekEndISO } = weekRangeContaining(dateISO);
@@ -182,7 +183,7 @@ export default async function JournalPage({
       <JournalEditor dateISO={dateISO} initialText={entry?.bodyText ?? ""} initialImproveText={entry?.improveText ?? ""} />
 
       <div className="mt-8">
-        <MoodChart monthISO={monthISO} entries={monthEntries.map((e) => ({ dateISO: dateToISO(e.date), mood: e.mood }))} />
+        <MoodChart monthISO={monthISO} entries={monthEntries.map((e) => ({ dateISO: dateToISO(e.date), mood: e.mood }))} today={today} />
       </div>
     </div>
   );

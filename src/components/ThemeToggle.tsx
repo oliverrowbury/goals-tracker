@@ -35,6 +35,16 @@ export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
+    // Deferred to an effect (not a lazy useState initializer) on purpose —
+    // this component is server-rendered too, where `document` doesn't
+    // exist, so the initial render always shows the light-mode icon. A
+    // lazy initializer reading `document` would make the client's first
+    // hydration pass disagree with that server output whenever dark mode
+    // is actually active, which is a hydration mismatch, not a fix for
+    // one. Correcting the icon here, after mount, avoids that at the cost
+    // of a harmless one-frame icon flash — the same tradeoff the inline
+    // theme script in the root layout accepts for the page background.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 

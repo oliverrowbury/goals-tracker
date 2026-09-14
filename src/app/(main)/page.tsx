@@ -80,7 +80,7 @@ export default async function HomePage({
             <JournalIcon className="h-3.5 w-3.5 text-accent" /> Journal
           </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{journalStatus}</p>
-          <p className="mt-3 text-sm text-accent group-hover:underline">Write today's entry →</p>
+          <p className="mt-3 text-sm text-accent group-hover:underline">Write today&apos;s entry →</p>
         </Link>
 
         <Link
@@ -94,7 +94,7 @@ export default async function HomePage({
           <p className="mt-1 font-serif text-xl font-semibold text-ink">
             {dueToday.length === 0 ? "None due today" : `${doneToday.length} of ${dueToday.length} done`}
           </p>
-          <p className="mt-3 text-sm text-goals group-hover:underline">Check today's goals →</p>
+          <p className="mt-3 text-sm text-goals group-hover:underline">Check today&apos;s goals →</p>
         </Link>
 
         <Link
