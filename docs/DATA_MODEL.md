@@ -9,6 +9,8 @@ rewritten if that changes.
 | id | uuid | |
 | email | text | |
 | name | text | |
+| accent_theme | enum | `terracotta` \| `ocean` \| `forest` \| `berry` \| `slate` — Settings → Appearance |
+| xp | integer | simple points total; level is derived from this at display time rather than stored |
 | created_at | timestamp | |
 
 ## JournalEntry
@@ -120,19 +122,35 @@ Progression view = all `WorkoutSet` rows for one exercise, ordered by the parent
 workout's date, tracking max weight (or estimated 1RM) over time.
 
 ## Reminder
-Per-goal, not global — each goal picks its own days. `time_of_day` is stored
-but not actually schedulable: the cron that sends these only runs once a day
-(Vercel Hobby plan), so every reminder fires on the same daily check regardless
-of what's in this column.
+Per-goal, not global — each goal picks its own days, plus which of the day's
+fixed slots to fire in. Vercel's Hobby cron plan only lets a single job run
+once a day, so "multiple times a day" is done with several separate cron
+jobs instead of an arbitrary time — see `vercel.json` and
+`src/app/api/cron/reminders/route.ts`.
 
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
 | goal_id | uuid | |
 | days_of_week | day[] | |
-| time_of_day | time | stored, not actually used for scheduling — see above |
+| slots | enum[] | `morning` \| `afternoon` \| `evening` \| `night`; each backed by its own cron job |
 | channel | enum | `push` \| `email` |
 | enabled | boolean | |
+
+## Deadline
+A specific date to hit (an exam, an assignment) — distinct from `Goal`, which
+is a recurring habit rather than a one-off with a due date.
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| user_id | uuid | |
+| title | text | |
+| subject_id | uuid, nullable | optional link to a Subject, same idea as `Goal.subject_id` |
+| due_date | date | |
+| notes | text | optional |
+| completed | boolean | |
+| created_at | timestamp | |
 
 ## Relationships
 
@@ -142,6 +160,7 @@ User 1─* Goal 1─* GoalLog
 User 1─* Subject 1─* StudySession
 User 1─* Exercise (custom only)
 User 1─* Workout 1─* WorkoutSet *─1 Exercise
+User 1─* Deadline *─1 Subject (optional)
 Goal 1─* Reminder
 ```
 

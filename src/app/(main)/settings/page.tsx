@@ -6,10 +6,11 @@ import { PasswordForm } from "./PasswordForm";
 import { UnitsForm } from "./UnitsForm";
 import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
+import { AccentThemeForm } from "./AccentThemeForm";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
-import { GearIcon, ClockIcon, DumbbellIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon } from "@/components/Icons";
+import { GearIcon, ClockIcon, DumbbellIcon, BellIcon, HelpIcon, MessageIcon, FlameIcon, PaletteIcon } from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
 import { computeJournalStreak } from "@/lib/journal";
 import { ADMIN_EMAIL } from "@/lib/auth";
@@ -107,6 +108,15 @@ export default async function SettingsPage() {
             Download my data (JSON)
           </a>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <PaletteIcon className="h-4 w-4 text-accent" />
+          Appearance
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">Pick an accent color for the whole app.</p>
+        <AccentThemeForm current={user.accentTheme} />
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

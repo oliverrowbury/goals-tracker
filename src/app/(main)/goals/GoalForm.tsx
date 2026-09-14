@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
-import { WEEKDAYS } from "@/lib/constants";
+import { WEEKDAYS, REMINDER_SLOTS, REMINDER_SLOT_LABELS } from "@/lib/constants";
 
 type GoalFormValues = {
   title: string;
@@ -15,6 +15,7 @@ type GoalFormValues = {
   workoutMetric: string;
   reminderEnabled: boolean;
   reminderDays: string[];
+  reminderSlots: string[];
 };
 
 const DEFAULTS: GoalFormValues = {
@@ -28,6 +29,7 @@ const DEFAULTS: GoalFormValues = {
   workoutMetric: "",
   reminderEnabled: false,
   reminderDays: [],
+  reminderSlots: [],
 };
 
 // useFormStatus only reports the status of the nearest enclosing <form>, so
@@ -201,24 +203,46 @@ export function GoalForm({
           Remind me about this goal
         </label>
         {reminderEnabled && (
-          <div className="mt-3">
-            <span className="mb-1 block text-xs text-ink-muted">On which days? (sent as a push notification, once daily)</span>
-            <div className="flex flex-wrap gap-2">
-              {WEEKDAYS.map((day) => (
-                <label
-                  key={day}
-                  className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-goals has-[:checked]:bg-goals has-[:checked]:text-white"
-                >
-                  <input
-                    type="checkbox"
-                    name="reminderDays"
-                    value={day}
-                    defaultChecked={values.reminderDays.includes(day)}
-                    className="sr-only"
-                  />
-                  {day}
-                </label>
-              ))}
+          <div className="mt-3 space-y-3">
+            <div>
+              <span className="mb-1 block text-xs text-ink-muted">On which days?</span>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((day) => (
+                  <label
+                    key={day}
+                    className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-goals has-[:checked]:bg-goals has-[:checked]:text-white"
+                  >
+                    <input
+                      type="checkbox"
+                      name="reminderDays"
+                      value={day}
+                      defaultChecked={values.reminderDays.includes(day)}
+                      className="sr-only"
+                    />
+                    {day}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="mb-1 block text-xs text-ink-muted">And at which times? (each sent as a separate push notification)</span>
+              <div className="flex flex-wrap gap-2">
+                {REMINDER_SLOTS.map((slot) => (
+                  <label
+                    key={slot}
+                    className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink has-[:checked]:border-goals has-[:checked]:bg-goals has-[:checked]:text-white"
+                  >
+                    <input
+                      type="checkbox"
+                      name="reminderSlots"
+                      value={slot}
+                      defaultChecked={values.reminderSlots.includes(slot)}
+                      className="sr-only"
+                    />
+                    {REMINDER_SLOT_LABELS[slot]}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
         )}

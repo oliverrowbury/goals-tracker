@@ -46,6 +46,7 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
           workoutMetric: goal.workoutMetric ?? "",
           reminderEnabled: reminder?.enabled ?? false,
           reminderDays: reminder?.daysOfWeek ?? [],
+          reminderSlots: reminder?.slots ?? [],
         }}
       />
     </div>

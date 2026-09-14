@@ -5,7 +5,14 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { isoToDate } from "@/lib/dates";
-import { GOAL_FREQUENCY_TYPES, WEEKDAYS, type GoalFrequencyType, type Weekday } from "@/lib/constants";
+import {
+  GOAL_FREQUENCY_TYPES,
+  WEEKDAYS,
+  REMINDER_SLOTS,
+  type GoalFrequencyType,
+  type Weekday,
+  type ReminderSlot,
+} from "@/lib/constants";
 
 function readGoalFields(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -50,30 +57,28 @@ function readGoalFields(formData: FormData) {
   };
 }
 
-// Vercel Hobby cron only runs once a day (see vercel.json), so a per-goal
-// time-of-day isn't actually deliverable — only which days a goal reminds
-// on is real. timeOfDay is required by the schema but unused for scheduling;
-// it's set to match the cron's one daily run purely so the column isn't null.
-const REMINDER_TIME_PLACEHOLDER = "18:00";
-
 function readReminderFields(formData: FormData) {
   const enabled = formData.get("reminderEnabled") === "on";
   const daysOfWeek = formData
     .getAll("reminderDays")
     .map(String)
     .filter((d): d is Weekday => (WEEKDAYS as readonly string[]).includes(d));
-  return { enabled: enabled && daysOfWeek.length > 0, daysOfWeek };
+  const slots = formData
+    .getAll("reminderSlots")
+    .map(String)
+    .filter((s): s is ReminderSlot => (REMINDER_SLOTS as readonly string[]).includes(s));
+  return { enabled: enabled && daysOfWeek.length > 0 && slots.length > 0, daysOfWeek, slots };
 }
 
 async function saveGoalReminder(goalId: string, formData: FormData) {
-  const { enabled, daysOfWeek } = readReminderFields(formData);
+  const { enabled, daysOfWeek, slots } = readReminderFields(formData);
   const existing = await prisma.reminder.findFirst({ where: { goalId } });
 
   if (existing) {
-    await prisma.reminder.update({ where: { id: existing.id }, data: { enabled, daysOfWeek } });
+    await prisma.reminder.update({ where: { id: existing.id }, data: { enabled, daysOfWeek, slots } });
   } else if (enabled) {
     await prisma.reminder.create({
-      data: { goalId, enabled, daysOfWeek, channel: "PUSH", timeOfDay: REMINDER_TIME_PLACEHOLDER },
+      data: { goalId, enabled, daysOfWeek, slots, channel: "PUSH" },
     });
   }
 }

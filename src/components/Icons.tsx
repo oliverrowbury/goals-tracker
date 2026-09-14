@@ -217,3 +217,19 @@ export function SignOutIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function PaletteIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M12 4a8 8 0 1 0 0 16c1.1 0 1.8-.9 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6h1.7a3 3 0 0 0 3-3A8 8 0 0 0 12 4Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="7.5" cy="11" r="1.15" fill="currentColor" />
+      <circle cx="9.5" cy="7.2" r="1.15" fill="currentColor" />
+      <circle cx="14.5" cy="7.2" r="1.15" fill="currentColor" />
+    </svg>
+  );
+}

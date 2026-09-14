@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUser } from "@/lib/push";
-import type { Weekday } from "@/lib/constants";
+import { REMINDER_SLOTS, type Weekday, type ReminderSlot } from "@/lib/constants";
 
-// Reminders are per-goal now (which days, not what time — see the comment
-// on REMINDER_TIME_PLACEHOLDER in goals/actions.ts), checked against UK
-// local time since this is still a single-user app. Revisit if/when
-// multiple users in different timezones are real.
+// Reminders are per-goal (which days + which of the day's fixed slots — see
+// the ReminderSlot comment in schema.prisma for why slots rather than an
+// arbitrary time), checked against UK local time since this is still a
+// single-user app. Revisit if/when multiple users in different timezones
+// are real.
 const REMINDER_TIMEZONE = "Europe/London";
 
 function currentWeekday(): Weekday {
@@ -21,10 +22,17 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const slotParam = searchParams.get("slot");
+  const slot = (REMINDER_SLOTS as readonly string[]).includes(slotParam ?? "") ? (slotParam as ReminderSlot) : null;
+  if (!slot) {
+    return NextResponse.json({ error: "Missing or invalid ?slot= — expected one of " + REMINDER_SLOTS.join(", ") }, { status: 400 });
+  }
+
   const today = currentWeekday();
 
   const dueReminders = await prisma.reminder.findMany({
-    where: { enabled: true, daysOfWeek: { has: today } },
+    where: { enabled: true, daysOfWeek: { has: today }, slots: { has: slot } },
     include: { goal: { select: { title: true, userId: true, active: true } } },
   });
 
@@ -46,5 +54,5 @@ export async function GET(request: Request) {
     ),
   );
 
-  return NextResponse.json({ sent: titlesByUser.size, checkedDay: today });
+  return NextResponse.json({ sent: titlesByUser.size, checkedDay: today, slot });
 }

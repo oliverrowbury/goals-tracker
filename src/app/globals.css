@@ -76,6 +76,56 @@
   --shadow-opacity-strong: 0.45;
 }
 
+/* User-chosen accent presets (Settings → Appearance), set as data-accent on
+   <html> in the root layout — see AccentThemeForm.tsx and User.accentTheme
+   in schema.prisma. TERRACOTTA needs no override block since it's just the
+   :root/.dark defaults above. Each preset only touches the three --accent-*
+   tokens; --goals/--study/--workout/--calm stay put so those sections keep
+   their own identity regardless of the chosen accent. */
+:root[data-accent="ocean"] {
+  --accent: #2b6cb0;
+  --accent-strong: #1e4e82;
+  --accent-soft: #dbe9f7;
+}
+:root.dark[data-accent="ocean"] {
+  --accent: #6fa8dc;
+  --accent-strong: #8dbbe6;
+  --accent-soft: #1f3040;
+}
+
+:root[data-accent="forest"] {
+  --accent: #3f7d4f;
+  --accent-strong: #2f5f3b;
+  --accent-soft: #dfead7;
+}
+:root.dark[data-accent="forest"] {
+  --accent: #7fc494;
+  --accent-strong: #99d3a8;
+  --accent-soft: #1f3324;
+}
+
+:root[data-accent="berry"] {
+  --accent: #a13d68;
+  --accent-strong: #7d2d50;
+  --accent-soft: #f3dde7;
+}
+:root.dark[data-accent="berry"] {
+  --accent: #e08fb3;
+  --accent-strong: #ea9fc0;
+  --accent-soft: #3a2030;
+}
+
+:root[data-accent="slate"] {
+  --accent: #51606e;
+  --accent-strong: #3c4854;
+  --accent-soft: #e2e7ea;
+}
+:root.dark[data-accent="slate"] {
+  --accent: #9fb0bd;
+  --accent-strong: #b7c5cf;
+  --accent-soft: #29333b;
+}
+
 @theme inline {
   --color-paper: var(--paper);
   --color-ink: var(--ink);

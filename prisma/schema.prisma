@@ -62,6 +62,31 @@ enum DistanceUnit {
   MI
 }
 
+// A curated set of accent-color presets a user can pick in Settings, rather
+// than a free-form color picker — keeps every combination looking
+// intentional and keeps contrast/accessibility guaranteed, since each is
+// hand-picked rather than user-mixed. TERRACOTTA is the original default.
+enum AccentTheme {
+  TERRACOTTA
+  OCEAN
+  FOREST
+  BERRY
+  SLATE
+}
+
+// Fixed times of day a reminder can fire at, rather than an arbitrary
+// "HH:mm" — see the Reminder model below for why: Vercel's Hobby cron plan
+// only allows each individual cron job to fire once a day, but a project
+// can register several separate cron jobs, each pinned to one of these
+// slots, which is what actually makes "more than one reminder a day"
+// possible without a paid plan.
+enum ReminderSlot {
+  MORNING
+  AFTERNOON
+  EVENING
+  NIGHT
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -75,19 +100,22 @@ model User {
   passwordHash String
   sessionToken String? @unique
 
-  // A single daily reminder time ("HH:mm", 24h, checked in the server's
-  // local sense of "now" — see the cron route). Null/false means no
-  // reminder is sent. Kept simple on purpose: one global nudge rather than
-  // the more granular per-goal Reminder model below, which nothing wires
-  // up to yet.
-  reminderTime    String?
-  reminderEnabled Boolean @default(false)
-
   // Display/input preference for the Workout tracker — everything is
   // still stored canonically in kg/km regardless of this, converted at
   // the UI's edges (see src/lib/workout.ts).
   weightUnit   WeightUnit   @default(KG)
   distanceUnit DistanceUnit @default(KM)
+
+  // Which preset color palette the app renders in for this user — applied
+  // as a data attribute on the app shell, see globals.css.
+  accentTheme AccentTheme @default(TERRACOTTA)
+
+  // Simple points total — +XP for finishing a study session or workout,
+  // completing a goal for the day, or writing a journal entry (see each
+  // action for the exact amounts). Level is derived from this at display
+  // time (see lib/xp.ts) rather than stored separately, so the level
+  // formula can change later without a migration.
+  xp Int @default(0)
 
   journalEntries    JournalEntry[]
   goals             Goal[]
@@ -97,6 +125,7 @@ model User {
   workouts          Workout[]
   pushSubscriptions PushSubscription[]
   feedback          Feedback[]
+  deadlines         Deadline[]
 }
 
 model PushSubscription {
@@ -209,6 +238,7 @@ model Subject {
 
   studySessions StudySession[]
   goals         Goal[]
+  deadlines     Deadline[]
 }
 
 model StudySession {
@@ -292,8 +322,31 @@ model Reminder {
   goal   Goal   @relation(fields: [goalId], references: [id])
 
   daysOfWeek Weekday[]
-  timeOfDay  String // "HH:mm", 24h
+  // Which of the day's fixed slots to fire in — a goal can be reminded in
+  // more than one (e.g. both MORNING and EVENING), each delivered by its
+  // own cron job (see vercel.json and the cron route).
+  slots ReminderSlot[]
 
   channel ReminderChannel
   enabled Boolean         @default(true)
+}
+
+model Deadline {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title String
+  // Optional link to a Subject, same idea as Goal.subjectId — lets a
+  // deadline show up alongside that subject's study time without forcing
+  // one, since not every deadline (a library book, a form to submit) maps
+  // to a subject.
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id])
+
+  dueDate   DateTime
+  notes     String?
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
 }

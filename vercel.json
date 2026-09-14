@@ -1,8 +1,20 @@
 {
   "crons": [
     {
-      "path": "/api/cron/reminders",
+      "path": "/api/cron/reminders?slot=MORNING",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/reminders?slot=AFTERNOON",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/reminders?slot=EVENING",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/reminders?slot=NIGHT",
+      "schedule": "0 21 * * *"
     }
   ]
 }
