@@ -89,7 +89,16 @@ export function GoalForm({
         <label className={labelClass} htmlFor="description">
           Description <span className="text-ink-muted">(optional)</span>
         </label>
-        <textarea id="description" name="description" defaultValue={values.description} rows={2} className={inputClass} />
+        <textarea
+          id="description"
+          name="description"
+          defaultValue={values.description}
+          rows={2}
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
+          className={inputClass}
+        />
       </div>
 
       <div>
@@ -142,7 +151,7 @@ export function GoalForm({
               id="targetValue"
               name="targetValue"
               type="number"
-              min="0.01"
+              min="0"
               step="any"
               defaultValue={values.targetValue}
               required

@@ -119,15 +119,23 @@ export async function removeFriendship(friendshipId: string) {
   revalidatePath("/friends");
 }
 
-export async function setShareActivity(share: boolean) {
+export type ShareCategory = "journal" | "study" | "workout";
+
+const SHARE_FIELD: Record<ShareCategory, "shareJournalStreak" | "shareStudyStreak" | "shareWorkoutStreak"> = {
+  journal: "shareJournalStreak",
+  study: "shareStudyStreak",
+  workout: "shareWorkoutStreak",
+};
+
+export async function setShareCategory(category: ShareCategory, share: boolean) {
   const user = await getCurrentUser();
-  await prisma.user.update({ where: { id: user.id }, data: { shareActivity: share } });
+  await prisma.user.update({ where: { id: user.id }, data: { [SHARE_FIELD[category]]: share } });
   revalidatePath("/friends");
 }
 
-// Proudly's own take on Strava kudos — since there's no per-activity feed
-// to react to (just each friend's aggregate streaks/level), this is capped
-// at once per friend per calendar day rather than once per activity. The
+// A simple "like" between friends — since there's no per-activity feed to
+// react to (just each friend's aggregate streaks/level), this is capped at
+// once per friend per calendar day rather than once per activity. The
 // @@unique([fromUserId, toUserId, date]) constraint is what actually
 // enforces the cap; a second tap the same day just no-ops.
 export async function sendCheer(toUserId: string) {

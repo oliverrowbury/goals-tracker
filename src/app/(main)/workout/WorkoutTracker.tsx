@@ -18,6 +18,7 @@ import { todayISO, shiftISO } from "@/lib/dates";
 import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
+import { ShareButton } from "@/components/ShareButton";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
@@ -639,13 +640,14 @@ export function WorkoutTracker({
         <div>
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Start a workout</h2>
           <div className="grid grid-cols-2 gap-3">
+            {/* Strength has no sub-type, so tapping it starts a workout right
+                away — same one-tap feel as tapping a specific cardio
+                activity below, rather than a tap-to-select-then-tap-to-start
+                two-step. */}
             <button
-              onClick={() => setStartTab("STRENGTH")}
-              className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
-                startTab === "STRENGTH"
-                  ? "border-workout bg-workout-soft text-workout"
-                  : "border-line bg-card text-ink-muted hover:border-workout hover:text-workout"
-              }`}
+              disabled={isPending}
+              onClick={() => startTransition(() => startWorkout("STRENGTH", "Workout"))}
+              className="flex flex-col items-center gap-2 rounded-xl border border-line bg-card p-4 text-ink-muted transition hover:border-workout hover:text-workout disabled:opacity-50"
             >
               <DumbbellIcon className="h-6 w-6" />
               <span className="text-sm font-medium">Strength</span>
@@ -663,18 +665,7 @@ export function WorkoutTracker({
             </button>
           </div>
 
-          {startTab === "STRENGTH" ? (
-            <div className="mt-4">
-              <button
-                disabled={isPending}
-                onClick={() => startTransition(() => startWorkout("STRENGTH", "Workout"))}
-                className="w-full rounded-xl bg-workout py-3.5 text-base font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
-              >
-                Start Workout
-              </button>
-              <p className="mt-1.5 text-xs text-ink-muted">You can rename it once it’s started.</p>
-            </div>
-          ) : (
+          {startTab === "CARDIO" && (
             <div className="mt-4">
               <p className="mb-2 text-xs text-ink-muted">What are you doing?</p>
               <div className="flex flex-wrap gap-2">
@@ -945,16 +936,43 @@ function WorkoutLogCard({
             )}
           </p>
 
-          {(!isCardio || hasRoute) && (
-            <button
-              type="button"
-              onClick={onToggleExpand}
-              className="mt-1.5 flex items-center gap-1 py-1 text-xs font-medium text-workout hover:underline"
-            >
-              {expanded ? "Hide details" : isCardio ? "View route" : "Show sets"}
-              <ChevronDownIcon className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
-            </button>
-          )}
+          <div className="mt-1.5 flex items-center gap-3">
+            {(!isCardio || hasRoute) && (
+              <button
+                type="button"
+                onClick={onToggleExpand}
+                className="flex items-center gap-1 py-1 text-xs font-medium text-workout hover:underline"
+              >
+                {expanded ? "Hide details" : isCardio ? "View route" : "Show sets"}
+                <ChevronDownIcon className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
+              </button>
+            )}
+            <ShareButton
+              accentVar="--workout"
+              fileName="workout.png"
+              shareTitle="My workout"
+              shareText={
+                isCardio
+                  ? `${workout.label}: ${workout.distanceKm ? `${formatDistance(workout.distanceKm, distanceUnit)}, ` : ""}${formatMinutes(workout.durationMinutes ?? 0)} — via Proudly`
+                  : `${workout.label}: ${exerciseOrder.length} exercises, ${formatMinutes(workout.durationMinutes ?? 0)} — via Proudly`
+              }
+              data={{
+                eyebrow: isCardio ? "Cardio workout" : "Strength workout",
+                heading: workout.label,
+                stats: isCardio
+                  ? [
+                      ...(workout.distanceKm ? [{ label: "Distance", value: formatDistance(workout.distanceKm, distanceUnit) }] : []),
+                      { label: "Time", value: formatMinutes(workout.durationMinutes ?? 0) },
+                      ...(pace ? [{ label: "Pace", value: pace }] : []),
+                    ]
+                  : [
+                      { label: "Exercises", value: String(exerciseOrder.length) },
+                      { label: "Sets", value: String(workout.sets.filter((s) => !s.isWarmup).length) },
+                      { label: "Time", value: formatMinutes(workout.durationMinutes ?? 0) },
+                    ],
+              }}
+            />
+          </div>
 
           {expanded && isCardio && workout.route && (
             <div className="mt-2">

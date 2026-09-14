@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, generateSessionToken } from "@/lib/password";
 import { sendWelcomeEmail } from "@/lib/email";
 import { USERNAME_RE } from "@/lib/constants";
+import { containsProfanity } from "@/lib/profanity";
 
 export type SignupState = {
   fieldErrors: { name?: string; username?: string; email?: string; password?: string; confirmPassword?: string };
@@ -39,6 +40,8 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   if (!username) fieldErrors.username = "Choose a username.";
   else if (!USERNAME_RE.test(username)) {
     fieldErrors.username = "3-20 characters, starting with a letter — lowercase letters, numbers, and underscores only.";
+  } else if (containsProfanity(username)) {
+    fieldErrors.username = "That username isn't allowed — please pick another.";
   }
   if (!email) fieldErrors.email = "Enter your email.";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "That doesn't look like a valid email address.";

@@ -20,6 +20,9 @@ export function FeedbackForm() {
         name="message"
         required
         rows={3}
+        autoCapitalize="sentences"
+        autoCorrect="on"
+        spellCheck
         placeholder="Bugs, ideas, anything you'd want changed…"
         className="w-full resize-y rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
       />

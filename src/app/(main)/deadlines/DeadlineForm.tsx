@@ -102,7 +102,16 @@ export function DeadlineForm({
         <label className={labelClass} htmlFor="notes">
           Notes <span className="text-ink-muted">(optional)</span>
         </label>
-        <textarea id="notes" name="notes" defaultValue={values.notes} rows={3} className={inputClass} />
+        <textarea
+          id="notes"
+          name="notes"
+          defaultValue={values.notes}
+          rows={3}
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
+          className={inputClass}
+        />
       </div>
 
       <SubmitButton label={submitLabel} />

@@ -1,6 +1,7 @@
 import { deleteStudySession } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import { todayISO, shiftISO } from "@/lib/dates";
+import { ShareButton } from "@/components/ShareButton";
 
 type Subject = { id: string; name: string; color: string };
 type Session = { id: string; subjectId: string; durationMinutes: number | null; startedAt: string };
@@ -30,11 +31,25 @@ export function RecentSessions({ subjects, sessions }: { subjects: Subject[]; se
               {subject?.name ?? "Unknown subject"}
               <span className="text-ink-muted">— {formatMinutes(session.durationMinutes ?? 0)}</span>
               <span className="text-xs text-ink-muted">{dayLabel(session.startedAt)}</span>
-              <form action={deleteStudySession.bind(null, session.id)} className="ml-auto">
-                <button type="submit" title="Remove this session" className="text-ink-muted hover:text-accent">
-                  ×
-                </button>
-              </form>
+              <div className="ml-auto flex items-center gap-2">
+                <ShareButton
+                  accentVar="--study"
+                  fileName="study-session.png"
+                  shareTitle="My study session"
+                  shareText={`${subject?.name ?? "Study"}: ${formatMinutes(session.durationMinutes ?? 0)} — via Proudly`}
+                  data={{
+                    eyebrow: "Study session",
+                    heading: subject?.name ?? "Study session",
+                    stats: [{ label: "Time", value: formatMinutes(session.durationMinutes ?? 0) }],
+                  }}
+                  className="text-ink-muted hover:text-accent"
+                />
+                <form action={deleteStudySession.bind(null, session.id)}>
+                  <button type="submit" title="Remove this session" className="text-ink-muted hover:text-accent">
+                    ×
+                  </button>
+                </form>
+              </div>
             </li>
           );
         })}

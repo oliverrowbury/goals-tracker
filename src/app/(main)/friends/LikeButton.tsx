@@ -1,36 +1,37 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { HeartIcon } from "@/components/Icons";
 import { sendCheer } from "./actions";
 
-export function CheerButton({
+export function LikeButton({
   friendUserId,
   count,
-  cheeredToday,
+  likedToday,
 }: {
   friendUserId: string;
   count: number;
-  cheeredToday: boolean;
+  likedToday: boolean;
 }) {
-  const [cheered, setCheered] = useState(cheeredToday);
+  const [liked, setLiked] = useState(likedToday);
   const [localCount, setLocalCount] = useState(count);
   const [isPending, startTransition] = useTransition();
 
   return (
     <button
       type="button"
-      disabled={cheered || isPending}
+      disabled={liked || isPending}
       onClick={() => {
-        setCheered(true); // optimistic
+        setLiked(true); // optimistic
         setLocalCount((c) => c + 1);
         startTransition(() => sendCheer(friendUserId));
       }}
-      title={cheered ? "You cheered them on today" : "Proud of you"}
+      title={liked ? "You liked this today" : "Like"}
       className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-        cheered ? "border-calm bg-calm-soft text-calm" : "border-line text-ink-muted hover:border-calm hover:text-calm"
+        liked ? "border-calm bg-calm-soft text-calm" : "border-line text-ink-muted hover:border-calm hover:text-calm"
       } disabled:cursor-default`}
     >
-      👏 Proud of you
+      <HeartIcon className="h-4 w-4" filled={liked} />
       {localCount > 0 && <span className="tabular-nums">{localCount}</span>}
     </button>
   );

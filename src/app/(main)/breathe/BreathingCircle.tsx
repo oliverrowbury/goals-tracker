@@ -5,14 +5,20 @@ import { useEffect, useState } from "react";
 // Box breathing: 4s in, 4s hold, 4s out, 4s hold — a well-known, simple
 // pattern that doesn't need any explanation for a first-time user.
 const PHASES = [
-  { label: "Breathe in", seconds: 4, scale: 1.45 },
-  { label: "Hold", seconds: 4, scale: 1.45 },
+  { label: "Breathe in", seconds: 4, scale: 1.35 },
+  { label: "Hold", seconds: 4, scale: 1.35 },
   { label: "Breathe out", seconds: 4, scale: 1 },
   { label: "Hold", seconds: 4, scale: 1 },
 ] as const;
 
 const RADIUS = 118;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+// An organic ease — slow to start and end, quick through the middle —
+// rather than the mechanical, evenly-paced feel of a linear or default
+// ease-in-out curve. This is what makes the orb read as "breathing"
+// rather than just resizing.
+const BREATH_EASE = "cubic-bezier(0.45, 0, 0.4, 1)";
 
 export function BreathingCircle() {
   const [running, setRunning] = useState(false);
@@ -69,34 +75,54 @@ export function BreathingCircle() {
       <button
         type="button"
         onClick={toggle}
-        className="relative flex h-72 w-72 items-center justify-center rounded-full"
+        className="relative flex h-80 w-80 items-center justify-center rounded-full"
         aria-label={running ? "Stop breathing exercise" : "Start breathing exercise"}
       >
+        {/* Ambient halo — rotates continuously, independent of the breathing
+            phase, so there's always some motion even through a still "hold". */}
         <div
-          className="absolute inset-4 rounded-full bg-calm-soft transition-transform ease-in-out"
+          className="absolute inset-0 rounded-full opacity-40 [animation:slow-spin_18s_linear_infinite]"
+          style={{ background: "conic-gradient(from 0deg, var(--calm-soft), transparent 30%, var(--calm-soft) 60%, transparent 90%)" }}
+        />
+
+        {/* Three softly offset layers scaling together give the orb depth,
+            rather than one flat circle resizing. */}
+        <div
+          className="absolute inset-6 rounded-full opacity-50 blur-2xl transition-transform"
           style={{
-            transform: `scale(${running ? phase.scale : 1})`,
+            transform: `scale(${running ? phase.scale * 1.08 : 1.08})`,
             transitionDuration: `${phase.seconds}s`,
+            transitionTimingFunction: BREATH_EASE,
+            background: "radial-gradient(circle, var(--calm), transparent 72%)",
           }}
         />
         <div
-          className="absolute inset-10 rounded-full opacity-70 blur-md transition-transform ease-in-out"
+          className="absolute inset-10 rounded-full opacity-70 blur-lg transition-transform"
           style={{
-            transform: `scale(${running ? phase.scale * 0.85 : 0.85})`,
+            transform: `scale(${running ? phase.scale * 0.95 : 0.95})`,
             transitionDuration: `${phase.seconds}s`,
+            transitionTimingFunction: BREATH_EASE,
             background: "radial-gradient(circle, var(--calm), transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute inset-14 rounded-full bg-calm-soft transition-transform"
+          style={{
+            transform: `scale(${running ? phase.scale : 1})`,
+            transitionDuration: `${phase.seconds}s`,
+            transitionTimingFunction: BREATH_EASE,
           }}
         />
 
         <svg viewBox="0 0 256 256" className="absolute inset-0 h-full w-full -rotate-90">
-          <circle cx="128" cy="128" r={RADIUS} fill="none" stroke="var(--line)" strokeWidth="4" />
+          <circle cx="128" cy="128" r={RADIUS} fill="none" stroke="var(--line)" strokeWidth="3" />
           <circle
             cx="128"
             cy="128"
             r={RADIUS}
             fill="none"
             stroke="var(--calm)"
-            strokeWidth="4"
+            strokeWidth="3"
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={running ? ringOffset : 0}
@@ -104,14 +130,20 @@ export function BreathingCircle() {
           />
         </svg>
 
-        <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border-2 border-calm bg-card text-center">
-          <span className="font-serif text-lg font-medium text-ink">{running ? phase.label : "Tap to start"}</span>
-          {running && <span className="text-sm text-ink-muted">{secondsLeft}</span>}
+        <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border-2 border-calm bg-card text-center shadow-sm">
+          <span key={running ? phaseIndex : "idle"} className="[animation:fade-in_0.5s_ease]">
+            <span className="block font-serif text-lg font-medium text-ink">{running ? phase.label : "Tap to start"}</span>
+          </span>
+          {running && (
+            <span key={secondsLeft} className="mt-0.5 block text-sm text-ink-muted [animation:fade-in_0.3s_ease]">
+              {secondsLeft}
+            </span>
+          )}
         </div>
       </button>
 
       {running && rounds > 0 && (
-        <p className="text-sm text-ink-muted">
+        <p className="text-sm text-ink-muted [animation:fade-in_0.4s_ease]">
           {rounds} round{rounds === 1 ? "" : "s"} done
         </p>
       )}

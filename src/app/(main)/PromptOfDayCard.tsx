@@ -33,6 +33,9 @@ export function PromptOfDayCard({
         onBlur={save}
         placeholder="Type your answer…"
         rows={2}
+        autoCapitalize="sentences"
+        autoCorrect="on"
+        spellCheck
         className="mt-4 w-full resize-y rounded-xl border border-line bg-paper p-3.5 text-[15px] leading-relaxed text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
       />
       <div className="mt-2 flex items-center gap-3">

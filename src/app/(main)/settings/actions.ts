@@ -8,6 +8,7 @@ import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, verifyPassword, generateSessionToken } from "@/lib/password";
 import { sendPasswordChangedEmail } from "@/lib/email";
 import { USERNAME_RE } from "@/lib/constants";
+import { containsProfanity } from "@/lib/profanity";
 
 export type SettingsActionState = { error?: string; success?: string } | null;
 
@@ -57,6 +58,9 @@ export async function updateUsername(_prev: SettingsActionState, formData: FormD
     .toLowerCase();
   if (!USERNAME_RE.test(username)) {
     return { error: "3-20 characters, starting with a letter — lowercase letters, numbers, and underscores only." };
+  }
+  if (containsProfanity(username)) {
+    return { error: "That username isn't allowed — please pick another." };
   }
 
   const user = await getCurrentUser();

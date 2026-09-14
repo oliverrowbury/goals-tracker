@@ -9,6 +9,7 @@ import { promptForDate } from "@/lib/prompts";
 import { daysBetween, dateToISO } from "@/lib/dates";
 import { PromptOfDayCard } from "./PromptOfDayCard";
 import { WeeklyRecap } from "./WeeklyRecap";
+import { OnboardingChecklist } from "./OnboardingChecklist";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function HomePage({
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
 
-  const [entry, goals, weekSessions, nextDeadline] = await Promise.all([
+  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount] = await Promise.all([
     prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(today) } } }),
     prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
@@ -43,6 +44,9 @@ export default async function HomePage({
       where: { userId: user.id, completed: false },
       orderBy: { dueDate: "asc" },
     }),
+    prisma.subject.count({ where: { userId: user.id } }),
+    prisma.workout.count({ where: { userId: user.id, endedAt: { not: null } } }),
+    prisma.journalEntry.count({ where: { userId: user.id, bodyText: { not: "" } } }),
   ]);
 
   const dueToday = goals.filter((g) => isGoalDueOn(g, today) && g.frequencyType !== "WEEKLY_TARGET");
@@ -99,6 +103,8 @@ export default async function HomePage({
           </span>
         </Link>
       )}
+
+      <OnboardingChecklist hasSubject={subjectCount > 0} hasWorkout={workoutCount > 0} hasJournalEntry={journalEntryCount > 0} />
 
       <PromptOfDayCard dateISO={today} prompt={promptForDate(today)} initialResponse={entry?.promptResponse ?? ""} />
 

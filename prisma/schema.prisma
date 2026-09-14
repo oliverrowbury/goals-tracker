@@ -105,12 +105,17 @@ model User {
   // formula can change later without a migration.
   xp Int @default(0)
 
-  // Opt-in privacy for the friends feed: an accepted friend can always see
-  // *that* you're a friend, but only sees streaks/level/recent activity
-  // when this is on. Defaults on since the whole point of adding a friend
-  // is to see each other's progress, but this is the one switch to turn
-  // that back off without having to remove anyone.
-  shareActivity Boolean @default(true)
+  // Opt-in privacy for the friends feed, per category — an accepted friend
+  // can always see *that* you're a friend, but only sees a given streak
+  // when its switch is on. Split three ways (rather than one blanket
+  // toggle) so someone can, say, show their workout streak without also
+  // showing their journal streak. All default on since the whole point of
+  // adding a friend is to see each other's progress. Level is always
+  // visible to friends regardless — it's just derived from total XP across
+  // everything, not any one category.
+  shareJournalStreak Boolean @default(true)
+  shareStudyStreak   Boolean @default(true)
+  shareWorkoutStreak Boolean @default(true)
 
   journalEntries    JournalEntry[]
   goals             Goal[]
@@ -404,10 +409,10 @@ model Friendship {
   @@unique([requesterId, addresseeId])
 }
 
-// A friend's on-brand equivalent of Strava kudos — capped at one per friend
-// per calendar day (the @@unique below) rather than per individual
-// activity, since there's no per-activity feed to react to, just each
-// other's aggregate streaks/level on the Friends page.
+// A simple "like" on a friend — capped at one per friend per calendar day
+// (the @@unique below) rather than per individual activity, since there's
+// no per-activity feed to react to, just each other's aggregate
+// streaks/level on the Friends page.
 model Cheer {
   id String @id @default(uuid())
 

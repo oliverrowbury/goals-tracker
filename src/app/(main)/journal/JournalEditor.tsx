@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { saveJournalEntry } from "./actions";
+import { ShareButton } from "@/components/ShareButton";
 
 type Mode = "freewrite" | "list";
 
@@ -89,15 +90,10 @@ function ListRow({
         ref={inputRef}
         value={value}
         placeholder={placeholder}
-        onChange={(e) => {
-          const next = e.target.value;
-          if (next.length === value.length + 1 && next.endsWith(".")) {
-            onChange(next.slice(0, -1));
-            onAdvance();
-          } else {
-            onChange(next);
-          }
-        }}
+        autoCapitalize="sentences"
+        autoCorrect="on"
+        spellCheck
+        onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -209,6 +205,9 @@ export function JournalEditor({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="What are you proud of today?"
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
           rows={10}
           className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
         />
@@ -223,6 +222,9 @@ export function JournalEditor({
           value={improveText}
           onChange={(e) => setImproveText(e.target.value)}
           placeholder="What could've gone better today?"
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
           rows={6}
           className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
         />
@@ -240,6 +242,16 @@ export function JournalEditor({
           <span className="text-sm text-ink-muted">
             Saved at {savedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
           </span>
+        )}
+        {text.trim() && (
+          <ShareButton
+            accentVar="--accent"
+            fileName="proud-moment.png"
+            shareTitle="A proud moment"
+            shareText={`${text.trim().slice(0, 200)} — via Proudly`}
+            data={{ eyebrow: "Proud moment", heading: "Today", body: text.trim() }}
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-accent hover:text-accent"
+          />
         )}
       </div>
     </div>

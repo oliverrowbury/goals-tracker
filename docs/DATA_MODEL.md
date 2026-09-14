@@ -2,7 +2,8 @@
 
 Real multi-user accounts — every table is scoped by `user_id`, and nothing reads
 across users except the friends feed (`Friendship`, below), which is explicitly
-gated by an accepted friendship plus the other user's own `share_activity` opt-in.
+gated by an accepted friendship plus the other user's own per-category
+`share_*_streak` opt-in.
 
 ## User
 | field | type | notes |
@@ -12,7 +13,9 @@ gated by an accepted friendship plus the other user's own `share_activity` opt-i
 | username | text | public handle, unique — how friends find/add each other (`/friends/add/[username]`) |
 | name | text | display name, not unique |
 | xp | integer | simple points total; level is derived from this at display time rather than stored |
-| share_activity | boolean | opt-in: whether accepted friends can see this user's streaks/level |
+| share_journal_streak | boolean | opt-in: whether accepted friends can see this user's journal streak |
+| share_study_streak | boolean | opt-in: whether accepted friends can see this user's study streak |
+| share_workout_streak | boolean | opt-in: whether accepted friends can see this user's workout streak |
 | created_at | timestamp | |
 
 ## JournalEntry
@@ -188,9 +191,9 @@ Unique on `(requester_id, addressee_id)` — direction-specific, so the "already
 requested the other way" case is checked in application code, not the schema.
 
 ## Cheer
-Proudly's own take on Strava kudos — one friend giving another a "Proud of
-you" on the Friends page. Capped at once per friend per calendar day (there's
-no per-activity feed to react to individually, just aggregate streaks/level).
+A simple "like" — one friend liking another on the Friends page. Capped at
+once per friend per calendar day (there's no per-activity feed to react to
+individually, just aggregate streaks/level).
 
 | field | type | notes |
 |---|---|---|

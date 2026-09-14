@@ -7,30 +7,49 @@ import { UsersIcon, FlameIcon, JournalIcon, ClockIcon, DumbbellIcon } from "@/co
 import { AddFriendSearch } from "./AddFriendSearch";
 import { ShareActivityToggle } from "./ShareActivityToggle";
 import { RemoveFriendButton } from "./RemoveFriendButton";
-import { CheerButton } from "./CheerButton";
+import { LikeButton } from "./LikeButton";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { acceptFriendRequest, removeFriendship } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type FriendUser = { id: string; name: string; username: string; shareActivity: boolean; xp: number };
+type FriendUser = {
+  id: string;
+  name: string;
+  username: string;
+  shareJournalStreak: boolean;
+  shareStudyStreak: boolean;
+  shareWorkoutStreak: boolean;
+  xp: number;
+};
 
 // The only place in the app that reads another user's rows — gated behind
-// an ACCEPTED friendship (checked by the caller) and that user's own
-// shareActivity opt-in, so it's never reachable just by knowing a user id.
-// Journal *content* is never included here regardless — only whether an
-// entry exists on a given day, the same way the streak is already computed
-// for the signed-in user's own settings page.
-async function friendActivity(userId: string, today: string) {
+// an ACCEPTED friendship (checked by the caller) and, per category, that
+// user's own share*Streak opt-in, so it's never reachable just by knowing
+// a user id. Journal *content* is never included here regardless — only
+// whether an entry exists on a given day, the same way the streak is
+// already computed for the signed-in user's own settings page. Each
+// category is fetched independently so one friend can show their workout
+// streak without also showing their journal streak.
+async function friendActivity(other: FriendUser, today: string) {
   const [journalDates, studyDates, workoutDates] = await Promise.all([
-    prisma.journalEntry.findMany({ where: { userId, bodyText: { not: "" } }, select: { date: true } }),
-    prisma.studySession.findMany({ where: { userId, durationMinutes: { not: null } }, select: { startedAt: true } }),
-    prisma.workout.findMany({ where: { userId, endedAt: { not: null } }, select: { date: true } }),
+    other.shareJournalStreak
+      ? prisma.journalEntry.findMany({ where: { userId: other.id, bodyText: { not: "" } }, select: { date: true } })
+      : null,
+    other.shareStudyStreak
+      ? prisma.studySession.findMany({
+          where: { userId: other.id, durationMinutes: { not: null } },
+          select: { startedAt: true },
+        })
+      : null,
+    other.shareWorkoutStreak
+      ? prisma.workout.findMany({ where: { userId: other.id, endedAt: { not: null } }, select: { date: true } })
+      : null,
   ]);
   return {
-    journalStreak: computeStreak(new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10))), today),
-    studyStreak: computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today),
-    workoutStreak: computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today),
+    journalStreak: journalDates && computeStreak(new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10))), today),
+    studyStreak: studyDates && computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today),
+    workoutStreak: workoutDates && computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today),
   };
 }
 
@@ -41,8 +60,28 @@ export default async function FriendsPage() {
   const friendships = await prisma.friendship.findMany({
     where: { OR: [{ requesterId: user.id }, { addresseeId: user.id }] },
     include: {
-      requester: { select: { id: true, name: true, username: true, shareActivity: true, xp: true } },
-      addressee: { select: { id: true, name: true, username: true, shareActivity: true, xp: true } },
+      requester: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          shareJournalStreak: true,
+          shareStudyStreak: true,
+          shareWorkoutStreak: true,
+          xp: true,
+        },
+      },
+      addressee: {
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          shareJournalStreak: true,
+          shareStudyStreak: true,
+          shareWorkoutStreak: true,
+          xp: true,
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -60,8 +99,8 @@ export default async function FriendsPage() {
       await Promise.all(
         accepted.map(async (f) => {
           const other = otherUser(f);
-          if (!other.shareActivity) return;
-          map.set(other.id, await friendActivity(other.id, today));
+          if (!other.shareJournalStreak && !other.shareStudyStreak && !other.shareWorkoutStreak) return;
+          map.set(other.id, await friendActivity(other, today));
         }),
       );
       return map;
@@ -89,9 +128,15 @@ export default async function FriendsPage() {
           <CopyLinkButton path={`/friends/add/${user.username}`} />
         </div>
         <div className="mt-6 border-t border-line pt-4">
-          <ShareActivityToggle initial={user.shareActivity} />
+          <ShareActivityToggle
+            initial={{
+              journal: user.shareJournalStreak,
+              study: user.shareStudyStreak,
+              workout: user.shareWorkoutStreak,
+            }}
+          />
           <p className="mt-1.5 text-xs text-ink-muted">
-            Your journal is never visible to anyone, friends included — this only covers streaks and level.
+            Your journal is never visible to anyone, friends included — these only ever cover streaks, never content.
           </p>
         </div>
       </section>
@@ -181,20 +226,26 @@ export default async function FriendsPage() {
                   </div>
                 </div>
 
-                {activity ? (
+                {activity && (activity.journalStreak != null || activity.studyStreak != null || activity.workoutStreak != null) ? (
                   <div className="mt-3 flex flex-wrap gap-4 border-t border-line pt-3 text-sm">
-                    <span className="flex items-center gap-1.5 text-ink-muted">
-                      <JournalIcon className="h-4 w-4 text-accent" />
-                      {activity.journalStreak} day{activity.journalStreak === 1 ? "" : "s"}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-ink-muted">
-                      <ClockIcon className="h-4 w-4 text-study" />
-                      {activity.studyStreak} day{activity.studyStreak === 1 ? "" : "s"}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-ink-muted">
-                      <DumbbellIcon className="h-4 w-4 text-workout" />
-                      {activity.workoutStreak} day{activity.workoutStreak === 1 ? "" : "s"}
-                    </span>
+                    {activity.journalStreak != null && (
+                      <span className="flex items-center gap-1.5 text-ink-muted">
+                        <JournalIcon className="h-4 w-4 text-accent" />
+                        {activity.journalStreak} day{activity.journalStreak === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {activity.studyStreak != null && (
+                      <span className="flex items-center gap-1.5 text-ink-muted">
+                        <ClockIcon className="h-4 w-4 text-study" />
+                        {activity.studyStreak} day{activity.studyStreak === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    {activity.workoutStreak != null && (
+                      <span className="flex items-center gap-1.5 text-ink-muted">
+                        <DumbbellIcon className="h-4 w-4 text-workout" />
+                        {activity.workoutStreak} day{activity.workoutStreak === 1 ? "" : "s"}
+                      </span>
+                    )}
                   </div>
                 ) : (
                   <p className="mt-3 flex items-center gap-1.5 border-t border-line pt-3 text-xs text-ink-muted">
@@ -204,10 +255,10 @@ export default async function FriendsPage() {
                 )}
 
                 <div className="mt-3 border-t border-line pt-3">
-                  <CheerButton
+                  <LikeButton
                     friendUserId={other.id}
                     count={cheerCountMap.get(other.id) ?? 0}
-                    cheeredToday={cheeredTodaySet.has(other.id)}
+                    likedToday={cheeredTodaySet.has(other.id)}
                   />
                 </div>
               </div>
