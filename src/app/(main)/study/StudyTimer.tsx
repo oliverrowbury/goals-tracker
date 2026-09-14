@@ -169,6 +169,9 @@ function formatClock(totalSeconds: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+const DEFAULT_WORK_MINUTES = 25;
+const DEFAULT_BREAK_MINUTES = 5;
+
 export function StudyTimer({
   subjects,
   openSession,
@@ -190,6 +193,91 @@ export function StudyTimer({
   const activeSubject = subjects.find((s) => s.id === openSession?.subjectId);
   const isRunning = !!openSession && !openSession.pausedAt;
   const isPaused = !!openSession && !!openSession.pausedAt;
+
+  // Pomodoro is a client-side layer on top of the same pause/resume actions
+  // used above — a "work" interval ending calls pauseStudySession exactly
+  // like the manual Pause button would, and a "break" ending calls
+  // resumeStudySession. Nothing new is persisted; the session's own
+  // startedAt/pausedAt already account for the paused break time correctly.
+  const [pomodoroEnabled, setPomodoroEnabled] = useState(false);
+  const [workMinutes, setWorkMinutes] = useState(DEFAULT_WORK_MINUTES);
+  const [breakMinutes, setBreakMinutes] = useState(DEFAULT_BREAK_MINUTES);
+  const [pomodoroPhase, setPomodoroPhase] = useState<"work" | "break">("work");
+  const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(DEFAULT_WORK_MINUTES * 60);
+  const [completedPomodoros, setCompletedPomodoros] = useState(0);
+  const onPomodoroBreak = pomodoroEnabled && pomodoroPhase === "break";
+  const openSessionId = openSession?.id ?? null;
+
+  // A new/ended session always starts Pomodoro fresh and off, rather than
+  // carrying over a stale phase/count from whatever was studied before.
+  // Done during render (the React-recommended way to reset state when
+  // something identity-like changes — see "Storing information from
+  // previous renders" in the React docs) rather than an effect, so it
+  // takes effect in the same render instead of causing an extra one.
+  const [prevSessionId, setPrevSessionId] = useState(openSessionId);
+  if (openSessionId !== prevSessionId) {
+    setPrevSessionId(openSessionId);
+    setPomodoroEnabled(false);
+    setPomodoroPhase("work");
+    setCompletedPomodoros(0);
+  }
+
+  // Ticks the current phase down once a second — work only while the
+  // session is actually running (so a manual pause freezes it too, same as
+  // the elapsed-time clock above), break always ticks since that time is
+  // deliberately not counted as study time.
+  useEffect(() => {
+    if (!pomodoroEnabled || phaseSecondsLeft <= 0) return;
+    const shouldTick = pomodoroPhase === "work" ? isRunning : true;
+    if (!shouldTick) return;
+    const timeout = setTimeout(() => setPhaseSecondsLeft((s) => Math.max(0, s - 1)), 1000);
+    return () => clearTimeout(timeout);
+  }, [pomodoroEnabled, pomodoroPhase, isRunning, phaseSecondsLeft]);
+
+  // Fires exactly once when a phase's countdown reaches zero — separated
+  // from the ticking effect above so the side effects here (pausing/
+  // resuming the session) only ever run on that transition, not on every
+  // second. Unlike the two state resets above, this genuinely belongs in
+  // an effect rather than during render: it's reacting to time passing
+  // (not a prop/input changing) and has to call a server action, which
+  // render can't do.
+  useEffect(() => {
+    if (!pomodoroEnabled || phaseSecondsLeft > 0 || !openSessionId) return;
+    if (pomodoroPhase === "work") {
+      startTransition(() => pauseStudySession(openSessionId));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPomodoroPhase("break");
+      setPhaseSecondsLeft(breakMinutes * 60);
+    } else {
+      startTransition(() => resumeStudySession(openSessionId));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPomodoroPhase("work");
+      setPhaseSecondsLeft(workMinutes * 60);
+      setCompletedPomodoros((c) => c + 1);
+    }
+  }, [phaseSecondsLeft, pomodoroEnabled, pomodoroPhase, openSessionId, breakMinutes, workMinutes]);
+
+  function togglePomodoro() {
+    const next = !pomodoroEnabled;
+    setPomodoroEnabled(next);
+    if (next) {
+      // Always starts on a fresh work interval — an event handler, not an
+      // effect, so this can just set state directly.
+      setPomodoroPhase("work");
+      setPhaseSecondsLeft(workMinutes * 60);
+    } else if (onPomodoroBreak && openSessionId) {
+      // Turning it off mid-break shouldn't leave the session stuck paused.
+      startTransition(() => resumeStudySession(openSessionId));
+    }
+  }
+
+  function skipBreak() {
+    if (!openSessionId) return;
+    startTransition(() => resumeStudySession(openSessionId));
+    setPomodoroPhase("work");
+    setPhaseSecondsLeft(workMinutes * 60);
+    setCompletedPomodoros((c) => c + 1);
+  }
 
   // Anti-idle: if the tab is hidden while a session is running, auto-pause
   // it after a grace period. This can't prove you're actually studying, but
@@ -221,38 +309,97 @@ export function StudyTimer({
     <div className="space-y-8">
       {openSession && activeSubject ? (
         <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm">
-          <p className="text-sm text-ink-muted">{isPaused ? "Paused" : "Studying"}</p>
+          <p className="text-sm text-ink-muted">{onPomodoroBreak ? "On a break" : isPaused ? "Paused" : "Studying"}</p>
           <p className="mt-1 font-serif text-2xl font-semibold text-ink">{activeSubject.name}</p>
           <p className={`mt-3 font-mono text-4xl tabular-nums ${isPaused ? "text-ink-muted" : "text-study"}`}>
             {formatClock(elapsedSeconds)}
           </p>
-          {isPaused && autoPaused && (
+          {isPaused && autoPaused && !pomodoroEnabled && (
             <p className="mt-2 text-xs text-ink-muted">Paused automatically — this tab was in the background a while.</p>
           )}
-          <div className="mt-5 flex items-center justify-center gap-2">
-            {isRunning && (
-              <button
-                disabled={isPending}
-                onClick={() => {
-                  setAutoPaused(false);
-                  startTransition(() => pauseStudySession(openSession.id));
-                }}
-                className="rounded-lg border border-line px-5 py-2 text-sm font-medium text-ink hover:border-study disabled:opacity-50"
-              >
-                Pause
-              </button>
+
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={togglePomodoro}
+              className={`rounded-full border px-3 py-1 font-medium transition ${
+                pomodoroEnabled ? "border-study bg-study-soft text-study" : "border-line text-ink-muted hover:border-study"
+              }`}
+            >
+              🍅 Pomodoro {pomodoroEnabled ? "on" : "off"}
+            </button>
+            {!pomodoroEnabled && (
+              <>
+                <label className="flex items-center gap-1 text-ink-muted">
+                  Work
+                  <input
+                    type="number"
+                    min={1}
+                    max={180}
+                    value={workMinutes}
+                    onChange={(e) => setWorkMinutes(Math.min(180, Math.max(1, Number(e.target.value) || 1)))}
+                    className="w-12 rounded border border-line bg-paper px-1 py-0.5 text-center focus:border-study focus:outline-none"
+                  />
+                  m
+                </label>
+                <label className="flex items-center gap-1 text-ink-muted">
+                  Break
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={breakMinutes}
+                    onChange={(e) => setBreakMinutes(Math.min(60, Math.max(1, Number(e.target.value) || 1)))}
+                    className="w-12 rounded border border-line bg-paper px-1 py-0.5 text-center focus:border-study focus:outline-none"
+                  />
+                  m
+                </label>
+              </>
             )}
-            {isPaused && (
+            {pomodoroEnabled && (
+              <span className="text-ink-muted">
+                {pomodoroPhase === "work" ? "Work" : "Break"} · {formatClock(phaseSecondsLeft)} left
+                {completedPomodoros > 0 && ` · ${completedPomodoros} done`}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-5 flex items-center justify-center gap-2">
+            {onPomodoroBreak ? (
               <button
                 disabled={isPending}
-                onClick={() => {
-                  setAutoPaused(false);
-                  startTransition(() => resumeStudySession(openSession.id));
-                }}
+                onClick={skipBreak}
                 className="rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
-                Resume
+                Skip break
               </button>
+            ) : (
+              <>
+                {isRunning && (
+                  <button
+                    disabled={isPending}
+                    onClick={() => {
+                      setAutoPaused(false);
+                      startTransition(() => pauseStudySession(openSession.id));
+                    }}
+                    className="rounded-lg border border-line px-5 py-2 text-sm font-medium text-ink hover:border-study disabled:opacity-50"
+                  >
+                    Pause
+                  </button>
+                )}
+                {isPaused && (
+                  <button
+                    disabled={isPending}
+                    onClick={() => {
+                      setAutoPaused(false);
+                      startTransition(() => resumeStudySession(openSession.id));
+                    }}
+                    className="rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    Resume
+                  </button>
+                )}
+              </>
             )}
             <button
               disabled={isPending}
