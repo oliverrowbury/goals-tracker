@@ -90,6 +90,18 @@ enum Gender {
   PREFER_NOT_TO_SAY
 }
 
+enum FocusTag {
+  JOURNALING
+  GOALS
+  STUDY
+  WORKOUTS
+}
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -152,6 +164,10 @@ model User {
   // — converted at the UI's edges, not stored in whatever unit was typed.
   weightKg Float?
   heightCm Float?
+  // What someone mainly uses the app for, shown on their profile — not
+  // mutually exclusive, same reasoning as Goal.targetDays being an array
+  // rather than a single enum: no reason someone can't be here for all of it.
+  focusTags FocusTag[] @default([])
 
   journalEntries    JournalEntry[]
   goals             Goal[]
@@ -453,11 +469,15 @@ model DeadlineReminderSent {
   @@unique([deadlineId, kind])
 }
 
-// One-directional, Strava-style — following someone needs no acceptance
-// from them, so followerId and followingId aren't symmetric the way the
-// old Friendship pair was. A "FRIENDS"-visibility activity (see
-// ActivityVisibility) shows to whoever follows its owner, regardless of
-// whether the owner follows back.
+// Instagram-style private-by-default follow: requesting to follow someone
+// needs their acceptance, but that acceptance is still one-directional —
+// followerId and followingId aren't a symmetric pair the way the old
+// Friendship model's requester/addressee was, and accepting a request
+// never creates or implies the reverse row. If A follows B (ACCEPTED), A
+// sees B's shared content; B seeing A's back requires B's own separate
+// Follow row toward A, accepted on its own. A "FRIENDS"-visibility activity
+// (see ActivityVisibility) shows to whoever has an ACCEPTED follow on its
+// owner.
 model Follow {
   id String @id @default(uuid())
 
@@ -466,12 +486,14 @@ model Follow {
   followingId String
   following   User   @relation("Following", fields: [followingId], references: [id])
 
-  createdAt DateTime @default(now())
+  status    FollowStatus @default(PENDING)
+  createdAt DateTime     @default(now())
 
   @@unique([followerId, followingId])
   // followerId is already covered as the leading column of the unique
-  // index above — followingId needs its own, since "who follows me" (feed
-  // + follower-count) lookups filter by it just as often.
+  // index above — followingId needs its own, since "who follows me" /
+  // "my incoming requests" (feed + follower-count) lookups filter by it
+  // just as often.
   @@index([followingId])
 }
 

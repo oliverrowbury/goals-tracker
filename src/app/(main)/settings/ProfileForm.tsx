@@ -1,11 +1,20 @@
 "use client";
 
 import { useActionState } from "react";
-import { GENDERS, GENDER_LABELS, type Gender } from "@/lib/constants";
+import { GENDERS, GENDER_LABELS, type Gender, FOCUS_TAGS, FOCUS_TAG_LABELS, type FocusTag } from "@/lib/constants";
 import { updateProfile, type SettingsActionState } from "./actions";
 
 const inputClass =
   "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none";
+
+// Nudges the date picker away from an under-13 birthday — the actual gate
+// is server-side in updateProfile, this is just so the picker doesn't
+// invite a date that's just going to bounce.
+function maxBirthdayISO(): string {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - 13);
+  return d.toISOString().slice(0, 10);
+}
 
 export function ProfileForm({
   birthdayISO,
@@ -15,6 +24,7 @@ export function ProfileForm({
   pronouns,
   weight,
   height,
+  focusTags,
   weightUnit,
   distanceUnit,
 }: {
@@ -25,6 +35,7 @@ export function ProfileForm({
   pronouns: string | null;
   weight: number | null;
   height: number | null;
+  focusTags: FocusTag[];
   weightUnit: "KG" | "LB";
   distanceUnit: "KM" | "MI";
 }) {
@@ -44,7 +55,7 @@ export function ProfileForm({
           name="birthday"
           type="date"
           required
-          max={new Date().toISOString().slice(0, 10)}
+          max={maxBirthdayISO()}
           defaultValue={birthdayISO ?? ""}
           className={inputClass}
         />
@@ -114,6 +125,19 @@ export function ProfileForm({
             Height ({distanceUnit === "MI" ? "in" : "cm"})
           </label>
           <input id="height" name="height" type="number" min="0" step="0.1" defaultValue={height ?? ""} className={inputClass} />
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-1.5 block text-sm font-medium text-ink">What are you here for?</p>
+        <p className="mb-2 text-xs text-ink-muted">Shown on your profile — pick as many as apply.</p>
+        <div className="flex flex-wrap gap-3">
+          {FOCUS_TAGS.map((tag) => (
+            <label key={tag} className="flex items-center gap-1.5 text-sm text-ink">
+              <input type="checkbox" name="focusTags" value={tag} defaultChecked={focusTags.includes(tag)} />
+              {FOCUS_TAG_LABELS[tag]}
+            </label>
+          ))}
         </div>
       </div>
 

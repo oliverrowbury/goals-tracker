@@ -108,6 +108,22 @@ export function SignupForm() {
         error={errors.confirmPassword}
       />
 
+      <label className="mb-4 flex items-start gap-2 text-sm text-ink-muted">
+        <input type="checkbox" name="agreeToTerms" required className="mt-0.5" />
+        <span>
+          I&apos;m 13 or older, and I agree to the{" "}
+          <Link href="/terms" target="_blank" className="text-accent hover:underline">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" target="_blank" className="text-accent hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </span>
+      </label>
+      {errors.agreeToTerms && <p className="mb-4 -mt-3 text-xs text-accent-strong">{errors.agreeToTerms}</p>}
+
       <SubmitButton />
 
       <p className="mt-4 text-center text-sm text-ink-muted">

@@ -122,6 +122,23 @@ export function formatWeekRange(startISO: string, endISO: string): string {
   return `${dayMonth(start, false)} – ${dayMonth(end, true)}`;
 }
 
+// "September 2026" — for "Joined September 2026" on a profile card.
+export function formatMonthYear(date: Date): string {
+  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+// Whole years old as of today — used to enforce the minimum age at
+// onboarding/profile-edit, not just displayed.
+export function ageInYears(birthday: Date): number {
+  const now = new Date();
+  let age = now.getUTCFullYear() - birthday.getUTCFullYear();
+  const hadBirthdayThisYear =
+    now.getUTCMonth() > birthday.getUTCMonth() ||
+    (now.getUTCMonth() === birthday.getUTCMonth() && now.getUTCDate() >= birthday.getUTCDate());
+  if (!hadBirthdayThisYear) age--;
+  return age;
+}
+
 export function formatLong(iso: string): string {
   const d = isoToDate(iso);
   return `${WEEKDAY_LONG[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_LONG[d.getUTCMonth()]} ${d.getUTCFullYear()}`;

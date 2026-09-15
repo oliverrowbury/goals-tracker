@@ -10,7 +10,14 @@ import { USERNAME_RE } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
 
 export type SignupState = {
-  fieldErrors: { name?: string; username?: string; email?: string; password?: string; confirmPassword?: string };
+  fieldErrors: {
+    name?: string;
+    username?: string;
+    email?: string;
+    password?: string;
+    confirmPassword?: string;
+    agreeToTerms?: string;
+  };
   // Whatever was typed for name/username/email, so the fields can be
   // re-populated — React resets every uncontrolled field in a <form> to
   // its defaultValue once the action finishes (success or not), so
@@ -33,6 +40,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
     .toLowerCase();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  const agreeToTerms = formData.get("agreeToTerms") === "on";
   const values = { name, username, email };
 
   const fieldErrors: NonNullable<SignupState>["fieldErrors"] = {};
@@ -47,6 +55,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "That doesn't look like a valid email address.";
   if (password.length < 6) fieldErrors.password = "Needs to be at least 6 characters.";
   if (confirmPassword !== password) fieldErrors.confirmPassword = "Doesn't match your password.";
+  if (!agreeToTerms) fieldErrors.agreeToTerms = "You need to agree to the Terms and Privacy Policy to continue.";
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors, values };
 

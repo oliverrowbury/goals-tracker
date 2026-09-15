@@ -4,9 +4,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { toKg, toCm } from "@/lib/workout";
+import { ageInYears } from "@/lib/dates";
 import { GENDERS, type Gender } from "@/lib/constants";
 
 export type OnboardingState = { error: string } | null;
+
+const MIN_AGE = 13;
 
 export async function completeProfile(_prev: OnboardingState, formData: FormData): Promise<OnboardingState> {
   const user = await getCurrentUser();
@@ -24,6 +27,7 @@ export async function completeProfile(_prev: OnboardingState, formData: FormData
   if (Number.isNaN(birthday.getTime()) || birthday.getTime() > Date.now()) {
     return { error: "That doesn't look like a valid birthday." };
   }
+  if (ageInYears(birthday) < MIN_AGE) return { error: `You need to be at least ${MIN_AGE} to use Proudly.` };
   if (!GENDERS.includes(gender as Gender)) return { error: "Choose an option for gender." };
   if (!city) return { error: "Enter your city." };
 

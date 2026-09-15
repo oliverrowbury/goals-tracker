@@ -2,8 +2,9 @@
 
 Real multi-user accounts — every table is scoped by `user_id`, and nothing reads
 across users except the friends feed (`Follow`, below), which is explicitly
-gated by a one-directional follow (Strava-style — no acceptance needed) plus
-the other user's own per-category `share_*_streak` opt-in.
+gated by an accepted, one-directional follow (Instagram-style — needs the
+other person's acceptance, but accepting never implies they follow back)
+plus the other user's own per-category `share_*_streak` opt-in.
 
 ## User
 | field | type | notes |
@@ -25,6 +26,7 @@ the other user's own per-category `share_*_streak` opt-in.
 | avatar_url | text, nullable | optional, public URL of a photo uploaded to Supabase Storage |
 | weight_kg | float, nullable | optional; canonical kg, converted to the user's `weight_unit` at the UI's edges same as Workout |
 | height_cm | float, nullable | optional; canonical cm, converted to cm/in based on `distance_unit` (km ⇒ cm, mi ⇒ in) at the UI's edges |
+| focus_tags | enum[] | `journaling` \| `goals` \| `study` \| `workouts` — not mutually exclusive, shown on the profile card |
 | created_at | timestamp | |
 
 ## JournalEntry
@@ -203,22 +205,28 @@ never double-sends the same one.
 Unique on `(deadline_id, kind)`.
 
 ## Follow
-One-directional, Strava-style — following someone needs no acceptance from
-them, so `follower_id` and `following_id` aren't a symmetric pair the way the
-old `Friendship` model's requester/addressee was. A `FRIENDS`-visibility
-activity (see `ActivityVisibility` on `Workout`/`StudySession`) shows to
-whoever follows its owner, regardless of whether the owner follows back.
+Instagram-style private-by-default follow: requesting to follow someone
+needs their acceptance (`status` starts `pending`, flips to `accepted` on
+their say-so), but that acceptance is still one-directional — `follower_id`
+and `following_id` aren't a symmetric pair the way the old `Friendship`
+model's requester/addressee was, and accepting a request never creates or
+implies the reverse row. If A follows B (`accepted`), A sees B's shared
+content; B seeing A's back requires B's own separate `Follow` row toward A,
+accepted on its own. A `FRIENDS`-visibility activity (see
+`ActivityVisibility` on `Workout`/`StudySession`) shows to whoever has an
+`accepted` follow on its owner.
 
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
 | follower_id | uuid | the user doing the following |
 | following_id | uuid | the user being followed |
+| status | enum | `pending` \| `accepted` |
 | created_at | timestamp | |
 
 Unique on `(follower_id, following_id)`. Also indexed on `following_id` alone,
-since "who follows me" (feed + follower-count) lookups filter by it just as
-often.
+since "who follows me" / "my incoming requests" (feed + follower-count)
+lookups filter by it just as often.
 
 ## Cheer
 A "like" on one specific activity (a workout or study session) in a

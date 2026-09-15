@@ -44,6 +44,17 @@ export const GENDER_LABELS: Record<Gender, string> = {
   PREFER_NOT_TO_SAY: "Prefer not to say",
 };
 
+// Not mutually exclusive — someone can be here for all of it, so this is a
+// multi-select on the profile, not a single choice.
+export const FOCUS_TAGS = ["JOURNALING", "GOALS", "STUDY", "WORKOUTS"] as const;
+export type FocusTag = (typeof FOCUS_TAGS)[number];
+export const FOCUS_TAG_LABELS: Record<FocusTag, string> = {
+  JOURNALING: "Journaling",
+  GOALS: "Goals",
+  STUDY: "Studying",
+  WORKOUTS: "Working out",
+};
+
 export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"] as const;
 
 // Lowercase letters/digits/underscores, starting with a letter — keeps a

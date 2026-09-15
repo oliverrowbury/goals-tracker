@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { searchUsers, followUser, unfollowUser, type FriendSearchResult } from "./actions";
+import { searchUsers, requestFollow, removeFollowByTarget, type FriendSearchResult } from "./actions";
 
 export function AddFriendSearch() {
   const [query, setQuery] = useState("");
@@ -20,18 +20,18 @@ export function AddFriendSearch() {
     });
   }
 
-  function handleFollow(target: FriendSearchResult) {
+  function handleRequest(target: FriendSearchResult) {
     startTransition(async () => {
-      const result = await followUser(target.id);
+      const result = await requestFollow(target.id);
       setMessage(result?.error ?? result?.success ?? null);
       const r = await searchUsers(query);
       setResults(r);
     });
   }
 
-  function handleUnfollow(target: FriendSearchResult) {
+  function handleRemove(target: FriendSearchResult) {
     startTransition(async () => {
-      await unfollowUser(target.id);
+      await removeFollowByTarget(target.id);
       setMessage(null);
       const r = await searchUsers(query);
       setResults(r);
@@ -56,23 +56,34 @@ export function AddFriendSearch() {
                 <span className="font-medium text-ink">{r.name}</span>{" "}
                 <span className="text-ink-muted">@{r.username}</span>
               </span>
-              {r.following ? (
+              {r.status === "none" && (
                 <button
                   type="button"
-                  onClick={() => handleUnfollow(r)}
-                  disabled={isPending}
-                  className="shrink-0 rounded-lg border border-line px-3 py-1 text-xs font-medium text-ink-muted hover:border-accent hover:text-accent disabled:opacity-50"
-                >
-                  Following
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => handleFollow(r)}
+                  onClick={() => handleRequest(r)}
                   disabled={isPending}
                   className="shrink-0 rounded-lg bg-calm px-3 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
                   Follow
+                </button>
+              )}
+              {r.status === "requested" && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(r)}
+                  disabled={isPending}
+                  className="shrink-0 rounded-lg border border-line px-3 py-1 text-xs font-medium text-ink-muted hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                  Requested
+                </button>
+              )}
+              {r.status === "following" && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(r)}
+                  disabled={isPending}
+                  className="shrink-0 rounded-lg border border-line px-3 py-1 text-xs font-medium text-ink-muted hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                  Following
                 </button>
               )}
             </li>

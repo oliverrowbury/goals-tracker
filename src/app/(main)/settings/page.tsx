@@ -13,6 +13,7 @@ import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
 import { AvatarUpload } from "./AvatarUpload";
 import { ProfileForm } from "./ProfileForm";
+import { DeleteAccountForm } from "./DeleteAccountForm";
 import {
   GearIcon,
   ClockIcon,
@@ -135,6 +136,7 @@ export default async function SettingsPage() {
             pronouns={user.pronouns}
             weight={user.weightKg != null ? fromKg(user.weightKg, user.weightUnit) : null}
             height={user.heightCm != null ? fromCm(user.heightCm, user.distanceUnit) : null}
+            focusTags={user.focusTags}
             weightUnit={user.weightUnit}
             distanceUnit={user.distanceUnit}
           />
@@ -154,6 +156,11 @@ export default async function SettingsPage() {
           >
             Download my data (JSON)
           </a>
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-2 text-sm font-medium text-ink">Delete account</p>
+          <DeleteAccountForm />
         </div>
       </section>
 

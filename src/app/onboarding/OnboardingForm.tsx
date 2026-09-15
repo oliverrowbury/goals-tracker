@@ -8,6 +8,15 @@ import { completeProfile } from "./actions";
 const inputClass =
   "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none";
 
+// Nudges the date picker away from an under-13 birthday — the actual gate
+// is server-side in completeProfile, this is just so the picker doesn't
+// invite a date that's just going to bounce.
+function maxBirthdayISO(): string {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - 13);
+  return d.toISOString().slice(0, 10);
+}
+
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -38,7 +47,7 @@ export function OnboardingForm({
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="birthday">
           Birthday
         </label>
-        <input id="birthday" name="birthday" type="date" required max={new Date().toISOString().slice(0, 10)} className={inputClass} />
+        <input id="birthday" name="birthday" type="date" required max={maxBirthdayISO()} className={inputClass} />
       </div>
 
       <div>

@@ -11,7 +11,7 @@ export default function TermsPage() {
       </Link>
 
       <h1 className="mt-8 font-serif text-2xl font-semibold text-ink">Terms of Service</h1>
-      <p className="mt-1 text-sm text-ink-muted">Last updated 10 September 2026.</p>
+      <p className="mt-1 text-sm text-ink-muted">Last updated 15 September 2026.</p>
 
       <div className="prose-sm mt-6 space-y-5 text-sm leading-relaxed text-ink">
         <p>By using Proudly, you agree to these terms. Read them alongside our Privacy Policy.</p>
@@ -39,7 +39,17 @@ export default function TermsPage() {
           <h2 className="font-serif text-lg font-semibold text-ink">Your account</h2>
           <p className="mt-2">
             Keep your password to yourself. You’re responsible for what happens under your account. Tell us if you
-            think someone else has access to it.
+            think someone else has access to it. You need to be at least 13 years old to create one.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-serif text-lg font-semibold text-ink">Following other people</h2>
+          <p className="mt-2">
+            Proudly has an optional social layer — you can follow other users, and they can follow you, each direction
+            needing that person’s acceptance. Following someone lets you see whatever streaks and activity they’ve
+            chosen to share; it doesn’t give them anything of yours in return unless they separately follow you back
+            and you’ve chosen to share it. Your journal is never part of this, regardless of who follows you.
           </p>
         </section>
 
@@ -73,8 +83,9 @@ export default function TermsPage() {
         <section>
           <h2 className="font-serif text-lg font-semibold text-ink">Ending your account</h2>
           <p className="mt-2">
-            You can ask us to delete your account and data at any time. We may also suspend or remove an account
-            that’s used to break these terms or the law.
+            You can permanently delete your account and everything in it yourself, any time, from Settings — or ask
+            us to do it for you. We may also suspend or remove an account that’s used to break these terms or the
+            law.
           </p>
         </section>
 

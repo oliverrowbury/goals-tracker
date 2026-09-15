@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { unfollowUser } from "./actions";
+import { removeFollowByTarget } from "./actions";
 
 export function UnfollowButton({ userId, name }: { userId: string; name: string }) {
   const [isPending, startTransition] = useTransition();
@@ -12,7 +12,7 @@ export function UnfollowButton({ userId, name }: { userId: string; name: string 
       disabled={isPending}
       onClick={() => {
         if (confirm(`Unfollow ${name}?`)) {
-          startTransition(() => unfollowUser(userId));
+          startTransition(() => removeFollowByTarget(userId));
         }
       }}
       className="text-sm text-ink-muted hover:text-accent disabled:opacity-50"

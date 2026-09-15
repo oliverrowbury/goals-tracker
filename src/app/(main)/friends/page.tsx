@@ -1,19 +1,22 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, shiftISO, isoToDate, weekdayShortDayMonth } from "@/lib/dates";
+import { todayISO, shiftISO, isoToDate, weekdayShortDayMonth, formatMonthYear } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace } from "@/lib/workout";
 import { Avatar } from "@/components/Avatar";
+import { OwnerBadge } from "@/components/OwnerBadge";
+import { ADMIN_EMAIL } from "@/lib/auth";
 import { UsersIcon, FlameIcon, JournalIcon, ClockIcon, DumbbellIcon, ActivityIcon, TargetIcon } from "@/components/Icons";
 import { AddFriendSearch } from "./AddFriendSearch";
 import { ShareActivityToggle } from "./ShareActivityToggle";
 import { UnfollowButton } from "./UnfollowButton";
 import { LikeButton } from "./LikeButton";
 import { CopyLinkButton } from "./CopyLinkButton";
-import { followUserVoid } from "./actions";
+import { FocusTagPills } from "./FocusTagPills";
+import { requestFollowVoid, acceptFollowRequest, removeFollow } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -29,13 +32,13 @@ type FollowedUser = {
 };
 
 // The only place in the app that reads another user's rows — gated behind
-// a follow (checked by the caller) and, per category, that user's own
-// share*Streak opt-in, so it's never reachable just by knowing a user id.
-// Journal *content* is never included here regardless — only whether an
-// entry exists on a given day, the same way the streak is already computed
-// for the signed-in user's own settings page. Each category is fetched
-// independently so one person can show their workout streak without also
-// showing their journal streak.
+// an ACCEPTED follow (checked by the caller) and, per category, that
+// user's own share*Streak opt-in, so it's never reachable just by knowing
+// a user id. Journal *content* is never included here regardless — only
+// whether an entry exists on a given day, the same way the streak is
+// already computed for the signed-in user's own settings page. Each
+// category is fetched independently so one person can show their workout
+// streak without also showing their journal streak.
 async function followedActivity(other: FollowedUser, today: string) {
   const [journalDates, studyDates, workoutDates] = await Promise.all([
     other.shareJournalStreak
@@ -82,44 +85,56 @@ type FeedItem = {
   photoUrl?: string | null;
 };
 
+const PROFILE_SELECT = {
+  id: true,
+  name: true,
+  username: true,
+  avatarUrl: true,
+  shareJournalStreak: true,
+  shareStudyStreak: true,
+  shareWorkoutStreak: true,
+  xp: true,
+} as const;
+
 export default async function FriendsPage() {
   const user = await getCurrentUser();
   const today = todayISO();
 
-  const [following, followers, journalCount, studySessionCount, workoutCount, goalsDoneCount] = await Promise.all([
-    prisma.follow.findMany({
-      where: { followerId: user.id },
-      include: {
-        following: {
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            avatarUrl: true,
-            shareJournalStreak: true,
-            shareStudyStreak: true,
-            shareWorkoutStreak: true,
-            xp: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.follow.findMany({
-      where: { followingId: user.id },
-      include: { follower: { select: { id: true, name: true, username: true, avatarUrl: true } } },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.journalEntry.count({ where: { userId: user.id, bodyText: { not: "" } } }),
-    prisma.studySession.count({ where: { userId: user.id, durationMinutes: { not: null } } }),
-    prisma.workout.count({ where: { userId: user.id, endedAt: { not: null } } }),
-    prisma.goalLog.count({ where: { completed: true, goal: { userId: user.id } } }),
-  ]);
+  const [following, followers, incomingRequests, outgoingRequests, journalCount, studySessionCount, workoutCount, goalsDoneCount] =
+    await Promise.all([
+      prisma.follow.findMany({
+        where: { followerId: user.id, status: "ACCEPTED" },
+        include: { following: { select: PROFILE_SELECT } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.follow.findMany({
+        where: { followingId: user.id, status: "ACCEPTED" },
+        include: { follower: { select: { id: true, name: true, username: true, avatarUrl: true } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.follow.findMany({
+        where: { followingId: user.id, status: "PENDING" },
+        include: { follower: { select: { id: true, name: true, username: true } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.follow.findMany({
+        where: { followerId: user.id, status: "PENDING" },
+        include: { following: { select: { id: true, name: true, username: true } } },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.journalEntry.count({ where: { userId: user.id, bodyText: { not: "" } } }),
+      prisma.studySession.count({ where: { userId: user.id, durationMinutes: { not: null } } }),
+      prisma.workout.count({ where: { userId: user.id, endedAt: { not: null } } }),
+      prisma.goalLog.count({ where: { completed: true, goal: { userId: user.id } } }),
+    ]);
 
   const followingList = following.map((f) => f.following);
-  const followingIds = followingList.map((f) => f.id);
-  const followingIdSet = new Set(followingIds);
+  const followingIdSet = new Set(followingList.map((f) => f.id));
   const followerIdSet = new Set(followers.map((f) => f.follower.id));
+  // Someone I already have a pending or accepted row toward, from either
+  // side — used to hide the "Follow back" button once a request is already
+  // in flight rather than letting it be sent twice.
+  const outgoingTargetIdSet = new Set(outgoingRequests.map((f) => f.following.id));
 
   const followedById = new Map(followingList.map((f) => [f.id, f]));
   const shareWorkoutIds = followingList.filter((o) => o.shareWorkoutStreak).map((o) => o.id);
@@ -221,6 +236,7 @@ export default async function FriendsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-serif text-lg font-semibold text-ink">{user.name}</h2>
+              {user.email === ADMIN_EMAIL && <OwnerBadge />}
               <span className="rounded-full bg-calm-soft px-2.5 py-0.5 text-xs font-medium text-calm">Lv {level}</span>
             </div>
             <p className="text-sm text-ink-muted">
@@ -229,8 +245,15 @@ export default async function FriendsPage() {
               {user.city && <span> · {user.city}</span>}
             </p>
             {user.bio && <p className="mt-1.5 text-sm text-ink">{user.bio}</p>}
+            <p className="mt-1.5 text-xs text-ink-muted">Joined {formatMonthYear(user.createdAt)}</p>
           </div>
         </div>
+
+        {user.focusTags.length > 0 && (
+          <div className="mt-3">
+            <FocusTagPills tags={user.focusTags} />
+          </div>
+        )}
 
         <div className="mt-4 flex gap-5 border-t border-line pt-4 text-sm">
           <span>
@@ -284,7 +307,8 @@ export default async function FriendsPage() {
       <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Follow someone</h2>
         <p className="mb-4 text-sm text-ink-muted">
-          No approval needed — following someone lets you see whatever they&apos;ve chosen to share, right away.
+          They have to accept before you see anything of theirs — and them accepting doesn&apos;t mean they follow you
+          back.
         </p>
         <AddFriendSearch />
         <div className="mt-4">
@@ -304,6 +328,56 @@ export default async function FriendsPage() {
         </div>
       </section>
 
+      {incomingRequests.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
+          <h2 className="mb-3 font-serif text-lg font-semibold text-ink">
+            {incomingRequests.length} follow request{incomingRequests.length === 1 ? "" : "s"}
+          </h2>
+          <ul className="space-y-2.5">
+            {incomingRequests.map((f) => (
+              <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-ink">
+                  <span className="font-medium">{f.follower.name}</span>{" "}
+                  <span className="text-ink-muted">@{f.follower.username}</span>
+                </span>
+                <div className="flex shrink-0 items-center gap-3">
+                  <form action={acceptFollowRequest.bind(null, f.id)}>
+                    <button type="submit" className="rounded-lg bg-calm px-3 py-1.5 text-xs font-medium text-white hover:opacity-90">
+                      Accept
+                    </button>
+                  </form>
+                  <form action={removeFollow.bind(null, f.id)}>
+                    <button type="submit" className="text-ink-muted hover:text-accent">
+                      Decline
+                    </button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {outgoingRequests.length > 0 && (
+        <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
+          <h2 className="mb-3 font-serif text-lg font-semibold text-ink">Sent</h2>
+          <ul className="space-y-2.5">
+            {outgoingRequests.map((f) => (
+              <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-ink-muted">
+                  Waiting for <span className="font-medium text-ink">{f.following.name}</span> to accept
+                </span>
+                <form action={removeFollow.bind(null, f.id)}>
+                  <button type="submit" className="text-ink-muted hover:text-accent">
+                    Cancel
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {followers.length > 0 && (
         <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
           <h2 className="mb-3 font-serif text-lg font-semibold text-ink">
@@ -312,16 +386,18 @@ export default async function FriendsPage() {
           <ul className="space-y-2.5">
             {followers.map(({ follower: f }) => (
               <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2.5">
+                <Link href={`/friends/add/${f.username}`} className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
                   <Avatar name={f.name} avatarUrl={f.avatarUrl} size={32} />
                   <span className="min-w-0 truncate text-ink">
                     <span className="font-medium">{f.name}</span> <span className="text-ink-muted">@{f.username}</span>
                   </span>
-                </span>
+                </Link>
                 {followingIdSet.has(f.id) ? (
                   <span className="shrink-0 text-xs text-ink-muted">Following</span>
+                ) : outgoingTargetIdSet.has(f.id) ? (
+                  <span className="shrink-0 text-xs text-ink-muted">Requested</span>
                 ) : (
-                  <form action={followUserVoid.bind(null, f.id)}>
+                  <form action={requestFollowVoid.bind(null, f.id)}>
                     <button type="submit" className="shrink-0 rounded-lg bg-calm px-3 py-1 text-xs font-medium text-white hover:opacity-90">
                       Follow back
                     </button>
@@ -354,7 +430,7 @@ export default async function FriendsPage() {
             return (
               <div key={other.id} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-2.5">
+                  <Link href={`/friends/add/${other.username}`} className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
                     <Avatar name={other.name} avatarUrl={other.avatarUrl} size={36} />
                     <div className="min-w-0">
                       <h3 className="truncate font-medium text-ink">{other.name}</h3>
@@ -363,7 +439,7 @@ export default async function FriendsPage() {
                         {followerIdSet.has(other.id) && <span> · Follows you</span>}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="rounded-full bg-calm-soft px-2.5 py-1 text-xs font-medium text-calm">Lv {otherLevel}</span>
                     <UnfollowButton userId={other.id} name={other.name} />
@@ -422,10 +498,14 @@ export default async function FriendsPage() {
                 return (
                   <li key={`${item.kind}-${item.id}`} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
                     <div className="flex items-start gap-3">
-                      <Avatar name={followed.name} avatarUrl={followed.avatarUrl} size={32} />
+                      <Link href={`/friends/add/${followed.username}`} className="shrink-0">
+                        <Avatar name={followed.name} avatarUrl={followed.avatarUrl} size={32} />
+                      </Link>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-ink">
-                          <span className="font-medium">{followed.name}</span>{" "}
+                          <Link href={`/friends/add/${followed.username}`} className="font-medium hover:underline">
+                            {followed.name}
+                          </Link>{" "}
                           <span className="text-ink-muted">
                             {item.kind === "workout" ? "finished a workout" : "studied"}
                           </span>

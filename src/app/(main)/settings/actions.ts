@@ -1,16 +1,20 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, verifyPassword, generateSessionToken } from "@/lib/password";
 import { sendPasswordChangedEmail } from "@/lib/email";
-import { USERNAME_RE, GENDERS, type Gender } from "@/lib/constants";
+import { USERNAME_RE, GENDERS, type Gender, FOCUS_TAGS, type FocusTag } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
 import { toKg, toCm } from "@/lib/workout";
-import { uploadAvatarPhoto, deleteAvatarPhoto } from "@/lib/storage";
+import { ageInYears } from "@/lib/dates";
+import { uploadAvatarPhoto, deleteAvatarPhoto, deleteJournalPhoto, deleteWorkoutPhoto } from "@/lib/storage";
+
+const MIN_AGE = 13;
 
 export type SettingsActionState = { error?: string; success?: string } | null;
 
@@ -170,12 +174,14 @@ export async function updateProfile(_prev: SettingsActionState, formData: FormDa
   const pronouns = String(formData.get("pronouns") ?? "").trim();
   const weightRaw = String(formData.get("weight") ?? "").trim();
   const heightRaw = String(formData.get("height") ?? "").trim();
+  const focusTags = formData.getAll("focusTags").map(String).filter((t): t is FocusTag => FOCUS_TAGS.includes(t as FocusTag));
 
   if (!birthdayISO) return { error: "Enter your birthday." };
   const birthday = new Date(`${birthdayISO}T00:00:00.000Z`);
   if (Number.isNaN(birthday.getTime()) || birthday.getTime() > Date.now()) {
     return { error: "That doesn't look like a valid birthday." };
   }
+  if (ageInYears(birthday) < MIN_AGE) return { error: `You need to be at least ${MIN_AGE} to use Proudly.` };
   if (!GENDERS.includes(gender as Gender)) return { error: "Choose an option for gender." };
   if (!city) return { error: "Enter your city." };
 
@@ -190,6 +196,7 @@ export async function updateProfile(_prev: SettingsActionState, formData: FormDa
       city,
       bio: bio || null,
       pronouns: pronouns || null,
+      focusTags,
       weightKg: weight != null && Number.isFinite(weight) && weight > 0 ? toKg(weight, user.weightUnit) : null,
       heightCm: height != null && Number.isFinite(height) && height > 0 ? toCm(height, user.distanceUnit) : null,
     },
@@ -228,6 +235,65 @@ export async function removeAvatar() {
   await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: null } });
   revalidatePath("/settings");
   revalidatePath("/friends");
+}
+
+// Self-service right-to-erasure — deletes every row this account owns, in
+// FK-safe order (children before parents), then the account itself. Photos
+// live in Supabase Storage, outside Postgres, so they're removed first: a
+// transaction rollback wouldn't undo a storage delete anyway, and doing it
+// after the DB rows are gone would leave nothing recording which paths to
+// clean up. Custom exercises are kept (userId cleared, not deleted) rather
+// than removed, since another account's WorkoutSet may still reference one.
+export async function deleteAccount(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
+  const password = String(formData.get("password") ?? "");
+  const user = await getCurrentUser();
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) return { error: "Password is wrong." };
+
+  const [entriesWithPhotos, workoutsWithPhotos, goals, deadlines, workouts] = await Promise.all([
+    prisma.journalEntry.findMany({ where: { userId: user.id, photoUrl: { not: null } }, select: { photoUrl: true } }),
+    prisma.workout.findMany({ where: { userId: user.id, photoUrl: { not: null } }, select: { photoUrl: true } }),
+    prisma.goal.findMany({ where: { userId: user.id }, select: { id: true } }),
+    prisma.deadline.findMany({ where: { userId: user.id }, select: { id: true } }),
+    prisma.workout.findMany({ where: { userId: user.id }, select: { id: true } }),
+  ]);
+
+  await Promise.all([
+    ...entriesWithPhotos.map((e) => deleteJournalPhoto(e.photoUrl!)),
+    ...workoutsWithPhotos.map((w) => deleteWorkoutPhoto(w.photoUrl!)),
+    user.avatarUrl ? deleteAvatarPhoto(user.avatarUrl) : null,
+  ]);
+
+  const goalIds = goals.map((g) => g.id);
+  const deadlineIds = deadlines.map((d) => d.id);
+  const workoutIds = workouts.map((w) => w.id);
+
+  await prisma.$transaction([
+    prisma.goalLog.deleteMany({ where: { goalId: { in: goalIds } } }),
+    prisma.reminder.deleteMany({ where: { goalId: { in: goalIds } } }),
+    prisma.deadlineReminderSent.deleteMany({ where: { deadlineId: { in: deadlineIds } } }),
+    prisma.workoutSet.deleteMany({ where: { workoutId: { in: workoutIds } } }),
+    prisma.cheer.deleteMany({
+      where: { OR: [{ fromUserId: user.id }, { toUserId: user.id }, { workoutId: { in: workoutIds } }] },
+    }),
+    prisma.follow.deleteMany({ where: { OR: [{ followerId: user.id }, { followingId: user.id }] } }),
+    prisma.userBadge.deleteMany({ where: { userId: user.id } }),
+    prisma.pushSubscription.deleteMany({ where: { userId: user.id } }),
+    prisma.feedback.deleteMany({ where: { userId: user.id } }),
+    prisma.journalEntry.deleteMany({ where: { userId: user.id } }),
+    prisma.studySession.deleteMany({ where: { userId: user.id } }),
+    prisma.workout.deleteMany({ where: { userId: user.id } }),
+    prisma.deadline.deleteMany({ where: { userId: user.id } }),
+    prisma.goal.deleteMany({ where: { userId: user.id } }),
+    prisma.exercise.updateMany({ where: { userId: user.id }, data: { userId: null } }),
+    prisma.subject.deleteMany({ where: { userId: user.id } }),
+    prisma.user.delete({ where: { id: user.id } }),
+  ]);
+
+  const cookieStore = await cookies();
+  cookieStore.delete(AUTH_COOKIE);
+
+  redirect("/login");
 }
 
 export async function sendFeedback(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
