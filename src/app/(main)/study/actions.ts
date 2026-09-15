@@ -8,6 +8,7 @@ import { isoToDate, todayISO } from "@/lib/dates";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
+import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardStudyBadges(userId: string) {
   const sessions = await prisma.studySession.findMany({
@@ -92,6 +93,15 @@ export async function finishStudySession(sessionId: string) {
   }
 
   revalidateStudyViews();
+}
+
+// Chosen on the post-finish summary screen — same idea as
+// setWorkoutVisibility, see its comment for how this combines with the
+// account-level shareStudyStreak switch.
+export async function setStudySessionVisibility(sessionId: string, visibility: ActivityVisibility) {
+  const user = await getCurrentUser();
+  await prisma.studySession.updateMany({ where: { id: sessionId, userId: user.id }, data: { visibility } });
+  revalidatePath("/friends");
 }
 
 export async function deleteStudySession(sessionId: string) {

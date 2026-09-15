@@ -83,6 +83,7 @@ One row per timer run.
 | started_at / ended_at | timestamp | |
 | duration_minutes | integer | derived, stored for easy querying |
 | note | text | optional |
+| visibility | enum | `private` \| `friends` — chosen on the post-finish summary screen; combines with the user's `share_study_streak` to gate the friend feed |
 
 ## Exercise
 Pre-loaded library plus user-added custom exercises.
@@ -105,7 +106,10 @@ Pre-loaded library plus user-added custom exercises.
 | label | text | e.g. "Push day" (strength) or "Run" (cardio) |
 | started_at / ended_at | timestamp | nullable until finished — live timer state |
 | duration_minutes | integer | derived from started_at/ended_at, stored for easy querying (same convention as `StudySession`) |
-| distance_km | number, nullable | cardio only, manually entered — no GPS tracking |
+| distance_km | number, nullable | cardio only |
+| route | json, nullable | cardio only — tracked GPS points `{lat, lng, t?, alt?}[]`; splits and elevation gain are derived from this at render time (see `lib/workout.ts`), not stored |
+| visibility | enum | `private` \| `friends` — chosen on the post-finish summary screen; combines with the user's `share_workout_streak` to gate the friend feed |
+| photo_url | text, nullable | optional photo attached on the post-finish summary screen |
 | note | text | optional |
 
 For `type = strength`, has `WorkoutSet` rows. For `type = cardio`, `distance_km` +

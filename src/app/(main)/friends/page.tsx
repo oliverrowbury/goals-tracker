@@ -76,6 +76,7 @@ type FeedItem = {
   when: Date;
   title: string;
   detail: string;
+  photoUrl?: string | null;
 };
 
 export default async function FriendsPage() {
@@ -141,14 +142,14 @@ export default async function FriendsPage() {
     })(),
     shareWorkoutFriendIds.length > 0
       ? prisma.workout.findMany({
-          where: { userId: { in: shareWorkoutFriendIds }, endedAt: { gte: FEED_SINCE } },
+          where: { userId: { in: shareWorkoutFriendIds }, endedAt: { gte: FEED_SINCE }, visibility: "FRIENDS" },
           orderBy: { endedAt: "desc" },
           take: FEED_LIMIT,
         })
       : [],
     shareStudyFriendIds.length > 0
       ? prisma.studySession.findMany({
-          where: { userId: { in: shareStudyFriendIds }, endedAt: { gte: FEED_SINCE } },
+          where: { userId: { in: shareStudyFriendIds }, endedAt: { gte: FEED_SINCE }, visibility: "FRIENDS" },
           orderBy: { endedAt: "desc" },
           take: FEED_LIMIT,
           include: { subject: true },
@@ -173,6 +174,7 @@ export default async function FriendsPage() {
               .filter(Boolean)
               .join(" · ")
           : formatMinutes(w.durationMinutes ?? 0),
+      photoUrl: w.photoUrl,
     })),
     ...feedStudySessions.map((s) => ({
       id: s.id,
@@ -394,6 +396,10 @@ export default async function FriendsPage() {
                         <p className="mt-0.5 text-xs text-ink-muted">{relativeLabel(item.when, today)}</p>
                       </div>
                     </div>
+                    {item.photoUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.photoUrl} alt="" className="mt-3 max-h-80 w-full rounded-xl object-cover" />
+                    )}
                     <div className="mt-3 border-t border-line pt-3">
                       <LikeButton
                         kind={item.kind}

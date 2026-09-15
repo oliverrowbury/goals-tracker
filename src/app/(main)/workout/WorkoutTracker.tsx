@@ -12,7 +12,20 @@ import {
   createExercise,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { formatPace, formatDistance, formatWeight, fromKg, computeVolume, formatClock, fromKm, toKm, haversineKm } from "@/lib/workout";
+import {
+  formatPace,
+  formatDistance,
+  formatWeight,
+  fromKg,
+  computeVolume,
+  formatClock,
+  fromKm,
+  toKm,
+  haversineKm,
+  computeSplits,
+  computeElevationGainM,
+  type RoutePoint,
+} from "@/lib/workout";
 import { useClockOffsetMs } from "@/lib/time";
 import { todayISO, shiftISO, weekdayShortDayMonth } from "@/lib/dates";
 import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/components/Icons";
@@ -27,7 +40,6 @@ type OpenWorkout = { id: string; type: WorkoutType; label: string; startedAt: st
 type LastPerformed = Record<string, { dateISO: string; sets: { weight: number; reps: number; isWarmup: boolean }[] }>;
 type WeekSummary = { sessions: number; minutes: number; strengthCount: number; cardioCount: number; cardioKm: number };
 type HistorySet = { id: string; exerciseName: string; weight: number; reps: number; isWarmup: boolean };
-type RoutePoint = { lat: number; lng: number };
 type HistoryWorkout = {
   id: string;
   type: WorkoutType;
@@ -159,14 +171,14 @@ function useGpsTrack(active: boolean): { distanceKm: number; status: GpsStatus; 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
         setStatus("tracking");
-        const { latitude, longitude, accuracy } = pos.coords;
+        const { latitude, longitude, accuracy, altitude } = pos.coords;
         const t = pos.timestamp;
         if (accuracy != null && accuracy > MAX_GPS_ACCURACY_M) return;
 
         const prev = lastFix.current;
         if (!prev) {
           lastFix.current = { lat: latitude, lon: longitude, t };
-          setPoints((pts) => [...pts, { lat: latitude, lng: longitude }]);
+          setPoints((pts) => [...pts, { lat: latitude, lng: longitude, t, alt: altitude }]);
           return;
         }
 
@@ -179,7 +191,7 @@ function useGpsTrack(active: boolean): { distanceKm: number; status: GpsStatus; 
         if (speedMps > MAX_PLAUSIBLE_SPEED_MPS) return; // an implausible jump — likely a glitch
 
         setDistanceKm((d) => d + km);
-        setPoints((pts) => [...pts, { lat: latitude, lng: longitude }]);
+        setPoints((pts) => [...pts, { lat: latitude, lng: longitude, t, alt: altitude }]);
         lastFix.current = { lat: latitude, lon: longitude, t };
       },
       () => setStatus("denied"),
@@ -727,14 +739,23 @@ export function WorkoutTracker({
               <button
                 disabled={isPending}
                 onClick={() => {
-                  setJustFinished({
-                    type: "STRENGTH",
-                    label: openWorkout.label,
-                    durationSeconds: elapsedSeconds,
-                    exerciseCount: activeExerciseIds.length,
-                    setCount: openWorkout.sets.filter((s) => !s.isWarmup).length,
-                    volumeKg: computeVolume(openWorkout.sets),
-                  });
+                  const setCount = openWorkout.sets.filter((s) => !s.isWarmup).length;
+                  // finishStrengthWorkout deletes the workout server-side
+                  // when nothing was logged (see its comment) rather than
+                  // saving an empty row — showing a "complete" summary with
+                  // share/delete/photo options for a workout that's already
+                  // gone would be worse than just skipping the summary here.
+                  if (setCount > 0) {
+                    setJustFinished({
+                      id: openWorkout.id,
+                      type: "STRENGTH",
+                      label: openWorkout.label,
+                      durationSeconds: elapsedSeconds,
+                      exerciseCount: activeExerciseIds.length,
+                      setCount,
+                      volumeKg: computeVolume(openWorkout.sets),
+                    });
+                  }
                   startTransition(() => finishStrengthWorkout(openWorkout.id));
                 }}
                 className="rounded-lg bg-ink-solid px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
@@ -837,6 +858,7 @@ export function WorkoutTracker({
               const displayDistance = distanceOverride ?? (gpsDistanceKm > 0 ? fromKm(gpsDistanceKm, distanceUnit).toFixed(2) : "");
               const distanceKm = displayDistance ? toKm(Number(displayDistance), distanceUnit) : undefined;
               setJustFinished({
+                id: openWorkout.id,
                 type: "CARDIO",
                 label: openWorkout.label,
                 durationSeconds: elapsedSeconds,

@@ -71,3 +71,60 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
     Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
+
+export type RoutePoint = { lat: number; lng: number; t?: number; alt?: number | null };
+export type Split = { label: string; durationSeconds: number };
+
+// One entry per completed km (or mile), each the time taken to cover that
+// unit — found by walking the tracked points and noting when cumulative
+// distance crosses each marker, using each point's own GPS timestamp
+// rather than an even split of the total (so a stop for traffic shows up
+// as a slow split instead of being smeared across the whole run). Needs
+// per-point timestamps, which only cardio sessions tracked live (not
+// manually entered ones) have.
+export function computeSplits(points: RoutePoint[], unit: "KM" | "MI"): Split[] {
+  if (points.length < 2) return [];
+  const stepKm = unit === "MI" ? KM_PER_MILE : 1;
+  const splits: Split[] = [];
+  let cumKm = 0;
+  let marker = 1;
+  let splitStartT = points[0].t;
+
+  for (let i = 1; i < points.length; i++) {
+    cumKm += haversineKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+    if (cumKm >= stepKm * marker) {
+      if (splitStartT != null && points[i].t != null) {
+        splits.push({ label: `${unit === "MI" ? "Mile" : "Km"} ${marker}`, durationSeconds: (points[i].t! - splitStartT) / 1000 });
+      }
+      splitStartT = points[i].t;
+      marker++;
+    }
+  }
+  return splits;
+}
+
+// Total climbed, in meters — sums only the upward changes between
+// consecutive altitude readings, discarding swings under NOISE_FLOOR_M so
+// GPS altitude jitter (routinely several meters even standing still)
+// doesn't get counted as climbing. Best-effort: phone GPS altitude is
+// genuinely inaccurate, this is not survey-grade elevation data. Returns
+// null when there's nothing usable (most fixes lack altitude entirely on
+// many devices/browsers).
+const NOISE_FLOOR_M = 2;
+export function computeElevationGainM(points: RoutePoint[]): number | null {
+  const alts = points.map((p) => p.alt).filter((a): a is number => a != null);
+  if (alts.length < 2) return null;
+
+  let gain = 0;
+  let base = alts[0];
+  for (let i = 1; i < alts.length; i++) {
+    const diff = alts[i] - base;
+    if (diff > NOISE_FLOOR_M) {
+      gain += diff;
+      base = alts[i];
+    } else if (diff < -NOISE_FLOOR_M) {
+      base = alts[i];
+    }
+  }
+  return Math.round(gain);
+}

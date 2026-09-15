@@ -14,6 +14,7 @@ import { formatMinutes } from "@/lib/study";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { useClockOffsetMs } from "@/lib/time";
 import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
+import { StudySummary, type JustFinishedSession } from "./StudySummary";
 
 type Subject = { id: string; name: string; color: string };
 
@@ -207,6 +208,7 @@ export function StudyTimer({
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
   const onPomodoroBreak = pomodoroEnabled && pomodoroPhase === "break";
   const openSessionId = openSession?.id ?? null;
+  const [justFinished, setJustFinished] = useState<JustFinishedSession | null>(null);
 
   // A new/ended session always starts Pomodoro fresh and off, rather than
   // carrying over a stale phase/count from whatever was studied before.
@@ -220,6 +222,9 @@ export function StudyTimer({
     setPomodoroEnabled(false);
     setPomodoroPhase("work");
     setCompletedPomodoros(0);
+    // A new session starting means any previous "just finished" summary is
+    // stale — same reasoning as the workout tracker's equivalent reset.
+    if (openSessionId) setJustFinished(null);
   }
 
   // Ticks the current phase down once a second — work only while the
@@ -307,6 +312,8 @@ export function StudyTimer({
 
   return (
     <div className="space-y-8">
+      {!openSession && justFinished && <StudySummary session={justFinished} onDone={() => setJustFinished(null)} />}
+
       {openSession && activeSubject ? (
         <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm">
           <p className="text-sm text-ink-muted">{onPomodoroBreak ? "On a break" : isPaused ? "Paused" : "Studying"}</p>
@@ -403,7 +410,14 @@ export function StudyTimer({
             )}
             <button
               disabled={isPending}
-              onClick={() => startTransition(() => finishStudySession(openSession.id))}
+              onClick={() => {
+                setJustFinished({
+                  id: openSession.id,
+                  subjectName: activeSubject.name,
+                  durationMinutes: Math.round(elapsedSeconds / 60),
+                });
+                startTransition(() => finishStudySession(openSession.id));
+              }}
               className="rounded-lg bg-ink-solid px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
             >
               Finish
@@ -423,33 +437,35 @@ export function StudyTimer({
           </button>
         </div>
       ) : (
-        <div>
-          <h2 className="mb-1 text-sm font-medium text-ink-muted">Start a session</h2>
-          <p className="mb-3 text-xs text-ink-muted">Tap a subject below to start timing it.</p>
-          <div className="flex flex-wrap gap-2.5">
-            {subjects.map((subject) => (
+        !justFinished && (
+          <div>
+            <h2 className="mb-1 text-sm font-medium text-ink-muted">Start a session</h2>
+            <p className="mb-3 text-xs text-ink-muted">Tap a subject below to start timing it.</p>
+            <div className="flex flex-wrap gap-2.5">
+              {subjects.map((subject) => (
+                <button
+                  key={subject.id}
+                  disabled={isPending}
+                  onClick={() => startTransition(() => startStudySession(subject.id))}
+                  className="group flex items-center gap-2 rounded-xl border border-line bg-card py-2.5 pl-2 pr-4 text-sm text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md disabled:opacity-50"
+                  style={{ borderLeftColor: subject.color, borderLeftWidth: 4 }}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-study-soft text-study transition group-hover:bg-study group-hover:text-white">
+                    <PlayIcon className="h-3.5 w-3.5" />
+                  </span>
+                  {subject.name}
+                </button>
+              ))}
               <button
-                key={subject.id}
-                disabled={isPending}
-                onClick={() => startTransition(() => startStudySession(subject.id))}
-                className="group flex items-center gap-2 rounded-xl border border-line bg-card py-2.5 pl-2 pr-4 text-sm text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md disabled:opacity-50"
-                style={{ borderLeftColor: subject.color, borderLeftWidth: 4 }}
+                onClick={() => setAddingSubject((v) => !v)}
+                className="rounded-xl border border-dashed border-line px-3.5 py-2.5 text-sm text-ink-muted hover:border-study hover:text-study"
               >
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-study-soft text-study transition group-hover:bg-study group-hover:text-white">
-                  <PlayIcon className="h-3.5 w-3.5" />
-                </span>
-                {subject.name}
+                + Subject
               </button>
-            ))}
-            <button
-              onClick={() => setAddingSubject((v) => !v)}
-              className="rounded-xl border border-dashed border-line px-3.5 py-2.5 text-sm text-ink-muted hover:border-study hover:text-study"
-            >
-              + Subject
-            </button>
+            </div>
+            {addingSubject && <AddSubjectForm onAdded={() => setAddingSubject(false)} />}
           </div>
-          {addingSubject && <AddSubjectForm onAdded={() => setAddingSubject(false)} />}
-        </div>
+        )
       )}
 
       {subjects.length > 0 && (

@@ -62,6 +62,14 @@ enum DistanceUnit {
   MI
 }
 
+// Chosen per-activity on the post-finish summary screen — "keep to
+// yourself" vs "share with friends" — sitting alongside (not replacing)
+// the account-level share*Streak switches: the friend feed requires both.
+enum ActivityVisibility {
+  PRIVATE
+  FRIENDS
+}
+
 // Fixed times of day a reminder can fire at, rather than an arbitrary
 // "HH:mm" — see the Reminder model below for why: Vercel's Hobby cron plan
 // only allows each individual cron job to fire once a day, but a project
@@ -263,6 +271,14 @@ model StudySession {
   endedAt         DateTime?
   durationMinutes Int?
   note            String?
+
+  // Chosen on the post-finish summary screen (Strava-style "who can see
+  // this"), independent of the account-level shareStudyStreak switch — the
+  // friend feed requires both: shareStudyStreak on, AND this session
+  // specifically set to FRIENDS. Defaults to FRIENDS so it matches the
+  // account-level default without extra friction for someone who's already
+  // opted their whole category in.
+  visibility ActivityVisibility @default(FRIENDS)
 }
 
 model Exercise {
@@ -296,11 +312,18 @@ model Workout {
   // pace is derived at render time from this and durationMinutes rather
   // than stored.
   distanceKm Float?
-  // Cardio only — the tracked GPS points ({lat, lng}[], in order), null if
-  // GPS wasn't available/used for this session. Just enough to draw the
-  // route on a map; no elevation, timestamps, or per-point accuracy kept.
+  // Cardio only — the tracked GPS points ({lat, lng, t, alt}[], in order,
+  // t/alt best-effort), null if GPS wasn't available/used for this session.
+  // Splits and elevation gain (see lib/workout.ts) are derived from this at
+  // render time rather than stored, same convention as pace.
   route Json?
   note  String?
+  // See StudySession.visibility for how this and shareWorkoutStreak
+  // together gate the friend feed.
+  visibility ActivityVisibility @default(FRIENDS)
+  // Optional photo attached on the post-finish summary screen — same
+  // Supabase Storage bucket/pattern as JournalEntry.photoUrl.
+  photoUrl String?
 
   sets WorkoutSet[]
 }

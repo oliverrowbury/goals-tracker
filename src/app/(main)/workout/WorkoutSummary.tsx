@@ -1,12 +1,24 @@
 "use client";
 
-import { DumbbellIcon, ActivityIcon } from "@/components/Icons";
-import { formatWeight, formatDistance, formatPace, formatClock } from "@/lib/workout";
+import { useRef, useState, useTransition } from "react";
+import { DumbbellIcon, ActivityIcon, TrashIcon } from "@/components/Icons";
+import {
+  formatWeight,
+  formatDistance,
+  formatPace,
+  formatClock,
+  computeSplits,
+  computeElevationGainM,
+  type RoutePoint,
+} from "@/lib/workout";
 import { ShareButton } from "@/components/ShareButton";
 import { RouteMap } from "./RouteMap";
+import { setWorkoutVisibility, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto } from "./actions";
 import type { WorkoutType, WeightUnit, DistanceUnit } from "@/lib/constants";
+import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 export type JustFinishedWorkout = {
+  id: string;
   type: WorkoutType;
   label: string;
   durationSeconds: number;
@@ -14,13 +26,97 @@ export type JustFinishedWorkout = {
   setCount?: number;
   volumeKg?: number;
   distanceKm?: number;
-  route?: { lat: number; lng: number }[];
+  route?: RoutePoint[];
 };
 
+function VisibilityPicker({ workoutId }: { workoutId: string }) {
+  const [visibility, setVisibility] = useState<ActivityVisibility>("FRIENDS");
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper p-1">
+      {(["FRIENDS", "PRIVATE"] as const).map((v) => (
+        <button
+          key={v}
+          type="button"
+          disabled={isPending}
+          onClick={() => {
+            setVisibility(v);
+            startTransition(() => setWorkoutVisibility(workoutId, v));
+          }}
+          className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+            visibility === v ? "bg-workout text-white" : "text-ink-muted hover:text-workout"
+          }`}
+        >
+          {v === "FRIENDS" ? "Share with friends" : "Keep to myself"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PhotoAttach({ workoutId }: { workoutId: string }) {
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    const formData = new FormData();
+    formData.set("photo", file);
+    startTransition(async () => {
+      const result = await uploadWorkoutPhoto(workoutId, formData);
+      if (result?.error) setError(result.error);
+      else setPhotoUrl(URL.createObjectURL(file));
+    });
+  }
+
+  if (photoUrl) {
+    return (
+      <div className="relative mt-5 inline-block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photoUrl} alt="" className="max-h-72 rounded-2xl border border-line object-cover" />
+        <button
+          type="button"
+          title="Remove photo"
+          disabled={isPending}
+          onClick={() => {
+            setPhotoUrl(null);
+            startTransition(() => removeWorkoutPhoto(workoutId));
+          }}
+          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-white hover:bg-ink"
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => inputRef.current?.click()}
+        className="rounded-lg border border-dashed border-line px-4 py-2.5 text-sm text-ink-muted hover:border-workout hover:text-workout disabled:opacity-50"
+      >
+        {isPending ? "Uploading…" : "+ Add a photo"}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+      {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 // A dedicated "just finished" screen — Strava's post-run recap (big hero
-// number, route map, pace) crossed with Hevy's post-lift one (exercise/set/
-// volume breakdown) — rather than dropping straight back to the plain
-// "start a workout" screen the instant Finish is tapped.
+// number, route map, pace, splits) crossed with Hevy's post-lift one
+// (exercise/set/volume breakdown) — rather than dropping straight back to
+// the plain "start a workout" screen the instant Finish is tapped. Also
+// where the Strava-style "who sees this" choice, a photo, and delete all
+// live, since this is the one moment a workout is guaranteed to be on
+// screen right after being created.
 export function WorkoutSummary({
   workout,
   weightUnit,
@@ -32,8 +128,11 @@ export function WorkoutSummary({
   distanceUnit: DistanceUnit;
   onDone: () => void;
 }) {
+  const [deleting, startDeleteTransition] = useTransition();
   const isCardio = workout.type === "CARDIO";
   const pace = isCardio ? formatPace(workout.distanceKm ?? null, workout.durationSeconds / 60, distanceUnit) : null;
+  const splits = isCardio && workout.route ? computeSplits(workout.route, distanceUnit) : [];
+  const elevationGainM = isCardio && workout.route ? computeElevationGainM(workout.route) : null;
 
   return (
     <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm sm:p-8">
@@ -56,7 +155,7 @@ export function WorkoutSummary({
         </div>
       )}
 
-      <div className="mt-5 grid grid-cols-3 gap-3 border-t border-line pt-5 text-sm">
+      <div className={`mt-5 grid gap-3 border-t border-line pt-5 text-sm ${isCardio && elevationGainM != null ? "grid-cols-4" : "grid-cols-3"}`}>
         {isCardio ? (
           <>
             <div>
@@ -73,6 +172,12 @@ export function WorkoutSummary({
               </p>
               <p className="text-xs text-ink-muted">Distance</p>
             </div>
+            {elevationGainM != null && (
+              <div>
+                <p className="font-serif text-xl font-semibold text-ink">{elevationGainM}m</p>
+                <p className="text-xs text-ink-muted">Elevation</p>
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -92,7 +197,27 @@ export function WorkoutSummary({
         )}
       </div>
 
-      <div className="mt-6 flex items-center justify-center gap-3">
+      {splits.length > 0 && (
+        <div className="mt-5 border-t border-line pt-5 text-left">
+          <p className="mb-2 text-xs font-medium text-ink-muted">Splits</p>
+          <ul className="space-y-1">
+            {splits.map((s) => (
+              <li key={s.label} className="flex items-center justify-between text-sm">
+                <span className="text-ink-muted">{s.label}</span>
+                <span className="font-medium tabular-nums text-ink">{formatClock(Math.round(s.durationSeconds))}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <PhotoAttach workoutId={workout.id} />
+
+      <div className="mt-6 border-t border-line pt-5">
+        <VisibilityPicker workoutId={workout.id} />
+      </div>
+
+      <div className="mt-5 flex items-center justify-center gap-3">
         <ShareButton
           accentVar="--workout"
           fileName="workout.png"
@@ -123,6 +248,21 @@ export function WorkoutSummary({
           Done
         </button>
       </div>
+
+      <button
+        type="button"
+        disabled={deleting}
+        onClick={() => {
+          if (confirm("Delete this workout? This can't be undone.")) {
+            startDeleteTransition(() => deleteWorkout(workout.id));
+            onDone();
+          }
+        }}
+        className="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+      >
+        <TrashIcon className="h-3.5 w-3.5" />
+        Delete this workout
+      </button>
     </div>
   );
 }

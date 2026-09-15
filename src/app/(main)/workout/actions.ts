@@ -10,6 +10,8 @@ import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
 import { todayISO } from "@/lib/dates";
+import { uploadWorkoutPhoto as uploadWorkoutPhotoToStorage, deleteWorkoutPhoto } from "@/lib/storage";
+import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardWorkoutBadges(userId: string) {
   const workouts = await prisma.workout.findMany({ where: { userId, endedAt: { not: null } }, select: { date: true } });
@@ -109,14 +111,24 @@ export async function finishStrengthWorkout(workoutId: string) {
 // accuracy/plausible speed by useGpsTrack) — just checks the shape so a
 // malformed or missing value can't crash the update. Anything short of two
 // points isn't a route worth drawing, so it's dropped rather than stored.
-function parseRoute(raw: string): { lat: number; lng: number }[] | undefined {
+// t/alt are kept when present (per-point timestamp/altitude) — that's what
+// lets splits and elevation gain be computed later, from stored history,
+// not just in the moment the workout finishes.
+function parseRoute(raw: string): { lat: number; lng: number; t?: number; alt?: number | null }[] | undefined {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return undefined;
-    const points = parsed.filter(
-      (p): p is { lat: number; lng: number } =>
-        p && typeof p.lat === "number" && typeof p.lng === "number" && Number.isFinite(p.lat) && Number.isFinite(p.lng),
-    );
+    const points = parsed
+      .filter(
+        (p): p is { lat: number; lng: number; t?: number; alt?: number | null } =>
+          p && typeof p.lat === "number" && typeof p.lng === "number" && Number.isFinite(p.lat) && Number.isFinite(p.lng),
+      )
+      .map((p) => ({
+        lat: p.lat,
+        lng: p.lng,
+        ...(typeof p.t === "number" ? { t: p.t } : {}),
+        ...(typeof p.alt === "number" ? { alt: p.alt } : {}),
+      }));
     return points.length >= 2 ? points : undefined;
   } catch {
     return undefined;
@@ -157,6 +169,49 @@ export async function deleteWorkout(workoutId: string) {
     prisma.workoutSet.deleteMany({ where: { workoutId } }),
     prisma.workout.delete({ where: { id: workoutId } }),
   ]);
+  revalidateWorkoutViews();
+}
+
+// Chosen on the post-finish summary screen — "keep to yourself" vs "share
+// with friends" for this one workout specifically, independent of the
+// account-level shareWorkoutStreak switch (see ActivityVisibility in
+// schema.prisma for how the two combine to gate the friend feed).
+export async function setWorkoutVisibility(workoutId: string, visibility: ActivityVisibility) {
+  const user = await getCurrentUser();
+  await prisma.workout.updateMany({ where: { id: workoutId, userId: user.id }, data: { visibility } });
+  revalidatePath("/friends");
+}
+
+export async function uploadWorkoutPhoto(workoutId: string, formData: FormData): Promise<{ error: string } | null> {
+  const user = await getCurrentUser();
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo first" };
+  if (!file.type.startsWith("image/")) return { error: "That's not an image file" };
+
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout) return { error: "Workout not found" };
+  if (workout.photoUrl) await deleteWorkoutPhoto(workout.photoUrl);
+
+  let photoUrl: string;
+  try {
+    photoUrl = await uploadWorkoutPhotoToStorage(user.id, workoutId, file);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Upload failed" };
+  }
+
+  await prisma.workout.update({ where: { id: workoutId }, data: { photoUrl } });
+  revalidateWorkoutViews();
+  revalidatePath("/friends");
+  return null;
+}
+
+export async function removeWorkoutPhoto(workoutId: string) {
+  const user = await getCurrentUser();
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout?.photoUrl) return;
+
+  await deleteWorkoutPhoto(workout.photoUrl);
+  await prisma.workout.update({ where: { id: workoutId }, data: { photoUrl: null } });
   revalidateWorkoutViews();
 }
 
