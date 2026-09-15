@@ -6,7 +6,13 @@ import { PrismaClient } from "@/generated/prisma/client";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  // `pg.Pool` defaults to up to 10 connections per instance — fine for one
+  // long-lived server, but Vercel can spin up many concurrent serverless
+  // function instances, each getting its own pool, which can add up past
+  // Postgres's connection limit under real (or even light-but-bursty)
+  // traffic and start failing new connections outright. Capped low since
+  // each function instance only ever runs one request at a time anyway.
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, max: 3 });
   return new PrismaClient({ adapter });
 }
 
