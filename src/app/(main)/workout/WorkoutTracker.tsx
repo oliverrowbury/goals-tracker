@@ -36,6 +36,7 @@ import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit
 import { RouteMap } from "./RouteMap";
 import { ShareButton } from "@/components/ShareButton";
 import { WorkoutSummary, type JustFinishedWorkout } from "./WorkoutSummary";
+import { EXERCISE_REFERENCE_IMAGE } from "@/lib/exerciseReference";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
@@ -490,6 +491,40 @@ function NumberStepper({
   );
 }
 
+// Reference photo for an exercise — collapsed to a small "how to" toggle by
+// default so it doesn't crowd the set-logging UI, opening into the actual
+// photo on tap. Silently hides itself if the image fails to load (a
+// hotlinked external URL going stale shouldn't leave a broken-image icon
+// in the middle of a workout) or if no confident match exists for this
+// exercise (see lib/exerciseReference.ts).
+function ExerciseReference({ name }: { name: string }) {
+  const [open, setOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const src = EXERCISE_REFERENCE_IMAGE[name];
+  if (!src || failed) return null;
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs font-medium text-workout hover:underline"
+      >
+        {open ? "Hide how-to" : "How to"}
+      </button>
+      {open && (
+        // eslint-disable-next-line @next/next/no-img-element -- external hotlinked reference photo, not a local asset next/image can optimize
+        <img
+          src={src}
+          alt={`How to perform ${name}`}
+          onError={() => setFailed(true)}
+          className="mt-2 max-h-56 w-full rounded-lg border border-line object-cover"
+        />
+      )}
+    </div>
+  );
+}
+
 function ExerciseSection({
   workoutId,
   exercise,
@@ -551,6 +586,7 @@ function ExerciseSection({
                 .join(", ")}
             </p>
           )}
+          <ExerciseReference name={exercise.name} />
         </div>
         {sets.length === 0 && (
           <button type="button" onClick={onRemove} className="rounded-lg px-1.5 py-1 -m-1 text-xs text-ink-muted hover:text-accent">
