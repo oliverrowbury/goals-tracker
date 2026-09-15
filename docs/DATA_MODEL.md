@@ -191,19 +191,23 @@ Unique on `(requester_id, addressee_id)` — direction-specific, so the "already
 requested the other way" case is checked in application code, not the schema.
 
 ## Cheer
-A simple "like" — one friend liking another on the Friends page. Capped at
-once per friend per calendar day (there's no per-activity feed to react to
-individually, just aggregate streaks/level).
+A "like" on one specific activity (a workout or study session) in a
+friend's activity feed on the Friends page — not a once-a-day thing.
+Exactly one of `workout_id`/`study_session_id` is set per row. Plain string
+FKs, not enforced foreign keys — a like on since-deleted activity just
+stops showing up in the feed, no cleanup needed.
 
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
 | from_user_id | uuid | |
 | to_user_id | uuid | |
-| date | date | the calendar day this cheer counts against |
+| workout_id | uuid, nullable | set when liking a workout |
+| study_session_id | uuid, nullable | set when liking a study session |
 | created_at | timestamp | |
 
-Unique on `(from_user_id, to_user_id, date)`.
+Unique on `(from_user_id, workout_id)` and `(from_user_id, study_session_id)`
+separately — one like per person per activity.
 
 ## UserBadge
 A fixed, curated set of milestones (first journal entry, 7-day streaks,

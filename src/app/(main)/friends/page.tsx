@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, isoToDate } from "@/lib/dates";
+import { todayISO, shiftISO, isoToDate, weekdayShortDayMonth } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
-import { UsersIcon, FlameIcon, JournalIcon, ClockIcon, DumbbellIcon } from "@/components/Icons";
+import { formatMinutes } from "@/lib/study";
+import { formatDistance, formatPace } from "@/lib/workout";
+import { UsersIcon, FlameIcon, JournalIcon, ClockIcon, DumbbellIcon, ActivityIcon } from "@/components/Icons";
 import { AddFriendSearch } from "./AddFriendSearch";
 import { ShareActivityToggle } from "./ShareActivityToggle";
 import { RemoveFriendButton } from "./RemoveFriendButton";
@@ -53,6 +55,29 @@ async function friendActivity(other: FriendUser, today: string) {
   };
 }
 
+// "Just now" / "2 hours ago" / "Yesterday" / "Sun 13 Sept" — same idea as
+// the workout log and study session dayLabels, just with same-day
+// hour-granularity like Strava/Hevy's feed instead of only "Today".
+function relativeLabel(date: Date, today: string): string {
+  const dateISO = date.toISOString().slice(0, 10);
+  if (dateISO === today) {
+    const hoursAgo = Math.floor((Date.now() - date.getTime()) / (60 * 60 * 1000));
+    if (hoursAgo < 1) return "Just now";
+    return `${hoursAgo} hour${hoursAgo === 1 ? "" : "s"} ago`;
+  }
+  if (dateISO === shiftISO(today, -1)) return "Yesterday";
+  return weekdayShortDayMonth(dateISO);
+}
+
+type FeedItem = {
+  id: string;
+  kind: "workout" | "study";
+  userId: string;
+  when: Date;
+  title: string;
+  detail: string;
+};
+
 export default async function FriendsPage() {
   const user = await getCurrentUser();
   const today = todayISO();
@@ -93,7 +118,16 @@ export default async function FriendsPage() {
   const outgoing = friendships.filter((f) => f.status === "PENDING" && f.requesterId === user.id);
   const friendIds = accepted.map((f) => otherUser(f).id);
 
-  const [activityByFriendId, cheersGivenToday, cheerCounts] = await Promise.all([
+  const friendById = new Map(accepted.map((f) => [otherUser(f).id, otherUser(f)]));
+  const shareWorkoutFriendIds = accepted.map(otherUser).filter((o) => o.shareWorkoutStreak).map((o) => o.id);
+  const shareStudyFriendIds = accepted.map(otherUser).filter((o) => o.shareStudyStreak).map((o) => o.id);
+
+  // Last two weeks, most recent 25 — a live feed, not a full archive (each
+  // friend's own history already lives on their Study/Workout pages).
+  const FEED_SINCE = isoToDate(shiftISO(today, -14));
+  const FEED_LIMIT = 25;
+
+  const [activityByFriendId, feedWorkouts, feedStudySessions] = await Promise.all([
     (async () => {
       const map = new Map<string, Awaited<ReturnType<typeof friendActivity>>>();
       await Promise.all(
@@ -105,11 +139,69 @@ export default async function FriendsPage() {
       );
       return map;
     })(),
-    prisma.cheer.findMany({ where: { fromUserId: user.id, toUserId: { in: friendIds }, date: isoToDate(today) } }),
-    prisma.cheer.groupBy({ by: ["toUserId"], where: { toUserId: { in: friendIds } }, _count: { toUserId: true } }),
+    shareWorkoutFriendIds.length > 0
+      ? prisma.workout.findMany({
+          where: { userId: { in: shareWorkoutFriendIds }, endedAt: { gte: FEED_SINCE } },
+          orderBy: { endedAt: "desc" },
+          take: FEED_LIMIT,
+        })
+      : [],
+    shareStudyFriendIds.length > 0
+      ? prisma.studySession.findMany({
+          where: { userId: { in: shareStudyFriendIds }, endedAt: { gte: FEED_SINCE } },
+          orderBy: { endedAt: "desc" },
+          take: FEED_LIMIT,
+          include: { subject: true },
+        })
+      : [],
   ]);
-  const cheeredTodaySet = new Set(cheersGivenToday.map((c) => c.toUserId));
-  const cheerCountMap = new Map(cheerCounts.map((c) => [c.toUserId, c._count.toUserId]));
+
+  const feed: FeedItem[] = [
+    ...feedWorkouts.map((w) => ({
+      id: w.id,
+      kind: "workout" as const,
+      userId: w.userId,
+      when: w.endedAt!,
+      title: w.label,
+      detail:
+        w.type === "CARDIO"
+          ? [
+              w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : null,
+              formatMinutes(w.durationMinutes ?? 0),
+              formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit),
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : formatMinutes(w.durationMinutes ?? 0),
+    })),
+    ...feedStudySessions.map((s) => ({
+      id: s.id,
+      kind: "study" as const,
+      userId: s.userId,
+      when: s.endedAt!,
+      title: s.subject.name,
+      detail: formatMinutes(s.durationMinutes ?? 0),
+    })),
+  ]
+    .sort((a, b) => b.when.getTime() - a.when.getTime())
+    .slice(0, FEED_LIMIT);
+
+  const workoutIds = feedWorkouts.map((w) => w.id);
+  const studySessionIds = feedStudySessions.map((s) => s.id);
+  const [likesGivenByMe, likeCounts] = await Promise.all([
+    prisma.cheer.findMany({
+      where: { fromUserId: user.id, OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }] },
+    }),
+    prisma.cheer.findMany({
+      where: { OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }] },
+    }),
+  ]);
+  const likedByMeSet = new Set(likesGivenByMe.map((c) => c.workoutId ?? c.studySessionId));
+  const likeCountMap = new Map<string, number>();
+  for (const c of likeCounts) {
+    const key = c.workoutId ?? c.studySessionId!;
+    likeCountMap.set(key, (likeCountMap.get(key) ?? 0) + 1);
+  }
 
   return (
     <div>
@@ -253,19 +345,70 @@ export default async function FriendsPage() {
                     Activity is private
                   </p>
                 )}
-
-                <div className="mt-3 border-t border-line pt-3">
-                  <LikeButton
-                    friendUserId={other.id}
-                    count={cheerCountMap.get(other.id) ?? 0}
-                    likedToday={cheeredTodaySet.has(other.id)}
-                  />
-                </div>
               </div>
             );
           })}
         </div>
       </section>
+
+      {accepted.length > 0 && (
+        <section className="mt-6">
+          <h2 className="mb-3 text-sm font-medium text-ink-muted">Activity</h2>
+
+          {feed.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
+              <p className="text-sm text-ink-muted">
+                Nothing from friends in the last two weeks — workouts and study sessions show up here once someone finishes
+                one and has that category shared.
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {feed.map((item) => {
+                const friend = friendById.get(item.userId);
+                if (!friend) return null;
+                return (
+                  <li key={`${item.kind}-${item.id}`} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                          item.kind === "workout" ? "bg-workout-soft text-workout" : "bg-study-soft text-study"
+                        }`}
+                      >
+                        {item.kind === "workout" ? (
+                          <ActivityIcon className="h-4 w-4" />
+                        ) : (
+                          <ClockIcon className="h-4 w-4" />
+                        )}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-ink">
+                          <span className="font-medium">{friend.name}</span>{" "}
+                          <span className="text-ink-muted">
+                            {item.kind === "workout" ? "finished a workout" : "studied"}
+                          </span>
+                        </p>
+                        <p className="mt-0.5 text-sm font-medium text-ink">
+                          {item.title} <span className="font-normal text-ink-muted">· {item.detail}</span>
+                        </p>
+                        <p className="mt-0.5 text-xs text-ink-muted">{relativeLabel(item.when, today)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 border-t border-line pt-3">
+                      <LikeButton
+                        kind={item.kind}
+                        activityId={item.id}
+                        count={likeCountMap.get(item.id) ?? 0}
+                        likedByMe={likedByMeSet.has(item.id)}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
     </div>
   );
 }

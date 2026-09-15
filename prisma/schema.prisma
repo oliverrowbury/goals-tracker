@@ -409,10 +409,16 @@ model Friendship {
   @@unique([requesterId, addresseeId])
 }
 
-// A simple "like" on a friend — capped at one per friend per calendar day
-// (the @@unique below) rather than per individual activity, since there's
-// no per-activity feed to react to, just each other's aggregate
-// streaks/level on the Friends page.
+// A "like" on one specific activity in a friend's feed (a finished workout
+// or study session — see the friend-feed query in friends/page.tsx), not a
+// once-a-day thing anymore. Exactly one of workoutId/studySessionId is set
+// per row; each is its own unique constraint (rather than one combined
+// constraint) so a like on a workout and a like on a study session never
+// collide just because both FK columns happen to be null on unrelated rows
+// — Postgres treats NULLs as distinct within a unique index, so that's safe.
+// Deliberately plain string FKs (no Prisma @relation) — a like on an
+// activity that's since been deleted just stops showing up in the feed,
+// which needs no cleanup or cascade of its own.
 model Cheer {
   id String @id @default(uuid())
 
@@ -421,10 +427,13 @@ model Cheer {
   toUserId   String
   toUser     User   @relation("CheerTo", fields: [toUserId], references: [id])
 
-  date      DateTime
+  workoutId      String?
+  studySessionId String?
+
   createdAt DateTime @default(now())
 
-  @@unique([fromUserId, toUserId, date])
+  @@unique([fromUserId, workoutId])
+  @@unique([fromUserId, studySessionId])
 }
 
 // A curated, fixed set of milestones rather than an open-ended point
