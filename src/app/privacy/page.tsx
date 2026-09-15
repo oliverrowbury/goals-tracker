@@ -40,9 +40,14 @@ export default function PrivacyPage() {
         <section>
           <h2 className="font-serif text-lg font-semibold text-ink">What we don’t collect</h2>
           <p className="mt-2">
-            No analytics or tracking scripts, no advertising identifiers, no data sold or shared with advertisers. We
-            don’t read your journal entries for any purpose other than showing them back to you. The only cookie is a
-            single, first-party session cookie that keeps you signed in — nothing from a third party.
+            No advertising identifiers, no data sold or shared with advertisers. We don’t read your journal entries
+            for any purpose other than showing them back to you. The only cookie is a single, first-party session
+            cookie that keeps you signed in — nothing from a third party.
+          </p>
+          <p className="mt-2">
+            We use Vercel Web Analytics to see how many people visit and which pages they use. It’s cookieless and
+            doesn’t collect any personal data — it can’t identify you individually, only anonymous, aggregate counts
+            like page views and visitor totals.
           </p>
         </section>
 
