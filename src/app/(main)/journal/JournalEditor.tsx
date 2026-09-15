@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { saveJournalEntry } from "./actions";
 import { ShareButton } from "@/components/ShareButton";
+import { autoCapitalizeSentences } from "@/lib/text";
 
 type Mode = "freewrite" | "list";
 
@@ -93,7 +94,7 @@ function ListRow({
         autoCapitalize="sentences"
         autoCorrect="on"
         spellCheck
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(autoCapitalizeSentences(e.target.value))}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -203,7 +204,7 @@ export function JournalEditor({
       ) : (
         <textarea
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => setText(autoCapitalizeSentences(e.target.value))}
           placeholder="What are you proud of today?"
           autoCapitalize="sentences"
           autoCorrect="on"
@@ -220,7 +221,7 @@ export function JournalEditor({
       ) : (
         <textarea
           value={improveText}
-          onChange={(e) => setImproveText(e.target.value)}
+          onChange={(e) => setImproveText(autoCapitalizeSentences(e.target.value))}
           placeholder="What could've gone better today?"
           autoCapitalize="sentences"
           autoCorrect="on"
