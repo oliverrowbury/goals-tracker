@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
+import { todayISO, isoToDate } from "@/lib/dates";
 
 export type FriendSearchResult = {
   id: string;
@@ -132,53 +133,30 @@ export async function setShareCategory(category: ShareCategory, share: boolean) 
   revalidatePath("/friends");
 }
 
-export type ActivityKind = "workout" | "study";
-
-// A like on one specific activity in a friend's feed — capped at one per
-// person per activity (the unique constraints on Cheer), not per day.
-// Re-checks the friendship *and* the owner's current share setting for that
-// category server-side rather than trusting that the activity only reached
-// this call because it was visible in the feed — the feed is the normal
-// path here, but this is the actual privacy boundary.
-export async function likeActivity(kind: ActivityKind, activityId: string) {
+// A simple "like" between friends — since there's no per-activity feed to
+// react to (just each friend's aggregate streaks/level), this is capped at
+// once per friend per calendar day rather than once per activity. The
+// @@unique([fromUserId, toUserId, date]) constraint is what actually
+// enforces the cap; a second tap the same day just no-ops.
+export async function sendCheer(toUserId: string) {
   const user = await getCurrentUser();
+  if (toUserId === user.id) return;
 
-  const owner =
-    kind === "workout"
-      ? await prisma.workout.findUnique({ where: { id: activityId }, select: { userId: true } })
-      : await prisma.studySession.findUnique({ where: { id: activityId }, select: { userId: true } });
-  if (!owner || owner.userId === user.id) return;
-
-  const [friendship, ownerUser] = await Promise.all([
-    prisma.friendship.findFirst({
-      where: {
-        status: "ACCEPTED",
-        OR: [
-          { requesterId: user.id, addresseeId: owner.userId },
-          { requesterId: owner.userId, addresseeId: user.id },
-        ],
-      },
-    }),
-    prisma.user.findUnique({
-      where: { id: owner.userId },
-      select: { shareWorkoutStreak: true, shareStudyStreak: true },
-    }),
-  ]);
-  if (!friendship || !ownerUser) return;
-  if (kind === "workout" && !ownerUser.shareWorkoutStreak) return;
-  if (kind === "study" && !ownerUser.shareStudyStreak) return;
+  const friendship = await prisma.friendship.findFirst({
+    where: {
+      status: "ACCEPTED",
+      OR: [
+        { requesterId: user.id, addresseeId: toUserId },
+        { requesterId: toUserId, addresseeId: user.id },
+      ],
+    },
+  });
+  if (!friendship) return;
 
   try {
-    await prisma.cheer.create({
-      data: {
-        fromUserId: user.id,
-        toUserId: owner.userId,
-        workoutId: kind === "workout" ? activityId : null,
-        studySessionId: kind === "study" ? activityId : null,
-      },
-    });
+    await prisma.cheer.create({ data: { fromUserId: user.id, toUserId, date: isoToDate(todayISO()) } });
   } catch {
-    // Already liked this activity — the unique constraint caught it.
+    // Already cheered this friend today — the unique constraint caught it.
   }
   revalidatePath("/friends");
 }

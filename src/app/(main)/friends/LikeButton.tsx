@@ -2,20 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { HeartIcon } from "@/components/Icons";
-import { likeActivity, type ActivityKind } from "./actions";
+import { sendCheer } from "./actions";
 
 export function LikeButton({
-  kind,
-  activityId,
+  friendUserId,
   count,
-  likedByMe,
+  likedToday,
 }: {
-  kind: ActivityKind;
-  activityId: string;
+  friendUserId: string;
   count: number;
-  likedByMe: boolean;
+  likedToday: boolean;
 }) {
-  const [liked, setLiked] = useState(likedByMe);
+  const [liked, setLiked] = useState(likedToday);
   const [localCount, setLocalCount] = useState(count);
   const [isPending, startTransition] = useTransition();
 
@@ -26,9 +24,9 @@ export function LikeButton({
       onClick={() => {
         setLiked(true); // optimistic
         setLocalCount((c) => c + 1);
-        startTransition(() => likeActivity(kind, activityId));
+        startTransition(() => sendCheer(friendUserId));
       }}
-      title={liked ? "You liked this" : "Like"}
+      title={liked ? "You liked this today" : "Like"}
       className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
         liked ? "border-calm bg-calm-soft text-calm" : "border-line text-ink-muted hover:border-calm hover:text-calm"
       } disabled:cursor-default`}
