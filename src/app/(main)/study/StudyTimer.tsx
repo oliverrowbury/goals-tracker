@@ -188,6 +188,11 @@ export function StudyTimer({
   const [addingSubject, setAddingSubject] = useState(false);
   const [addingManually, setAddingManually] = useState(false);
   const [autoPaused, setAutoPaused] = useState(false);
+  // Tapping a subject only selects it — it doesn't start the timer yet.
+  // Starting is its own deliberate action below, same as the workout
+  // tracker's type picker, so a stray tap can't accidentally kick off a
+  // timed session.
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const clockOffsetMs = useClockOffsetMs(serverNow);
   const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, openSession?.pausedAt ?? null, clockOffsetMs);
 
@@ -224,7 +229,10 @@ export function StudyTimer({
     setCompletedPomodoros(0);
     // A new session starting means any previous "just finished" summary is
     // stale — same reasoning as the workout tracker's equivalent reset.
-    if (openSessionId) setJustFinished(null);
+    if (openSessionId) {
+      setJustFinished(null);
+      setSelectedSubjectId(null);
+    }
   }
 
   // Ticks the current phase down once a second — work only while the
@@ -440,17 +448,27 @@ export function StudyTimer({
         !justFinished && (
           <div>
             <h2 className="mb-1 text-sm font-medium text-ink-muted">Start a session</h2>
-            <p className="mb-3 text-xs text-ink-muted">Tap a subject below to start timing it.</p>
+            <p className="mb-3 text-xs text-ink-muted">Tap a subject, then press Start.</p>
             <div className="flex flex-wrap gap-2.5">
               {subjects.map((subject) => (
                 <button
                   key={subject.id}
                   disabled={isPending}
-                  onClick={() => startTransition(() => startStudySession(subject.id))}
-                  className="group flex items-center gap-2 rounded-xl border border-line bg-card py-2.5 pl-2 pr-4 text-sm text-ink shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md disabled:opacity-50"
+                  onClick={() => setSelectedSubjectId(subject.id)}
+                  className={`group flex items-center gap-2 rounded-xl border py-2.5 pl-2 pr-4 text-sm shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:opacity-50 ${
+                    selectedSubjectId === subject.id
+                      ? "border-study bg-study-soft text-study"
+                      : "border-line bg-card text-ink hover:border-study"
+                  }`}
                   style={{ borderLeftColor: subject.color, borderLeftWidth: 4 }}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-study-soft text-study transition group-hover:bg-study group-hover:text-white">
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${
+                      selectedSubjectId === subject.id
+                        ? "bg-study text-white"
+                        : "bg-study-soft text-study group-hover:bg-study group-hover:text-white"
+                    }`}
+                  >
                     <PlayIcon className="h-3.5 w-3.5" />
                   </span>
                   {subject.name}
@@ -464,6 +482,15 @@ export function StudyTimer({
               </button>
             </div>
             {addingSubject && <AddSubjectForm onAdded={() => setAddingSubject(false)} />}
+            {selectedSubjectId && (
+              <button
+                disabled={isPending}
+                onClick={() => startTransition(() => startStudySession(selectedSubjectId))}
+                className="mt-4 w-full rounded-xl bg-study py-3.5 text-base font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
+              >
+                Start {subjects.find((s) => s.id === selectedSubjectId)?.name}
+              </button>
+            )}
           </div>
         )
       )}
