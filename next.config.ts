@@ -12,6 +12,16 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**": ["./src/generated/prisma/**/*"],
   },
+  // Every photo upload (journal, workout, avatar) goes through a Server
+  // Action taking a raw File in FormData — Next's default body-size cap for
+  // those is 1MB, which a real phone photo blows past instantly, failing
+  // the whole request before our own code (and its friendlier error
+  // messages) ever runs. Raised to comfortably cover a full-res phone photo.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
 };
 
 export default nextConfig;

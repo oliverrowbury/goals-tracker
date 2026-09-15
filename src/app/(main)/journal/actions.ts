@@ -81,7 +81,15 @@ export async function uploadEntryPhoto(dateISO: string, formData: FormData): Pro
 
   const date = isoToDate(dateISO);
   const existing = await prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } });
-  if (existing?.photoUrl) await deleteJournalPhoto(existing.photoUrl);
+  // Best-effort — a stale or already-gone old photo shouldn't block
+  // uploading the new one.
+  if (existing?.photoUrl) {
+    try {
+      await deleteJournalPhoto(existing.photoUrl);
+    } catch {
+      // ignore
+    }
+  }
 
   let photoUrl: string;
   try {
