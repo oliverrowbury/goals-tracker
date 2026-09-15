@@ -6,9 +6,11 @@ import type { User } from "@/generated/prisma/client";
 export const CURRENT_USER_HEADER = "x-proudly-current-user";
 
 // JSON round-trips Date fields as strings — restored here so callers get
-// the exact same shape prisma.user.findUnique would have returned.
+// the exact same shape prisma.user.findUnique would have returned. The
+// header itself is base64 (see proxy.ts for why — header values must be
+// plain ASCII, which free-text profile fields aren't guaranteed to be).
 function parseForwardedUser(raw: string): User {
-  const parsed = JSON.parse(raw);
+  const parsed = JSON.parse(Buffer.from(raw, "base64").toString("utf-8"));
   return {
     ...parsed,
     createdAt: new Date(parsed.createdAt),

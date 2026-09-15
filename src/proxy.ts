@@ -24,7 +24,13 @@ export async function proxy(request: NextRequest) {
     const user = await prisma.user.findUnique({ where: { sessionToken: token } });
     if (user) {
       const headers = new Headers(request.headers);
-      headers.set(CURRENT_USER_HEADER, JSON.stringify(user));
+      // Header values have to be plain ASCII (the Fetch API's ByteString
+      // restriction) — anything a user typed into a free-text profile field
+      // (bio, pronouns, name) can contain characters outside that range, so
+      // the raw JSON can't go in directly. Base64 is ASCII by construction
+      // regardless of what's inside it, so this can never throw here no
+      // matter what someone's put in their profile.
+      headers.set(CURRENT_USER_HEADER, Buffer.from(JSON.stringify(user), "utf-8").toString("base64"));
       return NextResponse.next({ request: { headers } });
     }
   }
