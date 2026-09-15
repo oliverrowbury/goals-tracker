@@ -131,11 +131,11 @@ export function BreathingCircle() {
         </svg>
 
         <div className="relative flex h-32 w-32 flex-col items-center justify-center rounded-full border-2 border-calm bg-card text-center shadow-sm">
-          <span key={running ? phaseIndex : "idle"} className="[animation:fade-in_0.5s_ease]">
+          <span key={`phase-${running ? phaseIndex : "idle"}`} className="[animation:fade-in_0.5s_ease]">
             <span className="block font-serif text-lg font-medium text-ink">{running ? phase.label : "Tap to start"}</span>
           </span>
           {running && (
-            <span key={secondsLeft} className="mt-0.5 block text-sm text-ink-muted [animation:fade-in_0.3s_ease]">
+            <span key={`seconds-${secondsLeft}`} className="mt-0.5 block text-sm text-ink-muted [animation:fade-in_0.3s_ease]">
               {secondsLeft}
             </span>
           )}

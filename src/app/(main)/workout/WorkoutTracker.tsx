@@ -1204,30 +1204,28 @@ function WorkoutLogCard({
                   />
                 </div>
                 {isCardio && (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-xs text-ink-muted">Distance ({distanceUnit === "MI" ? "mi" : "km"})</label>
-                      <input
-                        name="distance"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        defaultValue={workout.distanceKm ? fromKm(workout.distanceKm, distanceUnit).toFixed(2) : ""}
-                        className="w-24 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs text-ink-muted">Minutes</label>
-                      <input
-                        name="durationMinutes"
-                        type="number"
-                        min="1"
-                        defaultValue={workout.durationMinutes ?? ""}
-                        className="w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
-                      />
-                    </div>
-                  </>
+                  <div>
+                    <label className="mb-1 block text-xs text-ink-muted">Distance ({distanceUnit === "MI" ? "mi" : "km"})</label>
+                    <input
+                      name="distance"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      defaultValue={workout.distanceKm ? fromKm(workout.distanceKm, distanceUnit).toFixed(2) : ""}
+                      className="w-24 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                    />
+                  </div>
                 )}
+                <div>
+                  <label className="mb-1 block text-xs text-ink-muted">Minutes</label>
+                  <input
+                    name="durationMinutes"
+                    type="number"
+                    min="1"
+                    defaultValue={workout.durationMinutes ?? ""}
+                    className="w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                  />
+                </div>
               </div>
               <button
                 type="submit"

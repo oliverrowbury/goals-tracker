@@ -121,10 +121,10 @@ export async function updateWorkoutDetails(workoutId: string, formData: FormData
   if (label) data.label = label;
   if (dateISO) data.date = isoToDate(dateISO);
 
-  if (workout.type === "CARDIO") {
-    const durationRaw = Number(formData.get("durationMinutes"));
-    if (Number.isFinite(durationRaw) && durationRaw > 0) data.durationMinutes = Math.round(durationRaw);
+  const durationRaw = Number(formData.get("durationMinutes"));
+  if (Number.isFinite(durationRaw) && durationRaw > 0) data.durationMinutes = Math.round(durationRaw);
 
+  if (workout.type === "CARDIO") {
     const distanceRaw = String(formData.get("distance") ?? "").trim();
     if (distanceRaw) {
       const distance = Number(distanceRaw);
