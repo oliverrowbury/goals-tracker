@@ -3,6 +3,8 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO } from "@/lib/dates";
 import { weekRangeContaining } from "@/lib/goals";
 import { WorkoutTracker } from "./WorkoutTracker";
+import { ExerciseProgress } from "./ExerciseProgress";
+import { estimateOneRepMax } from "@/lib/workout";
 import { DumbbellIcon } from "@/components/Icons";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +43,43 @@ export default async function WorkoutPage() {
       select: { type: true, durationMinutes: true, distanceKm: true },
     }),
   ]);
+
+  // Best (heaviest estimated-1RM) set per exercise per day, in date order —
+  // what the Progress panel below charts. Derived from recentFinished
+  // (already fetched above for "Last time" hints and the Log) rather than
+  // a separate all-time query — this page's data reloads on every single
+  // set logged mid-workout, so keeping this to the same bounded lookback
+  // avoids adding a second full scan to that hot path. A day can have
+  // several sets of the same exercise; only the best one counts, same as
+  // Hevy's own progression graphs.
+  const progressByExercise = new Map<
+    string,
+    { exerciseName: string; byDate: Map<string, { weightKg: number; reps: number; estOneRmKg: number }> }
+  >();
+  for (const workout of recentFinished) {
+    const dateISO = workout.date.toISOString().slice(0, 10);
+    for (const s of workout.sets) {
+      if (s.isWarmup) continue;
+      const estOneRmKg = estimateOneRepMax(s.weight, s.reps);
+      if (!progressByExercise.has(s.exerciseId)) {
+        progressByExercise.set(s.exerciseId, { exerciseName: s.exercise.name, byDate: new Map() });
+      }
+      const entry = progressByExercise.get(s.exerciseId)!;
+      const existing = entry.byDate.get(dateISO);
+      if (!existing || estOneRmKg > existing.estOneRmKg) {
+        entry.byDate.set(dateISO, { weightKg: s.weight, reps: s.reps, estOneRmKg });
+      }
+    }
+  }
+  const exerciseProgress = Array.from(progressByExercise.entries())
+    .map(([exerciseId, { exerciseName, byDate }]) => ({
+      exerciseId,
+      exerciseName,
+      points: Array.from(byDate.entries())
+        .map(([dateISO, best]) => ({ dateISO, ...best }))
+        .sort((a, b) => a.dateISO.localeCompare(b.dateISO)),
+    }))
+    .sort((a, b) => a.exerciseName.localeCompare(b.exerciseName));
 
   // First (most recent) occurrence of each exercise across recent finished
   // workouts — what the "Last time" hint under each exercise shows.
@@ -81,6 +120,7 @@ export default async function WorkoutPage() {
                 id: openWorkout.id,
                 type: openWorkout.type,
                 label: openWorkout.label,
+                note: openWorkout.note,
                 startedAt: openWorkout.startedAt!.toISOString(),
                 sets: openWorkout.sets.map((s) => ({
                   id: s.id,
@@ -99,6 +139,7 @@ export default async function WorkoutPage() {
           id: w.id,
           type: w.type,
           label: w.label,
+          note: w.note,
           dateISO: w.date.toISOString().slice(0, 10),
           durationMinutes: w.durationMinutes,
           distanceKm: w.distanceKm,
@@ -112,6 +153,12 @@ export default async function WorkoutPage() {
           })),
         }))}
       />
+
+      {exerciseProgress.length > 0 && (
+        <div className="mt-8">
+          <ExerciseProgress exercises={exerciseProgress} weightUnit={user.weightUnit} />
+        </div>
+      )}
     </div>
   );
 }

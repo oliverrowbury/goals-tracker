@@ -52,6 +52,9 @@ export async function updateName(formData: FormData) {
   revalidatePath("/settings");
 }
 
+const USERNAME_COOLDOWN_DAYS = 7;
+const USERNAME_COOLDOWN_MS = USERNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
+
 export async function updateUsername(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
   const username = String(formData.get("username") ?? "")
     .trim()
@@ -66,10 +69,18 @@ export async function updateUsername(_prev: SettingsActionState, formData: FormD
   const user = await getCurrentUser();
   if (username === user.username) return { success: "That's already your username." };
 
+  if (user.usernameChangedAt) {
+    const msSinceChange = Date.now() - user.usernameChangedAt.getTime();
+    if (msSinceChange < USERNAME_COOLDOWN_MS) {
+      const daysLeft = Math.ceil((USERNAME_COOLDOWN_MS - msSinceChange) / (24 * 60 * 60 * 1000));
+      return { error: `You can change your username again in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.` };
+    }
+  }
+
   const existing = await prisma.user.findUnique({ where: { username } });
   if (existing) return { error: "That username is taken." };
 
-  await prisma.user.update({ where: { id: user.id }, data: { username } });
+  await prisma.user.update({ where: { id: user.id }, data: { username, usernameChangedAt: new Date() } });
   revalidatePath("/settings");
   return { success: "Username updated." };
 }

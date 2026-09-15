@@ -6,16 +6,18 @@ import { getCurrentUser } from "@/lib/user";
 import { minutesBetween } from "@/lib/study";
 import { isoToDate, todayISO } from "@/lib/dates";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
-import { awardBadge, awardStreakBadges } from "@/lib/badges";
+import { awardBadge, awardStreakBadges, awardStudyHoursBadges, awardTimeOfDayBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardStudyBadges(userId: string) {
   const sessions = await prisma.studySession.findMany({
     where: { userId, durationMinutes: { not: null } },
-    select: { startedAt: true },
+    select: { startedAt: true, durationMinutes: true },
   });
   if (sessions.length === 1) await awardBadge(userId, "FIRST_STUDY_SESSION");
+  const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+  await awardStudyHoursBadges(userId, totalMinutes);
   const streak = computeStreak(new Set(sessions.map((s) => s.startedAt.toISOString().slice(0, 10))), todayISO());
   await awardStreakBadges(userId, "STUDY", streak);
 }
@@ -90,6 +92,7 @@ export async function finishStudySession(sessionId: string) {
   if (durationMinutes >= 1) {
     await awardXp(session.userId, XP_AWARDS.STUDY_SESSION);
     await awardStudyBadges(session.userId);
+    await awardTimeOfDayBadges(session.userId, endedAt);
   }
 
   revalidateStudyViews();

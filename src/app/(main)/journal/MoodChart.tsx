@@ -109,9 +109,7 @@ export function MoodChart({ monthISO, entries, today }: { monthISO: string; entr
                     stroke="var(--card)"
                     strokeWidth="1.5"
                   >
-                    <title>
-                      {p.dateISO} — {moodFace(p.mood!)}
-                    </title>
+                    <title>{`${p.dateISO} — ${moodFace(p.mood!)}`}</title>
                   </circle>
                 ),
             )}

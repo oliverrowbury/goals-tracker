@@ -90,6 +90,10 @@ model User {
   // email address (see /friends). Set at signup; distinct from `name`,
   // which is just a display name and doesn't have to be unique.
   username  String   @unique
+  // Set whenever username actually changes (not on signup) — gates the
+  // 7-day change cooldown in settings/actions.ts. Null means "never
+  // changed since signup," which the cooldown check treats as free to change.
+  usernameChangedAt DateTime?
   name      String
   createdAt DateTime @default(now())
 
@@ -279,6 +283,12 @@ model StudySession {
   // account-level default without extra friction for someone who's already
   // opted their whole category in.
   visibility ActivityVisibility @default(FRIENDS)
+
+  // Every query here filters by userId, usually combined with a startedAt
+  // range (week/day views) — without this, those become sequential scans
+  // once a user's session history grows past what a personal app starts
+  // with.
+  @@index([userId, startedAt])
 }
 
 model Exercise {
@@ -326,6 +336,10 @@ model Workout {
   photoUrl String?
 
   sets WorkoutSet[]
+
+  // Same reasoning as StudySession's index — every query here filters by
+  // userId, usually with a date range too.
+  @@index([userId, date])
 }
 
 model WorkoutSet {
@@ -342,6 +356,14 @@ model WorkoutSet {
 
   weightUnit WeightUnit @default(KG)
   isWarmup   Boolean    @default(false)
+
+  // addSet/removeSet count and list sets by workoutId on every single set
+  // logged — the most frequent write in the app, and the one the "adding
+  // an exercise feels slow at the gym" complaint pointed at. exerciseId is
+  // indexed too for the "last time you did this" and progression lookups,
+  // which group across a user's whole history.
+  @@index([workoutId])
+  @@index([exerciseId])
 }
 
 model Reminder {
@@ -430,6 +452,10 @@ model Friendship {
   createdAt DateTime         @default(now())
 
   @@unique([requesterId, addresseeId])
+  // requesterId is already covered as the leading column of the unique
+  // index above — addresseeId needs its own, since friend-request/feed
+  // lookups filter by "am I the addressee" just as often.
+  @@index([addresseeId])
 }
 
 // A "like" on one specific activity in a friend's feed (a finished workout
@@ -457,6 +483,11 @@ model Cheer {
 
   @@unique([fromUserId, workoutId])
   @@unique([fromUserId, studySessionId])
+  // The friend feed's like-count lookup filters by workoutId/studySessionId
+  // directly (not fromUserId), which the two unique indexes above don't
+  // cover since fromUserId is their leading column.
+  @@index([workoutId])
+  @@index([studySessionId])
 }
 
 // A curated, fixed set of milestones rather than an open-ended point
@@ -471,10 +502,23 @@ enum Badge {
   FIRST_DEADLINE_COMPLETE
   JOURNAL_STREAK_7
   JOURNAL_STREAK_30
+  JOURNAL_STREAK_100
   STUDY_STREAK_7
+  STUDY_STREAK_30
   WORKOUT_STREAK_7
+  WORKOUT_STREAK_30
   LEVEL_5
   LEVEL_10
+  LEVEL_20
+  LEVEL_50
+  TOTAL_WORKOUTS_10
+  TOTAL_WORKOUTS_50
+  TOTAL_WORKOUTS_100
+  TOTAL_STUDY_HOURS_10
+  TOTAL_STUDY_HOURS_50
+  FIRST_FRIEND
+  EARLY_BIRD
+  NIGHT_OWL
 }
 
 model UserBadge {

@@ -11,6 +11,7 @@ gated by an accepted friendship plus the other user's own per-category
 | id | uuid | |
 | email | text | private — never shown to other users, including friends |
 | username | text | public handle, unique — how friends find/add each other (`/friends/add/[username]`) |
+| username_changed_at | timestamp, nullable | set whenever username actually changes (not on signup) — gates a 7-day change cooldown in settings/actions.ts |
 | name | text | display name, not unique |
 | xp | integer | simple points total; level is derived from this at display time rather than stored |
 | share_journal_streak | boolean | opt-in: whether accepted friends can see this user's journal streak |
@@ -42,7 +43,7 @@ combining this row with any `StudySession` / `Workout` rows on the same date.
 | target_days | day[] | used when `specific_days`, e.g. [Mon, Wed, Fri] |
 | target_value | number | e.g. `10` for "10 minutes"; null for simple yes/no goals |
 | unit | text | e.g. "minutes", "sessions"; null for yes/no goals |
-| subject_id | uuid, nullable | when set, weekly total auto-tracks from `StudySession` instead of manual `GoalLog.value` entry |
+| subject_id | uuid, nullable | when set, weekly total auto-tracks from `StudySession`, still toppable-up manually (see `GoalLog` below) |
 | workout_metric | enum, nullable | `sessions` \| `minutes` — when set, weekly total auto-tracks from `Workout` instead; mutually exclusive with `subject_id` |
 | active | boolean | |
 | start_date / end_date | date | end_date nullable (ongoing) |
@@ -59,7 +60,7 @@ counter to keep in sync.
 | goal_id | uuid | |
 | date | date | |
 | completed | boolean | |
-| value | number | optional, for quantity goals (e.g. minutes studied) |
+| value | number | optional, for quantity goals (e.g. minutes studied). For an auto-tracked goal (`subject_id`/`workout_metric` set), this is a manual top-up on top of the auto-tracked total — not stored anywhere else, and never overwrites it — for when the timer/log missed something (see `GoalExtraInput`). |
 | note | text | optional |
 
 ## Subject
@@ -84,6 +85,8 @@ One row per timer run.
 | duration_minutes | integer | derived, stored for easy querying |
 | note | text | optional |
 | visibility | enum | `private` \| `friends` — chosen on the post-finish summary screen; combines with the user's `share_study_streak` to gate the friend feed |
+
+Indexed on `(user_id, started_at)` — every query here filters by user, usually with a date range too.
 
 ## Exercise
 Pre-loaded library plus user-added custom exercises.
@@ -110,10 +113,18 @@ Pre-loaded library plus user-added custom exercises.
 | route | json, nullable | cardio only — tracked GPS points `{lat, lng, t?, alt?}[]`; splits and elevation gain are derived from this at render time (see `lib/workout.ts`), not stored |
 | visibility | enum | `private` \| `friends` — chosen on the post-finish summary screen; combines with the user's `share_workout_streak` to gate the friend feed |
 | photo_url | text, nullable | optional photo attached on the post-finish summary screen |
-| note | text | optional |
+| note | text | optional — free text about the workout, editable both while it's open (WorkoutNoteField) and afterwards from the log (updateWorkoutDetails) |
 
 For `type = strength`, has `WorkoutSet` rows. For `type = cardio`, `distance_km` +
 `duration_minutes` are the whole record — no sets.
+
+Indexed on `(user_id, date)` — every query here filters by user, usually with a
+date range too.
+
+Everything on a finished workout is editable from the log, not just at
+finish time: name, note, date, distance/duration (cardio), and per-set
+weight/reps (strength) — see `updateWorkoutDetails`/`updateWorkoutSet` in
+`workout/actions.ts`.
 
 ## WorkoutSet
 | field | type | notes |
@@ -127,8 +138,15 @@ For `type = strength`, has `WorkoutSet` rows. For `type = cardio`, `distance_km`
 | weight_unit | enum | `kg` \| `lb` |
 | is_warmup | boolean | |
 
-Progression view = all `WorkoutSet` rows for one exercise, ordered by the parent
-workout's date, tracking max weight (or estimated 1RM) over time.
+Indexed on `workout_id` (every set add/remove counts and lists by it — the
+single most frequent write in the app) and `exercise_id` (grouped across a
+user's whole history for the "last time" hint and the progression view).
+
+Progression view = best (highest estimated-1RM) set per exercise per day,
+across the same recent-workouts window used for "last time you did this"
+(see `LAST_PERFORMED_LOOKBACK` in `workout/page.tsx`) rather than a
+separate all-time query — /workout reloads on every set logged, so this
+keeps that reload bounded regardless of how long someone's used the app.
 
 ## Reminder
 Per-goal, not global — each goal picks its own days, plus which of the day's
@@ -193,6 +211,8 @@ two crossed pending rows for the same pair.
 
 Unique on `(requester_id, addressee_id)` — direction-specific, so the "already
 requested the other way" case is checked in application code, not the schema.
+Also indexed on `addressee_id` alone, since that's the other direction
+requests/feed lookups filter by just as often.
 
 ## Cheer
 A "like" on one specific activity (a workout or study session) in a
@@ -211,13 +231,22 @@ stops showing up in the feed, no cleanup needed.
 | created_at | timestamp | |
 
 Unique on `(from_user_id, workout_id)` and `(from_user_id, study_session_id)`
-separately — one like per person per activity.
+separately — one like per person per activity. Also indexed on `workout_id`
+and `study_session_id` alone, since the friend feed's like-count lookup
+filters by those directly, not by `from_user_id`.
 
 ## UserBadge
-A fixed, curated set of milestones (first journal entry, 7-day streaks,
-reaching level 5, etc. — the full list and copy lives in `src/lib/badges.ts`)
-rather than an open-ended point system, so each badge means something
-specific. Awarded automatically from the same actions that award XP.
+A fixed, curated set of milestones (first journal entry, streaks, XP levels,
+lifetime workout/study totals, friend-adding, time-of-day, etc. — the full
+list and copy lives in `src/lib/badgeInfo.ts`, imported by both the
+server-only award logic in `src/lib/badges.ts` and the client-side
+`BadgeWatcher` toast) rather than an open-ended point system, so each badge
+means something specific. Awarded automatically from the same actions that
+award XP; `BadgeWatcher` (mounted in the (main) layout) diffs the current
+user's badges against what it's already shown (tracked in localStorage) and
+pops up a toast for anything earned in roughly the last few minutes — not a
+push mechanism, just piggybacking on the router refresh every award-eligible
+action already triggers.
 
 | field | type | notes |
 |---|---|---|

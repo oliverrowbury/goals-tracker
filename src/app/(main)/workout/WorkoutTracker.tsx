@@ -6,6 +6,9 @@ import {
   addSet,
   removeSet,
   renameWorkout,
+  updateWorkoutNote,
+  updateWorkoutDetails,
+  updateWorkoutSet,
   finishStrengthWorkout,
   finishCardioWorkout,
   deleteWorkout,
@@ -36,7 +39,14 @@ import { WorkoutSummary, type JustFinishedWorkout } from "./WorkoutSummary";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
-type OpenWorkout = { id: string; type: WorkoutType; label: string; startedAt: string; sets: SetRow[] } | null;
+type OpenWorkout = {
+  id: string;
+  type: WorkoutType;
+  label: string;
+  note: string | null;
+  startedAt: string;
+  sets: SetRow[];
+} | null;
 type LastPerformed = Record<string, { dateISO: string; sets: { weight: number; reps: number; isWarmup: boolean }[] }>;
 type WeekSummary = { sessions: number; minutes: number; strengthCount: number; cardioCount: number; cardioKm: number };
 type HistorySet = { id: string; exerciseName: string; weight: number; reps: number; isWarmup: boolean };
@@ -44,6 +54,7 @@ type HistoryWorkout = {
   id: string;
   type: WorkoutType;
   label: string;
+  note: string | null;
   dateISO: string;
   durationMinutes: number | null;
   distanceKm: number | null;
@@ -261,6 +272,26 @@ function EditableLabel({ workoutId, label }: { workoutId: string; label: string 
     >
       {label}
     </button>
+  );
+}
+
+// A free-text note about the workout — how it felt, what to try next time —
+// saved onBlur like EditableLabel above, rather than a separate Save button.
+function WorkoutNoteField({ workoutId, note }: { workoutId: string; note: string | null }) {
+  const [value, setValue] = useState(note ?? "");
+  const [, startTransition] = useTransition();
+
+  return (
+    <textarea
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        if (value.trim() !== (note ?? "").trim()) startTransition(() => updateWorkoutNote(workoutId, value));
+      }}
+      placeholder="Add a note — how it felt, what to try next time…"
+      rows={2}
+      className="mt-3 w-full resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-workout focus:outline-none"
+    />
   );
 }
 
@@ -735,6 +766,7 @@ export function WorkoutTracker({
               </div>
               <p className="font-serif text-3xl font-semibold tabular-nums text-ink">{formatClock(elapsedSeconds)}</p>
             </div>
+            <WorkoutNoteField workoutId={openWorkout.id} note={openWorkout.note} />
             <div className="mt-4 flex items-center gap-2">
               <button
                 disabled={isPending}
@@ -852,6 +884,10 @@ export function WorkoutTracker({
             </div>
           )}
 
+          <div className="text-left">
+            <WorkoutNoteField workoutId={openWorkout.id} note={openWorkout.note} />
+          </div>
+
           <form
             action={finishCardioWorkout.bind(null, openWorkout.id)}
             onSubmit={() => {
@@ -945,6 +981,48 @@ export function WorkoutTracker({
   );
 }
 
+// One editable set row in a past workout's edit view — weight/reps only
+// (exercise/warm-up aren't editable after the fact; delete and re-add if
+// those are wrong), saved onBlur via updateWorkoutSet.
+function EditableSetRow({ set, index, weightUnit }: { set: HistorySet; index: number; weightUnit: WeightUnit }) {
+  const [weight, setWeight] = useState(String(parseFloat(fromKg(set.weight, weightUnit).toFixed(1))));
+  const [reps, setReps] = useState(String(set.reps));
+  const [, startTransition] = useTransition();
+
+  function save() {
+    const fd = new FormData();
+    fd.set("weight", weight);
+    fd.set("reps", reps);
+    startTransition(() => updateWorkoutSet(set.id, fd));
+  }
+
+  return (
+    <li className="flex items-center gap-2 text-xs text-ink-muted">
+      <span className="w-4 shrink-0">{index + 1}</span>
+      <input
+        value={weight}
+        onChange={(e) => setWeight(e.target.value)}
+        onBlur={save}
+        type="number"
+        inputMode="decimal"
+        min={0}
+        className="w-14 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
+      />
+      <span>{weightUnit === "LB" ? "lb" : "kg"} ×</span>
+      <input
+        value={reps}
+        onChange={(e) => setReps(e.target.value)}
+        onBlur={save}
+        type="number"
+        inputMode="numeric"
+        min={1}
+        className="w-12 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
+      />
+      {set.isWarmup && <span>(warm-up)</span>}
+    </li>
+  );
+}
+
 function WorkoutLogCard({
   workout,
   weightUnit,
@@ -958,6 +1036,7 @@ function WorkoutLogCard({
   expanded: boolean;
   onToggleExpand: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
   const isCardio = workout.type === "CARDIO";
   const hasRoute = (workout.route?.length ?? 0) >= 2;
   const pace = isCardio ? formatPace(workout.distanceKm, workout.durationMinutes, distanceUnit) : null;
@@ -1018,6 +1097,16 @@ function WorkoutLogCard({
                 <ChevronDownIcon className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                if (!expanded) onToggleExpand();
+                setEditing((v) => !v);
+              }}
+              className="py-1 text-xs font-medium text-workout hover:underline"
+            >
+              {editing ? "Done editing" : "Edit"}
+            </button>
             <ShareButton
               accentVar="--workout"
               fileName="workout.png"
@@ -1045,13 +1134,96 @@ function WorkoutLogCard({
             />
           </div>
 
-          {expanded && isCardio && workout.route && (
+          {editing && (
+            <form
+              action={updateWorkoutDetails.bind(null, workout.id)}
+              className="mt-3 space-y-2.5 border-t border-line pt-3"
+            >
+              <div>
+                <label className="mb-1 block text-xs text-ink-muted">Name</label>
+                <input
+                  name="label"
+                  defaultValue={workout.label}
+                  className="w-full rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-ink-muted">Notes</label>
+                <textarea
+                  name="note"
+                  defaultValue={workout.note ?? ""}
+                  rows={2}
+                  className="w-full resize-none rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                <div>
+                  <label className="mb-1 block text-xs text-ink-muted">Date</label>
+                  <input
+                    name="date"
+                    type="date"
+                    defaultValue={workout.dateISO}
+                    max={todayISO()}
+                    className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                  />
+                </div>
+                {isCardio && (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-xs text-ink-muted">Distance ({distanceUnit === "MI" ? "mi" : "km"})</label>
+                      <input
+                        name="distance"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        defaultValue={workout.distanceKm ? fromKm(workout.distanceKm, distanceUnit).toFixed(2) : ""}
+                        className="w-24 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs text-ink-muted">Minutes</label>
+                      <input
+                        name="durationMinutes"
+                        type="number"
+                        min="1"
+                        defaultValue={workout.durationMinutes ?? ""}
+                        className="w-20 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="rounded-lg bg-workout px-3.5 py-1.5 text-sm font-medium text-white hover:opacity-90"
+              >
+                Save changes
+              </button>
+
+              {!isCardio && exerciseOrder.length > 0 && (
+                <div className="space-y-3 border-t border-line pt-3">
+                  {exerciseOrder.map((name) => (
+                    <div key={name}>
+                      <p className="text-sm font-medium text-ink">{name}</p>
+                      <ul className="mt-1 space-y-1.5">
+                        {setsByExercise.get(name)!.map((s, i) => (
+                          <EditableSetRow key={s.id} set={s} index={i} weightUnit={weightUnit} />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </form>
+          )}
+
+          {expanded && !editing && isCardio && workout.route && (
             <div className="mt-2">
               <RouteMap points={workout.route} />
             </div>
           )}
 
-          {expanded && !isCardio && (
+          {expanded && !editing && !isCardio && (
             <div className="mt-3 space-y-3 border-t border-line pt-3">
               {exerciseOrder.map((name) => (
                 <div key={name}>

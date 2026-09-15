@@ -3,6 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
+import { awardBadge } from "@/lib/badges";
+
+async function awardFirstFriendBadge(userId: string) {
+  const count = await prisma.friendship.count({
+    where: { status: "ACCEPTED", OR: [{ requesterId: userId }, { addresseeId: userId }] },
+  });
+  if (count >= 1) await awardBadge(userId, "FIRST_FRIEND");
+}
 
 export type FriendSearchResult = {
   id: string;
@@ -68,6 +76,8 @@ async function createOrAcceptRequest(userId: string, otherId: string, otherName:
     // They already requested you — this is a mutual add, accept it
     // outright instead of leaving two crossed pending requests.
     await prisma.friendship.update({ where: { id: existing.id }, data: { status: "ACCEPTED" } });
+    await awardFirstFriendBadge(userId);
+    await awardFirstFriendBadge(otherId);
     revalidatePath("/friends");
     return { success: `You and ${otherName} are now friends` };
   }
@@ -104,6 +114,8 @@ export async function acceptFriendRequest(friendshipId: string) {
   if (!request) return;
 
   await prisma.friendship.update({ where: { id: friendshipId }, data: { status: "ACCEPTED" } });
+  await awardFirstFriendBadge(user.id);
+  await awardFirstFriendBadge(request.requesterId);
   revalidatePath("/friends");
 }
 

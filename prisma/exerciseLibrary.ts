@@ -36,6 +36,8 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Chest Dip", category: "Chest" },
   { name: "Landmine Press", category: "Chest" },
   { name: "Svend Press", category: "Chest" },
+  { name: "Guillotine Press", category: "Chest" },
+  { name: "Single Arm Cable Press", category: "Chest" },
 
   // Back
   { name: "Deadlift", category: "Back" },
@@ -72,6 +74,9 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Machine Shrug", category: "Back" },
   { name: "Cable Shrug", category: "Back" },
   { name: "Back Extension", category: "Back" },
+  { name: "Meadows Row", category: "Back" },
+  { name: "Inverted Row", category: "Back" },
+  { name: "Renegade Row", category: "Back" },
 
   // Shoulders
   { name: "Overhead Press", category: "Shoulders" },
@@ -97,6 +102,9 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Upright Row", category: "Shoulders" },
   { name: "Cable Upright Row", category: "Shoulders" },
   { name: "Cuban Press", category: "Shoulders" },
+  { name: "Egyptian Lateral Raise", category: "Shoulders" },
+  { name: "Bus Driver", category: "Shoulders" },
+  { name: "Viking Press", category: "Shoulders" },
 
   // Biceps
   { name: "Barbell Curl", category: "Biceps" },
@@ -117,6 +125,10 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Cable Hammer Curl", category: "Biceps" },
   { name: "Rope Cable Curl", category: "Biceps" },
   { name: "Machine Bicep Curl", category: "Biceps" },
+  { name: "21s", category: "Biceps" },
+  { name: "Drag Curl", category: "Biceps" },
+  { name: "Waiter Curl", category: "Biceps" },
+  { name: "Cable Preacher Curl", category: "Biceps" },
 
   // Triceps
   { name: "Tricep Pushdown", category: "Triceps" },
@@ -136,6 +148,8 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Weighted Dip", category: "Triceps" },
   { name: "Tricep Kickback", category: "Triceps" },
   { name: "Cable Tricep Kickback", category: "Triceps" },
+  { name: "Tate Press", category: "Triceps" },
+  { name: "Diamond Bench Press", category: "Triceps" },
 
   // Forearms
   { name: "Wrist Curl", category: "Forearms" },
@@ -144,6 +158,8 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Farmer's Carry", category: "Forearms" },
   { name: "Plate Pinch", category: "Forearms" },
   { name: "Dead Hang", category: "Forearms" },
+  { name: "Behind the Back Wrist Curl", category: "Forearms" },
+  { name: "Wrist Roller", category: "Forearms" },
 
   // Quadriceps
   { name: "Barbell Back Squat", category: "Quadriceps" },
@@ -169,6 +185,10 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Leg Extension", category: "Quadriceps" },
   { name: "Sissy Squat", category: "Quadriceps" },
   { name: "Belt Squat", category: "Quadriceps" },
+  { name: "Zercher Squat", category: "Quadriceps" },
+  { name: "Spanish Squat", category: "Quadriceps" },
+  { name: "Pistol Squat", category: "Quadriceps" },
+  { name: "Sissy Squat Machine", category: "Quadriceps" },
 
   // Hamstrings
   { name: "Romanian Deadlift", category: "Hamstrings" },
@@ -180,6 +200,8 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Standing Leg Curl", category: "Hamstrings" },
   { name: "Nordic Curl", category: "Hamstrings" },
   { name: "Glute Ham Raise", category: "Hamstrings" },
+  { name: "Swiss Ball Leg Curl", category: "Hamstrings" },
+  { name: "Single Leg Romanian Deadlift", category: "Hamstrings" },
 
   // Calves
   { name: "Standing Calf Raise", category: "Calves" },
@@ -224,6 +246,9 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Dead Bug", category: "Abdominals" },
   { name: "Flutter Kicks", category: "Abdominals" },
   { name: "Pallof Press", category: "Abdominals" },
+  { name: "Hollow Body Hold", category: "Abdominals" },
+  { name: "L-Sit", category: "Abdominals" },
+  { name: "Stir the Pot", category: "Abdominals" },
 
   // Full Body & Olympic
   { name: "Clean", category: "Full Body & Olympic" },
@@ -245,4 +270,9 @@ export const EXERCISE_LIBRARY: { name: string; category: string }[] = [
   { name: "Sled Pull", category: "Full Body & Olympic" },
   { name: "Box Jump", category: "Full Body & Olympic" },
   { name: "Man Maker", category: "Full Body & Olympic" },
+  { name: "Farmer's Walk", category: "Full Body & Olympic" },
+  { name: "Tire Flip", category: "Full Body & Olympic" },
+  { name: "Bear Crawl", category: "Full Body & Olympic" },
+  { name: "Sled Drag", category: "Full Body & Olympic" },
+  { name: "Devil Press", category: "Full Body & Olympic" },
 ];

@@ -6,6 +6,7 @@ import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } fr
 import { setGoalActive } from "./actions";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 import { GoalTodayCheckbox } from "./GoalTodayCheckbox";
+import { GoalExtraInput } from "./GoalExtraInput";
 import { TargetIcon, FlameIcon } from "@/components/Icons";
 
 const HISTORY_DAYS = 14;
@@ -89,21 +90,25 @@ export default async function GoalsPage() {
           );
           const streak = goal.frequencyType !== "WEEKLY_TARGET" ? computeStreak(goal, completedDates, today) : null;
 
-          const weekTotal =
-            goal.frequencyType === "WEEKLY_TARGET"
-              ? goal.subjectId
-                ? (weekMinutesBySubject.get(goal.subjectId) ?? 0)
-                : goal.workoutMetric === "SESSIONS"
-                  ? weekWorkoutSessionCount
-                  : goal.workoutMetric === "MINUTES"
-                    ? weekWorkoutMinutes
-                    : goal.logs
-                        .filter((l) => {
-                          const d = l.date.toISOString().slice(0, 10);
-                          return d >= weekStartISO && d <= weekEndISO;
-                        })
-                        .reduce((sum, l) => sum + (l.value ?? 0), 0)
-              : null;
+          const isAutoTracked = goal.frequencyType === "WEEKLY_TARGET" && !!(goal.subjectId || goal.workoutMetric);
+          const autoPart = goal.subjectId
+            ? (weekMinutesBySubject.get(goal.subjectId) ?? 0)
+            : goal.workoutMetric === "SESSIONS"
+              ? weekWorkoutSessionCount
+              : goal.workoutMetric === "MINUTES"
+                ? weekWorkoutMinutes
+                : 0;
+          const manualPart = goal.logs
+            .filter((l) => {
+              const d = l.date.toISOString().slice(0, 10);
+              return d >= weekStartISO && d <= weekEndISO;
+            })
+            .reduce((sum, l) => sum + (l.value ?? 0), 0);
+          // Auto-tracked total plus any manual top-up logged alongside it —
+          // see GoalExtraInput below for why a manual entry can exist even
+          // on an auto-tracked goal.
+          const weekTotal = goal.frequencyType === "WEEKLY_TARGET" ? autoPart + manualPart : null;
+          const todayExtra = goal.logs.find((l) => l.date.toISOString().slice(0, 10) === today)?.value ?? null;
 
           const historyDays = Array.from({ length: HISTORY_DAYS }, (_, i) => shiftISO(today, -(HISTORY_DAYS - 1 - i)));
 
@@ -161,11 +166,16 @@ export default async function GoalsPage() {
                       style={{ width: `${Math.min(100, ((weekTotal / (goal.targetValue || 1)) * 100))}%` }}
                     />
                   </div>
-                  <p className="mt-1.5 text-xs text-ink-muted">
-                    {weekTotal}/{goal.targetValue} {goal.unit} this week
-                    {goal.subjectId && " · auto-tracked from Study"}
-                    {goal.workoutMetric && " · auto-tracked from Workouts"}
-                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-xs text-ink-muted">
+                      {weekTotal}/{goal.targetValue} {goal.unit} this week
+                      {goal.subjectId && " · auto-tracked from Study"}
+                      {goal.workoutMetric && " · auto-tracked from Workouts"}
+                    </p>
+                    {isAutoTracked && (
+                      <GoalExtraInput goalId={goal.id} dateISO={today} initialValue={todayExtra} unit={goal.unit} />
+                    )}
+                  </div>
                 </div>
               )}
 

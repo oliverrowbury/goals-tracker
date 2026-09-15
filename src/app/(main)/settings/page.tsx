@@ -23,7 +23,7 @@ import {
   TargetIcon,
   MoonIcon,
 } from "@/components/Icons";
-import { formatLong, todayISO } from "@/lib/dates";
+import { formatLong, todayISO, shiftISO, daysBetween } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
 import { BADGE_INFO } from "@/lib/badges";
@@ -80,6 +80,9 @@ export default async function SettingsPage() {
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
   const today = todayISO();
+  const usernameCooldownDaysLeft = user.usernameChangedAt
+    ? Math.max(0, 7 - daysBetween(user.usernameChangedAt.toISOString().slice(0, 10), today))
+    : 0;
   const journaledDateSet = new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10)));
   const journalStreak = computeStreak(journaledDateSet, today);
   const totalEntries = journaledDateSet.size;
@@ -147,6 +150,11 @@ export default async function SettingsPage() {
           <FlameIcon className="h-3.5 w-3.5 text-accent" />
           {totalEntries} journal {totalEntries === 1 ? "entry" : "entries"} written in total
         </p>
+        <p className="mt-2 text-xs">
+          <Link href={`/?week=${shiftISO(today, -7)}#recap`} className="text-accent hover:underline">
+            Browse past weekly recaps →
+          </Link>
+        </p>
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
@@ -201,7 +209,7 @@ export default async function SettingsPage() {
 
         <div className="mt-6 border-t border-line pt-6">
           <p className="mb-3 text-sm font-medium text-ink">Username</p>
-          <UsernameForm current={user.username} />
+          <UsernameForm current={user.username} cooldownDaysLeft={usernameCooldownDaysLeft} />
         </div>
 
         <div className="mt-6 border-t border-line pt-6">

@@ -156,6 +156,22 @@ textarea {
   }
 }
 
+/* BadgeWatcher's toast — already horizontally centered via the
+   -translate-x-1/2 utility, so the animation's own transform keeps that
+   -50% throughout (an animation's transform fully replaces the element's
+   static one while running, not composes with it — dropping the -50% here
+   would make the toast jump sideways the moment the animation starts). */
+@keyframes badge-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* Ambient halo behind the breathing orb — rotates continuously and
    independently of the breathing phase, so the animation never looks
    static even during a 4s "hold". */

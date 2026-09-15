@@ -1,17 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, shiftISO, isoToDate, formatWeekRange, formatLong } from "@/lib/dates";
+import { todayISO, shiftISO, isoToDate, formatWeekRange } from "@/lib/dates";
 import { weekRangeContaining, isGoalDueOn } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace } from "@/lib/workout";
 import { ChartIcon } from "@/components/Icons";
-
-function snippet(text: string, max = 90): string {
-  const trimmed = text.trim();
-  if (trimmed.length <= max) return trimmed;
-  return trimmed.slice(0, max).trimEnd() + "…";
-}
 
 export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
   const { startISO, endISO } = weekRangeContaining(anchorISO);
@@ -22,11 +16,7 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
   const rangeStart = isoToDate(startISO);
   const rangeEnd = new Date(`${endISO}T23:59:59.999Z`);
 
-  const [entries, goals, sessions, subjects, workouts] = await Promise.all([
-    prisma.journalEntry.findMany({
-      where: { userId: user.id, date: { gte: rangeStart, lte: rangeEnd } },
-      orderBy: { date: "asc" },
-    }),
+  const [goals, sessions, subjects, workouts] = await Promise.all([
     prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
       where: { userId: user.id, endedAt: { not: null }, startedAt: { gte: rangeStart, lte: rangeEnd } },
@@ -71,14 +61,10 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
 
-  const journaledDays = days
-    .map((d) => ({ dateISO: d, entry: entries.find((e) => e.date.toISOString().slice(0, 10) === d) }))
-    .filter((d) => d.entry && (d.entry.bodyText.trim() || d.entry.improveText?.trim()));
-
   const isCurrentWeek = startISO === weekRangeContaining(today).startISO;
 
   return (
-    <div className="mt-10">
+    <div id="recap" className="mt-10 scroll-mt-6">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <ChartIcon className="h-5 w-5 shrink-0 text-ink-muted" />
@@ -178,26 +164,6 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
                 {cardioKm > 0 && ` · ${formatDistance(cardioKm, user.distanceUnit)} covered`}
               </p>
             </>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
-            <span className="h-2 w-2 rounded-full bg-accent" /> Journal highlights
-          </h3>
-          {journaledDays.length === 0 ? (
-            <p className="text-sm text-ink-muted">No journal entries this week.</p>
-          ) : (
-            <ul className="-mx-5 divide-y divide-line">
-              {journaledDays.map(({ dateISO, entry }) => (
-                <li key={dateISO}>
-                  <Link href={`/journal?date=${dateISO}`} className="block px-5 py-2.5 hover:bg-paper">
-                    <p className="text-xs font-medium text-ink-muted">{formatLong(dateISO)}</p>
-                    {entry!.bodyText.trim() && <p className="mt-1 text-sm text-ink">{snippet(entry!.bodyText)}</p>}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           )}
         </section>
       </div>

@@ -7,17 +7,19 @@ import { minutesBetween } from "@/lib/study";
 import { toKg, toKm } from "@/lib/workout";
 import type { WorkoutType } from "@/lib/constants";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
-import { awardBadge, awardStreakBadges } from "@/lib/badges";
+import { awardBadge, awardStreakBadges, awardWorkoutCountBadges, awardTimeOfDayBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
-import { todayISO } from "@/lib/dates";
+import { todayISO, isoToDate } from "@/lib/dates";
 import { uploadWorkoutPhoto as uploadWorkoutPhotoToStorage, deleteWorkoutPhoto } from "@/lib/storage";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardWorkoutBadges(userId: string) {
   const workouts = await prisma.workout.findMany({ where: { userId, endedAt: { not: null } }, select: { date: true } });
   if (workouts.length === 1) await awardBadge(userId, "FIRST_WORKOUT");
+  await awardWorkoutCountBadges(userId, workouts.length);
   const streak = computeStreak(new Set(workouts.map((w) => w.date.toISOString().slice(0, 10))), todayISO());
   await awardStreakBadges(userId, "WORKOUT", streak);
+  await awardTimeOfDayBadges(userId, new Date());
 }
 
 function revalidateWorkoutViews() {
@@ -67,12 +69,17 @@ export async function addSet(workoutId: string, exerciseId: string, formData: Fo
   await prisma.workoutSet.create({
     data: { workoutId, exerciseId, setNumber: count + 1, weight, reps, isWarmup },
   });
-  revalidateWorkoutViews();
+  // Just /workout, not the full revalidateWorkoutViews() — this fires on
+  // every single set logged (many times per workout, exactly the "adding
+  // an exercise feels slow at the gym" hot path), and /journal, /goals,
+  // and / only ever show week-level workout totals that don't change
+  // until the workout actually finishes.
+  revalidatePath("/workout");
 }
 
 export async function removeSet(setId: string) {
   await prisma.workoutSet.delete({ where: { id: setId } });
-  revalidateWorkoutViews();
+  revalidatePath("/workout");
 }
 
 export async function renameWorkout(workoutId: string, label: string) {
@@ -80,6 +87,71 @@ export async function renameWorkout(workoutId: string, label: string) {
   if (!trimmed) return;
   await prisma.workout.update({ where: { id: workoutId }, data: { label: trimmed } });
   revalidateWorkoutViews();
+}
+
+// Free-text notes about the workout — how it felt, what to try next time,
+// etc. Shown on the open workout card while it's running and editable
+// again from the log afterwards (see updateWorkoutDetails).
+export async function updateWorkoutNote(workoutId: string, note: string) {
+  const user = await getCurrentUser();
+  await prisma.workout.updateMany({ where: { id: workoutId, userId: user.id }, data: { note: note.trim() || null } });
+  revalidateWorkoutViews();
+}
+
+// Editing a finished workout from the log — name, note, the date it counts
+// toward, and (cardio only) distance/duration, all in one form rather than
+// onBlur-per-field like the live tracker, since this is an occasional
+// correction rather than something typed continuously.
+export async function updateWorkoutDetails(workoutId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout) return;
+
+  const label = String(formData.get("label") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  const dateISO = String(formData.get("date") ?? "").trim();
+
+  const data: {
+    label?: string;
+    note?: string | null;
+    date?: Date;
+    durationMinutes?: number;
+    distanceKm?: number | null;
+  } = { note: note || null };
+  if (label) data.label = label;
+  if (dateISO) data.date = isoToDate(dateISO);
+
+  if (workout.type === "CARDIO") {
+    const durationRaw = Number(formData.get("durationMinutes"));
+    if (Number.isFinite(durationRaw) && durationRaw > 0) data.durationMinutes = Math.round(durationRaw);
+
+    const distanceRaw = String(formData.get("distance") ?? "").trim();
+    if (distanceRaw) {
+      const distance = Number(distanceRaw);
+      if (Number.isFinite(distance) && distance >= 0) data.distanceKm = toKm(distance, user.distanceUnit);
+    }
+  }
+
+  await prisma.workout.update({ where: { id: workoutId }, data });
+  revalidateWorkoutViews();
+  revalidatePath("/friends");
+}
+
+// Editing one already-logged set (weight/reps) from the log, in whatever
+// unit the user currently has set — same conversion-at-the-edges rule as
+// addSet.
+export async function updateWorkoutSet(setId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  const enteredWeight = Number(formData.get("weight"));
+  const reps = Number(formData.get("reps"));
+  if (!Number.isFinite(enteredWeight) || enteredWeight < 0 || !Number.isFinite(reps) || reps <= 0) return;
+
+  const set = await prisma.workoutSet.findFirst({ where: { id: setId }, include: { workout: true } });
+  if (!set || set.workout.userId !== user.id) return;
+
+  const weight = toKg(enteredWeight, user.weightUnit);
+  await prisma.workoutSet.update({ where: { id: setId }, data: { weight, reps } });
+  revalidatePath("/workout");
 }
 
 export async function finishStrengthWorkout(workoutId: string) {

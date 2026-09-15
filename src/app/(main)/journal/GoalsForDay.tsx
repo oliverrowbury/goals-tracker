@@ -46,14 +46,41 @@ function WeeklyTargetRow({ goal, dateISO }: { goal: DayGoal; dateISO: string }) 
   const [weekTotal, setWeekTotal] = useState(goal.weekTotal ?? 0);
   const [isPending, startTransition] = useTransition();
 
+  // Auto-tracked goals still get a manual top-up input — the auto-tracked
+  // source (Study timer / Workout log) might have missed something, so
+  // this isn't a replacement for it, just extra on top. goal.value/weekTotal
+  // already fold in any manual amount alongside the auto-tracked part (see
+  // journal/page.tsx), so this input only ever adds to what's tracked
+  // automatically, never overwrites it.
   if (goal.isAutoTracked) {
     return (
       <>
         <span className="text-sm text-ink">{goal.title}</span>
-        <span className="text-xs text-ink-muted">
-          <span className="font-medium text-goals">{weekTotal}</span>/{goal.targetValue} {goal.unit} this week ·
-          auto-tracked
-        </span>
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            disabled={isPending}
+            defaultValue={goal.value ?? ""}
+            placeholder="0"
+            title="Log extra, on top of what's auto-tracked — in case the timer/log missed some"
+            onBlur={(e) => {
+              const newValue = Number(e.target.value || 0);
+              const delta = newValue - value;
+              setValue(newValue);
+              setWeekTotal((t) => t + delta); // optimistic weekly total
+              startTransition(() => {
+                setGoalLogValue(goal.id, dateISO, newValue);
+              });
+            }}
+            className="w-16 rounded-md border border-line px-2 py-1 text-right text-sm focus:border-goals focus:outline-none"
+          />
+          <span className="text-xs text-ink-muted">
+            extra today · <span className="font-medium text-goals">{weekTotal}</span>/{goal.targetValue} {goal.unit}{" "}
+            this week · auto-tracked
+          </span>
+        </div>
       </>
     );
   }

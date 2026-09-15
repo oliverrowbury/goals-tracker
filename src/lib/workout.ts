@@ -6,6 +6,13 @@ export function computeVolume(sets: { weight: number; reps: number; isWarmup: bo
   return sets.filter((s) => !s.isWarmup).reduce((sum, s) => sum + s.weight * s.reps, 0);
 }
 
+// Epley formula — a common, simple estimate, not a claim of precision (true
+// 1RM only comes from actually testing it). 1 rep is already the max, so
+// it's returned as-is rather than run through the formula.
+export function estimateOneRepMax(weightKg: number, reps: number): number {
+  return reps <= 1 ? weightKg : weightKg * (1 + reps / 30);
+}
+
 // "12:04" under an hour, "1:02:04" once it runs past one — shared between
 // the live in-progress timer and the post-workout summary.
 export function formatClock(totalSeconds: number): string {
