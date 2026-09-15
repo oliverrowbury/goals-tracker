@@ -23,7 +23,7 @@ export function CopyLinkButton({ path }: { path: string }) {
       onClick={copy}
       className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:border-calm hover:text-calm"
     >
-      {copied ? "Copied!" : "Copy my friend link"}
+      {copied ? "Copied!" : "Copy my follow link"}
     </button>
   );
 }

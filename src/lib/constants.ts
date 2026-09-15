@@ -35,6 +35,15 @@ export type WorkoutMetric = (typeof WORKOUT_METRICS)[number];
 export const DISTANCE_UNITS = ["KM", "MI"] as const;
 export type DistanceUnit = (typeof DISTANCE_UNITS)[number];
 
+export const GENDERS = ["MALE", "FEMALE", "NON_BINARY", "PREFER_NOT_TO_SAY"] as const;
+export type Gender = (typeof GENDERS)[number];
+export const GENDER_LABELS: Record<Gender, string> = {
+  MALE: "Male",
+  FEMALE: "Female",
+  NON_BINARY: "Non-binary",
+  PREFER_NOT_TO_SAY: "Prefer not to say",
+};
+
 export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"] as const;
 
 // Lowercase letters/digits/underscores, starting with a letter — keeps a

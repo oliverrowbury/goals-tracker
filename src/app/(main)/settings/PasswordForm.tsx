@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { PasswordInput } from "@/components/PasswordInput";
 import { changePassword } from "./actions";
 
 export function PasswordForm() {
@@ -19,10 +20,9 @@ export function PasswordForm() {
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="currentPassword">
           Current password
         </label>
-        <input
+        <PasswordInput
           id="currentPassword"
-          name="currentPassword"
-          type="password"
+          autoComplete="current-password"
           required
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
@@ -32,10 +32,9 @@ export function PasswordForm() {
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="newPassword">
           New password
         </label>
-        <input
+        <PasswordInput
           id="newPassword"
-          name="newPassword"
-          type="password"
+          autoComplete="new-password"
           required
           minLength={6}
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
@@ -46,10 +45,9 @@ export function PasswordForm() {
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="confirmPassword">
           Confirm new password
         </label>
-        <input
+        <PasswordInput
           id="confirmPassword"
-          name="confirmPassword"
-          type="password"
+          autoComplete="new-password"
           required
           minLength={6}
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Wordmark } from "@/components/Wordmark";
+import { PasswordInput } from "@/components/PasswordInput";
 import { signup } from "./actions";
 
 const inputClass =
@@ -26,22 +27,36 @@ function Field({
   error?: string;
   defaultValue?: string;
 }) {
+  const fieldClassName = `${inputClass} ${error ? "border-accent" : "border-line focus:border-accent"}`;
+
   return (
     <div className="mb-4">
       <label className="mb-1 block text-sm font-medium text-ink" htmlFor={id}>
         {label}
       </label>
-      <input
-        id={id}
-        name={id}
-        type={type}
-        autoComplete={autoComplete}
-        autoFocus={autoFocus}
-        required
-        defaultValue={defaultValue}
-        aria-invalid={!!error}
-        className={`${inputClass} ${error ? "border-accent" : "border-line focus:border-accent"}`}
-      />
+      {type === "password" ? (
+        <PasswordInput
+          id={id}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
+          required
+          defaultValue={defaultValue}
+          ariaInvalid={!!error}
+          className={fieldClassName}
+        />
+      ) : (
+        <input
+          id={id}
+          name={id}
+          type={type}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
+          required
+          defaultValue={defaultValue}
+          aria-invalid={!!error}
+          className={fieldClassName}
+        />
+      )}
       {error && <p className="text-xs text-accent-strong">{error}</p>}
     </div>
   );

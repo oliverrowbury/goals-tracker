@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { UsersIcon } from "@/components/Icons";
-import { sendFriendRequestToVoid, acceptFriendRequest } from "../../actions";
+import { followUserVoid, unfollowUser } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,16 +14,9 @@ export default async function AddFriendByLinkPage({ params }: { params: Promise<
   if (!target) notFound();
 
   const isSelf = target.id === user.id;
-  const existing = isSelf
-    ? null
-    : await prisma.friendship.findFirst({
-        where: {
-          OR: [
-            { requesterId: user.id, addresseeId: target.id },
-            { requesterId: target.id, addresseeId: user.id },
-          ],
-        },
-      });
+  const alreadyFollowing = isSelf
+    ? false
+    : (await prisma.follow.findFirst({ where: { followerId: user.id, followingId: target.id } })) != null;
 
   return (
     <div className="mx-auto max-w-sm text-center">
@@ -35,21 +28,18 @@ export default async function AddFriendByLinkPage({ params }: { params: Promise<
 
       <div className="mt-6">
         {isSelf ? (
-          <p className="text-sm text-ink-muted">This is your own friend link — share it with someone else instead.</p>
-        ) : existing?.status === "ACCEPTED" ? (
-          <p className="text-sm text-calm">You&apos;re already friends.</p>
-        ) : existing && existing.requesterId === user.id ? (
-          <p className="text-sm text-ink-muted">Request already sent — waiting for {target.name} to accept.</p>
-        ) : existing && existing.requesterId === target.id ? (
-          <form action={acceptFriendRequest.bind(null, existing.id)}>
-            <button type="submit" className="rounded-lg bg-calm px-5 py-2 text-sm font-medium text-white hover:opacity-90">
-              Accept {target.name}&apos;s request
+          <p className="text-sm text-ink-muted">This is your own share link — send it to someone else instead.</p>
+        ) : alreadyFollowing ? (
+          <form action={unfollowUser.bind(null, target.id)}>
+            <p className="mb-2 text-sm text-calm">You&apos;re following {target.name}.</p>
+            <button type="submit" className="text-sm text-ink-muted hover:text-accent">
+              Unfollow
             </button>
           </form>
         ) : (
-          <form action={sendFriendRequestToVoid.bind(null, target.id)}>
+          <form action={followUserVoid.bind(null, target.id)}>
             <button type="submit" className="rounded-lg bg-calm px-5 py-2 text-sm font-medium text-white hover:opacity-90">
-              Add {target.name} as a friend
+              Follow {target.name}
             </button>
           </form>
         )}

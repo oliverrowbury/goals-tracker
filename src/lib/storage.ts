@@ -52,3 +52,10 @@ export async function uploadWorkoutPhoto(userId: string, workoutId: string, file
 }
 
 export const deleteWorkoutPhoto = deletePhoto;
+
+export async function uploadAvatarPhoto(userId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  return uploadPhoto(`avatars/${userId}-${Date.now()}.${ext}`, file);
+}
+
+export const deleteAvatarPhoto = deletePhoto;

@@ -29,7 +29,7 @@ export const BADGE_INFO: Record<Badge, { emoji: string; label: string; descripti
   TOTAL_WORKOUTS_100: { emoji: "🥇", label: "100 workouts", description: "Finished 100 workouts total" },
   TOTAL_STUDY_HOURS_10: { emoji: "🕙", label: "10 hours studied", description: "Racked up 10 hours of study time total" },
   TOTAL_STUDY_HOURS_50: { emoji: "🕰️", label: "50 hours studied", description: "Racked up 50 hours of study time total" },
-  FIRST_FRIEND: { emoji: "🤝", label: "Made a friend", description: "Added your first friend" },
+  FIRST_FRIEND: { emoji: "🤝", label: "First follow", description: "Followed your first person on Proudly" },
   EARLY_BIRD: { emoji: "🌅", label: "Early bird", description: "Finished a workout or study session before 7am" },
   NIGHT_OWL: { emoji: "🦉", label: "Night owl", description: "Finished a workout or study session after 10pm" },
 };

@@ -1,9 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
-import { removeFriendship } from "./actions";
+import { unfollowUser } from "./actions";
 
-export function RemoveFriendButton({ friendshipId, name }: { friendshipId: string; name: string }) {
+export function UnfollowButton({ userId, name }: { userId: string; name: string }) {
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -11,13 +11,13 @@ export function RemoveFriendButton({ friendshipId, name }: { friendshipId: strin
       type="button"
       disabled={isPending}
       onClick={() => {
-        if (confirm(`Remove ${name} as a friend?`)) {
-          startTransition(() => removeFriendship(friendshipId));
+        if (confirm(`Unfollow ${name}?`)) {
+          startTransition(() => unfollowUser(userId));
         }
       }}
       className="text-sm text-ink-muted hover:text-accent disabled:opacity-50"
     >
-      Remove
+      Unfollow
     </button>
   );
 }

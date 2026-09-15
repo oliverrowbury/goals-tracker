@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { isoToDate } from "@/lib/dates";
+import { isoToDate, isFutureISO } from "@/lib/dates";
 import {
   GOAL_FREQUENCY_TYPES,
   WEEKDAYS,
@@ -135,6 +135,7 @@ export async function setGoalActive(goalId: string, active: boolean) {
 }
 
 export async function toggleGoalCompletion(goalId: string, dateISO: string) {
+  if (isFutureISO(dateISO)) return;
   const date = isoToDate(dateISO);
   const [goal, existing] = await Promise.all([
     prisma.goal.findUniqueOrThrow({ where: { id: goalId }, select: { userId: true } }),
@@ -159,6 +160,7 @@ export async function toggleGoalCompletion(goalId: string, dateISO: string) {
 }
 
 export async function setGoalLogValue(goalId: string, dateISO: string, value: number) {
+  if (isFutureISO(dateISO)) return;
   const date = isoToDate(dateISO);
   const [goal, existing] = await Promise.all([
     prisma.goal.findUniqueOrThrow({ where: { id: goalId }, select: { userId: true } }),

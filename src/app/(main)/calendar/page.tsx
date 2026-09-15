@@ -90,11 +90,36 @@ export default async function CalendarPage({
         {days.map((dayISO) => {
           const inMonth = monthISOOf(dayISO) === monthISO;
           const isToday = dayISO === today;
+          const isFuture = dayISO > today;
           const hasJournal = journalDays.has(dayISO);
           const hasGoal = goalDays.has(dayISO);
           const hasStudy = studyDays.has(dayISO);
           const dayNum = Number(dayISO.slice(8, 10));
           const mood = moodByDay.get(dayISO);
+
+          const dots = (hasJournal || hasGoal || hasStudy) && (
+            <span className="mt-auto flex items-center gap-0.5 pb-1.5">
+              {hasJournal && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
+              {hasGoal && <span className="h-1.5 w-1.5 rounded-full bg-goals" />}
+              {hasStudy && <span className="h-1.5 w-1.5 rounded-full bg-study" />}
+            </span>
+          );
+
+          // A future day has nothing to show and nothing to log yet — render
+          // it as a plain, unclickable cell rather than a link into a day
+          // that doesn't make sense to open.
+          if (isFuture) {
+            return (
+              <div
+                key={dayISO}
+                className={`flex aspect-square flex-col items-center gap-1 rounded-xl border pt-2 text-sm ${
+                  inMonth ? "border-transparent text-ink-muted/40" : "border-transparent text-ink-muted/20"
+                }`}
+              >
+                <span>{dayNum}</span>
+              </div>
+            );
+          }
 
           return (
             <Link
@@ -106,13 +131,7 @@ export default async function CalendarPage({
             >
               <span className={inMonth ? "text-ink" : "text-ink-muted/50"}>{dayNum}</span>
               {mood != null && <span className="text-base leading-none">{moodFace(mood)}</span>}
-              {(hasJournal || hasGoal || hasStudy) && (
-                <span className="mt-auto flex items-center gap-0.5 pb-1.5">
-                  {hasJournal && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
-                  {hasGoal && <span className="h-1.5 w-1.5 rounded-full bg-goals" />}
-                  {hasStudy && <span className="h-1.5 w-1.5 rounded-full bg-study" />}
-                </span>
-              )}
+              {dots}
             </Link>
           );
         })}

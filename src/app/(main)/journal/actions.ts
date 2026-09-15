@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { isoToDate, todayISO } from "@/lib/dates";
+import { isoToDate, todayISO, isFutureISO } from "@/lib/dates";
 import { uploadJournalPhoto, deleteJournalPhoto } from "@/lib/storage";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
 
 export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string) {
+  if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
 
@@ -38,6 +39,7 @@ export async function saveJournalEntry(dateISO: string, bodyText: string, improv
 }
 
 export async function setMood(dateISO: string, mood: number) {
+  if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
 
@@ -56,6 +58,7 @@ export async function setMood(dateISO: string, mood: number) {
 // prompt is a lightweight daily check-in, so it saves itself rather than
 // waiting on the full journal entry's Save button.
 export async function savePromptResponse(dateISO: string, promptResponse: string) {
+  if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
 
@@ -70,6 +73,7 @@ export async function savePromptResponse(dateISO: string, promptResponse: string
 }
 
 export async function uploadEntryPhoto(dateISO: string, formData: FormData): Promise<{ error: string } | null> {
+  if (isFutureISO(dateISO)) return { error: "Can't add a photo to a day that hasn't happened yet" };
   const user = await getCurrentUser();
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo first" };
@@ -97,6 +101,7 @@ export async function uploadEntryPhoto(dateISO: string, formData: FormData): Pro
 }
 
 export async function removeEntryPhoto(dateISO: string) {
+  if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
   const entry = await prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } });

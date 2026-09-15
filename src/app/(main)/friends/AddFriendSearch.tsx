@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { searchUsers, sendFriendRequestTo, type FriendSearchResult } from "./actions";
+import { searchUsers, followUser, unfollowUser, type FriendSearchResult } from "./actions";
 
 export function AddFriendSearch() {
   const [query, setQuery] = useState("");
@@ -20,10 +20,19 @@ export function AddFriendSearch() {
     });
   }
 
-  function handleAdd(target: FriendSearchResult) {
+  function handleFollow(target: FriendSearchResult) {
     startTransition(async () => {
-      const result = await sendFriendRequestTo(target.id);
+      const result = await followUser(target.id);
       setMessage(result?.error ?? result?.success ?? null);
+      const r = await searchUsers(query);
+      setResults(r);
+    });
+  }
+
+  function handleUnfollow(target: FriendSearchResult) {
+    startTransition(async () => {
+      await unfollowUser(target.id);
+      setMessage(null);
       const r = await searchUsers(query);
       setResults(r);
     });
@@ -47,19 +56,25 @@ export function AddFriendSearch() {
                 <span className="font-medium text-ink">{r.name}</span>{" "}
                 <span className="text-ink-muted">@{r.username}</span>
               </span>
-              {r.status === "none" && (
+              {r.following ? (
                 <button
                   type="button"
-                  onClick={() => handleAdd(r)}
+                  onClick={() => handleUnfollow(r)}
+                  disabled={isPending}
+                  className="shrink-0 rounded-lg border border-line px-3 py-1 text-xs font-medium text-ink-muted hover:border-accent hover:text-accent disabled:opacity-50"
+                >
+                  Following
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleFollow(r)}
                   disabled={isPending}
                   className="shrink-0 rounded-lg bg-calm px-3 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-50"
                 >
-                  Add
+                  Follow
                 </button>
               )}
-              {r.status === "pending_sent" && <span className="shrink-0 text-xs text-ink-muted">Request sent</span>}
-              {r.status === "pending_received" && <span className="shrink-0 text-xs text-ink-muted">Respond below</span>}
-              {r.status === "friends" && <span className="shrink-0 text-xs text-calm">Friends</span>}
             </li>
           ))}
         </ul>

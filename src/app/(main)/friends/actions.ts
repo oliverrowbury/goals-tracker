@@ -5,10 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { awardBadge } from "@/lib/badges";
 
-async function awardFirstFriendBadge(userId: string) {
-  const count = await prisma.friendship.count({
-    where: { status: "ACCEPTED", OR: [{ requesterId: userId }, { addresseeId: userId }] },
-  });
+async function awardFirstFollowBadge(userId: string) {
+  const count = await prisma.follow.count({ where: { followerId: userId } });
   if (count >= 1) await awardBadge(userId, "FIRST_FRIEND");
 }
 
@@ -16,7 +14,7 @@ export type FriendSearchResult = {
   id: string;
   name: string;
   username: string;
-  status: "none" | "pending_sent" | "pending_received" | "friends";
+  following: boolean;
 };
 
 // Username matches as a prefix (like most apps' public-handle search) so
@@ -38,95 +36,48 @@ export async function searchUsers(query: string): Promise<FriendSearchResult[]> 
   });
   if (candidates.length === 0) return [];
 
-  const friendships = await prisma.friendship.findMany({
-    where: {
-      OR: [
-        { requesterId: user.id, addresseeId: { in: candidates.map((c) => c.id) } },
-        { addresseeId: user.id, requesterId: { in: candidates.map((c) => c.id) } },
-      ],
-    },
+  const follows = await prisma.follow.findMany({
+    where: { followerId: user.id, followingId: { in: candidates.map((c) => c.id) } },
+    select: { followingId: true },
   });
+  const followingSet = new Set(follows.map((f) => f.followingId));
 
-  return candidates.map((c) => {
-    const f = friendships.find((f) => f.requesterId === c.id || f.addresseeId === c.id);
-    let status: FriendSearchResult["status"] = "none";
-    if (f?.status === "ACCEPTED") status = "friends";
-    else if (f?.requesterId === user.id) status = "pending_sent";
-    else if (f) status = "pending_received";
-    return { ...c, status };
-  });
+  return candidates.map((c) => ({ ...c, following: followingSet.has(c.id) }));
 }
 
-export type FriendRequestState = { error?: string; success?: string } | null;
+export type FollowState = { error?: string; success?: string } | null;
 
-async function createOrAcceptRequest(userId: string, otherId: string, otherName: string): Promise<FriendRequestState> {
-  const existing = await prisma.friendship.findFirst({
-    where: {
-      OR: [
-        { requesterId: userId, addresseeId: otherId },
-        { requesterId: otherId, addresseeId: userId },
-      ],
-    },
-  });
-
-  if (existing?.status === "ACCEPTED") return { error: `You're already friends with ${otherName}` };
-  if (existing && existing.requesterId === userId) return { error: `You've already sent ${otherName} a request` };
-
-  if (existing && existing.requesterId === otherId) {
-    // They already requested you — this is a mutual add, accept it
-    // outright instead of leaving two crossed pending requests.
-    await prisma.friendship.update({ where: { id: existing.id }, data: { status: "ACCEPTED" } });
-    await awardFirstFriendBadge(userId);
-    await awardFirstFriendBadge(otherId);
-    revalidatePath("/friends");
-    return { success: `You and ${otherName} are now friends` };
-  }
-
-  await prisma.friendship.create({ data: { requesterId: userId, addresseeId: otherId } });
-  revalidatePath("/friends");
-  return { success: `Request sent to ${otherName}` };
-}
-
-// Used by search results and the /friends/add/[username] share link, where
-// the target is already a resolved user rather than free-typed text.
-export async function sendFriendRequestTo(targetUserId: string): Promise<FriendRequestState> {
+// One-directional — no acceptance needed, same as Strava. Used by search
+// results and the /friends/add/[username] share link, where the target is
+// already a resolved user rather than free-typed text.
+export async function followUser(targetUserId: string): Promise<FollowState> {
   const user = await getCurrentUser();
   if (targetUserId === user.id) return { error: "That's you" };
 
   const other = await prisma.user.findUnique({ where: { id: targetUserId } });
   if (!other) return { error: "That account doesn't exist" };
 
-  return createOrAcceptRequest(user.id, other.id, other.name);
+  try {
+    await prisma.follow.create({ data: { followerId: user.id, followingId: other.id } });
+  } catch {
+    // Unique constraint — already following them.
+    return { error: `You're already following ${other.name}` };
+  }
+  await awardFirstFollowBadge(user.id);
+  revalidatePath("/friends");
+  return { success: `Now following ${other.name}` };
 }
 
-// Same as sendFriendRequestTo but discards the result — for the
+// Same as followUser but discards the result — for the
 // /friends/add/[username] page's plain <form action>, which (unlike
 // AddFriendSearch) has no client-side state to show a return value in.
-export async function sendFriendRequestToVoid(targetUserId: string): Promise<void> {
-  await sendFriendRequestTo(targetUserId);
+export async function followUserVoid(targetUserId: string): Promise<void> {
+  await followUser(targetUserId);
 }
 
-export async function acceptFriendRequest(friendshipId: string) {
+export async function unfollowUser(targetUserId: string) {
   const user = await getCurrentUser();
-  // findFirst (not findUniqueOrThrow) so a request meant for someone else
-  // just no-ops instead of accepting on their behalf.
-  const request = await prisma.friendship.findFirst({ where: { id: friendshipId, addresseeId: user.id } });
-  if (!request) return;
-
-  await prisma.friendship.update({ where: { id: friendshipId }, data: { status: "ACCEPTED" } });
-  await awardFirstFriendBadge(user.id);
-  await awardFirstFriendBadge(request.requesterId);
-  revalidatePath("/friends");
-}
-
-// Covers declining a pending request, cancelling one you sent, and
-// removing an existing friend — all the same "this row shouldn't exist
-// anymore" operation, just at different statuses.
-export async function removeFriendship(friendshipId: string) {
-  const user = await getCurrentUser();
-  await prisma.friendship.deleteMany({
-    where: { id: friendshipId, OR: [{ requesterId: user.id }, { addresseeId: user.id }] },
-  });
+  await prisma.follow.deleteMany({ where: { followerId: user.id, followingId: targetUserId } });
   revalidatePath("/friends");
 }
 
@@ -148,10 +99,11 @@ export type ActivityKind = "workout" | "study";
 
 // A like on one specific activity in a friend's feed — capped at one per
 // person per activity (the unique constraints on Cheer), not per day.
-// Re-checks the friendship *and* the owner's current share setting for that
-// category server-side rather than trusting that the activity only reached
-// this call because it was visible in the feed — the feed is the normal
-// path here, but this is the actual privacy boundary.
+// Re-checks that the liker actually follows the owner *and* the owner's
+// current share setting for that category server-side rather than trusting
+// that the activity only reached this call because it was visible in the
+// feed — the feed is the normal path here, but this is the actual privacy
+// boundary.
 export async function likeActivity(kind: ActivityKind, activityId: string) {
   const user = await getCurrentUser();
 
@@ -161,22 +113,14 @@ export async function likeActivity(kind: ActivityKind, activityId: string) {
       : await prisma.studySession.findUnique({ where: { id: activityId }, select: { userId: true } });
   if (!owner || owner.userId === user.id) return;
 
-  const [friendship, ownerUser] = await Promise.all([
-    prisma.friendship.findFirst({
-      where: {
-        status: "ACCEPTED",
-        OR: [
-          { requesterId: user.id, addresseeId: owner.userId },
-          { requesterId: owner.userId, addresseeId: user.id },
-        ],
-      },
-    }),
+  const [follows, ownerUser] = await Promise.all([
+    prisma.follow.findFirst({ where: { followerId: user.id, followingId: owner.userId } }),
     prisma.user.findUnique({
       where: { id: owner.userId },
       select: { shareWorkoutStreak: true, shareStudyStreak: true },
     }),
   ]);
-  if (!friendship || !ownerUser) return;
+  if (!follows || !ownerUser) return;
   if (kind === "workout" && !ownerUser.shareWorkoutStreak) return;
   if (kind === "study" && !ownerUser.shareStudyStreak) return;
 

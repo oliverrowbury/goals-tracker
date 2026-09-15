@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, monthRangeContaining, dateToISO } from "@/lib/dates";
+import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, monthRangeContaining, dateToISO, isFutureISO } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { JournalEditor } from "./JournalEditor";
@@ -24,7 +25,12 @@ export default async function JournalPage({
   const { date } = await searchParams;
   const today = todayISO();
   const dateISO = date ?? today;
+  // A future day hasn't happened yet, so there's nothing to log against it
+  // — bounce back to today rather than letting mood/goals/journal be filled
+  // in ahead of time.
+  if (isFutureISO(dateISO)) redirect("/journal");
   const isToday = dateISO === today;
+  const isPast = !isToday;
 
   const user = await getCurrentUser();
   const { startISO: weekStartISO, endISO: weekEndISO } = weekRangeContaining(dateISO);
@@ -148,17 +154,24 @@ export default async function JournalPage({
           </div>
         </div>
         <div className="flex items-center gap-2 text-sm">
+          {isPast && (
+            <Link href="/calendar" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
+              ← Calendar
+            </Link>
+          )}
           <Link href={`/journal?date=${prevISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
             ← Prev
           </Link>
-          {!isToday && (
+          {isPast && (
             <Link href="/journal" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
               Today
             </Link>
           )}
-          <Link href={`/journal?date=${nextISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
-            Next →
-          </Link>
+          {isPast && (
+            <Link href={`/journal?date=${nextISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
+              Next →
+            </Link>
+          )}
         </div>
       </div>
 

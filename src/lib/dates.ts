@@ -30,6 +30,12 @@ export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// ISO date strings compare lexicographically the same as chronologically,
+// so this is a plain string comparison — no Date parsing needed.
+export function isFutureISO(dateISO: string): boolean {
+  return dateISO > todayISO();
+}
+
 export function isoToDate(iso: string): Date {
   return new Date(`${iso}T00:00:00.000Z`);
 }

@@ -46,6 +46,19 @@ export function fromKm(km: number, unit: "KM" | "MI"): number {
   return unit === "MI" ? km / KM_PER_MILE : km;
 }
 
+const CM_PER_INCH = 2.54;
+
+// Height follows the same imperial/metric split as distanceUnit (miles vs
+// km implies feet/in vs cm) rather than its own separate preference —
+// canonical storage is always cm.
+export function toCm(value: number, unit: "KM" | "MI"): number {
+  return unit === "MI" ? value * CM_PER_INCH : value;
+}
+
+export function fromCm(cm: number, unit: "KM" | "MI"): number {
+  return unit === "MI" ? cm / CM_PER_INCH : cm;
+}
+
 export function formatWeight(kg: number, unit: "KG" | "LB"): string {
   const value = fromKg(kg, unit);
   return `${parseFloat(value.toFixed(1))}${unit === "LB" ? "lb" : "kg"}`;

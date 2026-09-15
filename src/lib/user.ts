@@ -13,6 +13,7 @@ function parseForwardedUser(raw: string): User {
     ...parsed,
     createdAt: new Date(parsed.createdAt),
     usernameChangedAt: parsed.usernameChangedAt ? new Date(parsed.usernameChangedAt) : null,
+    birthday: parsed.birthday ? new Date(parsed.birthday) : null,
   };
 }
 
@@ -35,4 +36,13 @@ export async function getCurrentUser(): Promise<User> {
   if (!token) throw new Error("Not signed in");
 
   return prisma.user.findUniqueOrThrow({ where: { sessionToken: token } });
+}
+
+// The three fields /onboarding collects and won't let through empty —
+// checked here (rather than a separate stored flag) so there's one
+// definition of "done" that can't drift from what the form actually
+// requires. Shared by the proxy's onboarding redirect and the onboarding
+// page itself.
+export function hasCompletedProfile(user: Pick<User, "birthday" | "gender" | "city">): boolean {
+  return !!(user.birthday && user.gender && user.city);
 }

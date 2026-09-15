@@ -83,6 +83,13 @@ enum ReminderSlot {
   NIGHT
 }
 
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -129,6 +136,23 @@ model User {
   shareStudyStreak   Boolean @default(true)
   shareWorkoutStreak Boolean @default(true)
 
+  // Public profile fields — nullable at the schema level so an existing
+  // account never breaks, but birthday/gender/city are treated as required
+  // by the app itself: /onboarding gates the rest of the app behind them
+  // (see hasCompletedProfile in lib/user.ts), shown right after signup
+  // and to any older account that predates this. bio/avatarUrl/pronouns/
+  // weightKg/heightCm stay genuinely optional even there.
+  birthday  DateTime?
+  gender    Gender?
+  city      String?
+  bio       String?
+  pronouns  String?
+  avatarUrl String?
+  // Canonical SI units, same convention as workout's weightUnit/distanceUnit
+  // — converted at the UI's edges, not stored in whatever unit was typed.
+  weightKg Float?
+  heightCm Float?
+
   journalEntries    JournalEntry[]
   goals             Goal[]
   subjects          Subject[]
@@ -140,10 +164,10 @@ model User {
   deadlines         Deadline[]
   badges            UserBadge[]
 
-  sentFriendRequests     Friendship[] @relation("FriendshipRequester")
-  receivedFriendRequests Friendship[] @relation("FriendshipAddressee")
-  cheersSent             Cheer[]      @relation("CheerFrom")
-  cheersReceived         Cheer[]      @relation("CheerTo")
+  following Follow[] @relation("Follower")
+  followers Follow[] @relation("Following")
+  cheersSent     Cheer[] @relation("CheerFrom")
+  cheersReceived Cheer[] @relation("CheerTo")
 }
 
 model PushSubscription {
@@ -429,33 +453,26 @@ model DeadlineReminderSent {
   @@unique([deadlineId, kind])
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-}
-
-// One row per pair, not two — requester sent it, addressee either accepts
-// (status flips to ACCEPTED, same row) or the row is deleted (declined, or
-// an accepted friendship removed). A pair is unique regardless of
-// direction, enforced in application code (see friends/actions.ts) rather
-// than the schema, since Postgres can't express "unordered pair unique" as
-// a plain constraint without also normalizing which id goes first.
-model Friendship {
+// One-directional, Strava-style — following someone needs no acceptance
+// from them, so followerId and followingId aren't symmetric the way the
+// old Friendship pair was. A "FRIENDS"-visibility activity (see
+// ActivityVisibility) shows to whoever follows its owner, regardless of
+// whether the owner follows back.
+model Follow {
   id String @id @default(uuid())
 
-  requesterId String
-  requester   User   @relation("FriendshipRequester", fields: [requesterId], references: [id])
-  addresseeId String
-  addressee   User   @relation("FriendshipAddressee", fields: [addresseeId], references: [id])
+  followerId  String
+  follower    User   @relation("Follower", fields: [followerId], references: [id])
+  followingId String
+  following   User   @relation("Following", fields: [followingId], references: [id])
 
-  status    FriendshipStatus @default(PENDING)
-  createdAt DateTime         @default(now())
+  createdAt DateTime @default(now())
 
-  @@unique([requesterId, addresseeId])
-  // requesterId is already covered as the leading column of the unique
-  // index above — addresseeId needs its own, since friend-request/feed
-  // lookups filter by "am I the addressee" just as often.
-  @@index([addresseeId])
+  @@unique([followerId, followingId])
+  // followerId is already covered as the leading column of the unique
+  // index above — followingId needs its own, since "who follows me" (feed
+  // + follower-count) lookups filter by it just as often.
+  @@index([followingId])
 }
 
 // A "like" on one specific activity in a friend's feed (a finished workout

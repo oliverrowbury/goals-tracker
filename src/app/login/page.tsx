@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
+import { PasswordInput } from "@/components/PasswordInput";
 
 export default async function LoginPage({
   searchParams,
@@ -43,14 +44,14 @@ export default async function LoginPage({
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="password">
           Password
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
-        />
+        <div className="mb-4">
+          <PasswordInput
+            id="password"
+            autoComplete="current-password"
+            required
+            className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </div>
 
         <button
           type="submit"

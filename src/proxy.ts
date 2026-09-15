@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth";
-import { CURRENT_USER_HEADER } from "@/lib/user";
+import { CURRENT_USER_HEADER, hasCompletedProfile } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 
 // Proxy (formerly "middleware") runs on the Node.js runtime by default as
@@ -23,6 +23,15 @@ export async function proxy(request: NextRequest) {
   if (token) {
     const user = await prisma.user.findUnique({ where: { sessionToken: token } });
     if (user) {
+      // Birthday/gender/city are required before anywhere else in the app
+      // is reachable — /onboarding and logging out are the only things
+      // still allowed through without them, so someone who signed up by
+      // mistake isn't trapped with no way out, and this can't loop.
+      const bypassesOnboardingGate = request.nextUrl.pathname === "/onboarding" || request.nextUrl.pathname === "/api/logout";
+      if (!hasCompletedProfile(user) && !bypassesOnboardingGate) {
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
+
       const headers = new Headers(request.headers);
       headers.set(CURRENT_USER_HEADER, JSON.stringify(user));
       return NextResponse.next({ request: { headers } });

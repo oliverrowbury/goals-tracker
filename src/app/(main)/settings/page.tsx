@@ -11,6 +11,8 @@ import { DarkModeSwitch } from "./DarkModeSwitch";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
+import { AvatarUpload } from "./AvatarUpload";
+import { ProfileForm } from "./ProfileForm";
 import {
   GearIcon,
   ClockIcon,
@@ -28,6 +30,7 @@ import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
 import { BADGE_INFO } from "@/lib/badges";
 import { ADMIN_EMAIL } from "@/lib/auth";
+import { fromKg, fromCm } from "@/lib/workout";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +101,61 @@ export default async function SettingsPage() {
         <GearIcon className="h-5 w-5 shrink-0 text-ink-muted" />
         <h1 className="font-serif text-2xl font-semibold text-ink">Settings</h1>
       </div>
+
+      <section id="account" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Account</h2>
+        <p className="mb-4 text-sm text-ink-muted">Your name, photo, profile, password, and a copy of your data.</p>
+
+        <AvatarUpload name={user.name} initialAvatarUrl={user.avatarUrl} />
+
+        <form action={updateName} className="mt-4 flex max-w-sm gap-2">
+          <input
+            name="name"
+            defaultValue={user.name}
+            required
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
+            Save
+          </button>
+        </form>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-3 text-sm font-medium text-ink">Username</p>
+          <UsernameForm current={user.username} cooldownDaysLeft={usernameCooldownDaysLeft} />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-3 text-sm font-medium text-ink">Profile</p>
+          <ProfileForm
+            birthdayISO={user.birthday ? user.birthday.toISOString().slice(0, 10) : null}
+            gender={user.gender}
+            city={user.city}
+            bio={user.bio}
+            pronouns={user.pronouns}
+            weight={user.weightKg != null ? fromKg(user.weightKg, user.weightUnit) : null}
+            height={user.heightCm != null ? fromCm(user.heightCm, user.distanceUnit) : null}
+            weightUnit={user.weightUnit}
+            distanceUnit={user.distanceUnit}
+          />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-3 text-sm font-medium text-ink">Password</p>
+          <PasswordForm />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-2 text-sm font-medium text-ink">Your data</p>
+          <a
+            href="/api/export"
+            download
+            className="inline-block rounded-lg border border-line px-4 py-2 text-sm text-ink-muted hover:border-accent hover:text-accent"
+          >
+            Download my data (JSON)
+          </a>
+        </div>
+      </section>
 
       <div className="rounded-2xl border border-line bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -189,44 +247,6 @@ export default async function SettingsPage() {
         </h2>
         <p className="mb-4 text-sm text-ink-muted">Light or dark — no other color options, that&apos;s the whole picker.</p>
         <DarkModeSwitch />
-      </section>
-
-      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Account</h2>
-        <p className="mb-4 text-sm text-ink-muted">Your name, password, and a copy of your data.</p>
-
-        <form action={updateName} className="flex max-w-sm gap-2">
-          <input
-            name="name"
-            defaultValue={user.name}
-            required
-            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
-          />
-          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
-            Save
-          </button>
-        </form>
-
-        <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-3 text-sm font-medium text-ink">Username</p>
-          <UsernameForm current={user.username} cooldownDaysLeft={usernameCooldownDaysLeft} />
-        </div>
-
-        <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-3 text-sm font-medium text-ink">Password</p>
-          <PasswordForm />
-        </div>
-
-        <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-2 text-sm font-medium text-ink">Your data</p>
-          <a
-            href="/api/export"
-            download
-            className="inline-block rounded-lg border border-line px-4 py-2 text-sm text-ink-muted hover:border-accent hover:text-accent"
-          >
-            Download my data (JSON)
-          </a>
-        </div>
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

@@ -1,22 +1,30 @@
 # Data model
 
 Real multi-user accounts — every table is scoped by `user_id`, and nothing reads
-across users except the friends feed (`Friendship`, below), which is explicitly
-gated by an accepted friendship plus the other user's own per-category
-`share_*_streak` opt-in.
+across users except the friends feed (`Follow`, below), which is explicitly
+gated by a one-directional follow (Strava-style — no acceptance needed) plus
+the other user's own per-category `share_*_streak` opt-in.
 
 ## User
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
 | email | text | private — never shown to other users, including friends |
-| username | text | public handle, unique — how friends find/add each other (`/friends/add/[username]`) |
+| username | text | public handle, unique — how people find/follow each other (`/friends/add/[username]`) |
 | username_changed_at | timestamp, nullable | set whenever username actually changes (not on signup) — gates a 7-day change cooldown in settings/actions.ts |
 | name | text | display name, not unique |
 | xp | integer | simple points total; level is derived from this at display time rather than stored |
-| share_journal_streak | boolean | opt-in: whether accepted friends can see this user's journal streak |
-| share_study_streak | boolean | opt-in: whether accepted friends can see this user's study streak |
-| share_workout_streak | boolean | opt-in: whether accepted friends can see this user's workout streak |
+| share_journal_streak | boolean | opt-in: whether followers can see this user's journal streak |
+| share_study_streak | boolean | opt-in: whether followers can see this user's study streak |
+| share_workout_streak | boolean | opt-in: whether followers can see this user's workout streak |
+| birthday | date, nullable | nullable at the schema level, but treated as required by the app — `/onboarding` gates the rest of the app behind it (see `hasCompletedProfile` in `lib/user.ts`) |
+| gender | enum, nullable | `male` \| `female` \| `non_binary` \| `prefer_not_to_say`; same required-by-app-not-schema treatment as birthday |
+| city | text, nullable | same required-by-app-not-schema treatment as birthday |
+| bio | text, nullable | optional, shown on the Friends page profile card |
+| pronouns | text, nullable | optional, freeform |
+| avatar_url | text, nullable | optional, public URL of a photo uploaded to Supabase Storage |
+| weight_kg | float, nullable | optional; canonical kg, converted to the user's `weight_unit` at the UI's edges same as Workout |
+| height_cm | float, nullable | optional; canonical cm, converted to cm/in based on `distance_unit` (km ⇒ cm, mi ⇒ in) at the UI's edges |
 | created_at | timestamp | |
 
 ## JournalEntry
@@ -194,25 +202,23 @@ never double-sends the same one.
 
 Unique on `(deadline_id, kind)`.
 
-## Friendship
-One row per pair, not two — whoever adds first is the requester. `status`
-starts `pending`; the addressee accepting flips the same row to `accepted`
-rather than creating a second row. If the addressee had *already* sent
-their own request first, adding back accepts that one instead of leaving
-two crossed pending rows for the same pair.
+## Follow
+One-directional, Strava-style — following someone needs no acceptance from
+them, so `follower_id` and `following_id` aren't a symmetric pair the way the
+old `Friendship` model's requester/addressee was. A `FRIENDS`-visibility
+activity (see `ActivityVisibility` on `Workout`/`StudySession`) shows to
+whoever follows its owner, regardless of whether the owner follows back.
 
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
-| requester_id | uuid | the user who sent the request |
-| addressee_id | uuid | the user who received it |
-| status | enum | `pending` \| `accepted` |
+| follower_id | uuid | the user doing the following |
+| following_id | uuid | the user being followed |
 | created_at | timestamp | |
 
-Unique on `(requester_id, addressee_id)` — direction-specific, so the "already
-requested the other way" case is checked in application code, not the schema.
-Also indexed on `addressee_id` alone, since that's the other direction
-requests/feed lookups filter by just as often.
+Unique on `(follower_id, following_id)`. Also indexed on `following_id` alone,
+since "who follows me" (feed + follower-count) lookups filter by it just as
+often.
 
 ## Cheer
 A "like" on one specific activity (a workout or study session) in a
@@ -237,7 +243,7 @@ filters by those directly, not by `from_user_id`.
 
 ## UserBadge
 A fixed, curated set of milestones (first journal entry, streaks, XP levels,
-lifetime workout/study totals, friend-adding, time-of-day, etc. — the full
+lifetime workout/study totals, first follow, time-of-day, etc. — the full
 list and copy lives in `src/lib/badgeInfo.ts`, imported by both the
 server-only award logic in `src/lib/badges.ts` and the client-side
 `BadgeWatcher` toast) rather than an open-ended point system, so each badge
@@ -267,7 +273,7 @@ User 1─* Exercise (custom only)
 User 1─* Workout 1─* WorkoutSet *─1 Exercise
 User 1─* Deadline *─1 Subject (optional)
 Deadline 1─* DeadlineReminderSent
-User 1─* Friendship (as requester) *─1 User (as addressee)
+User 1─* Follow (as follower) *─1 User (as followed)
 User 1─* Cheer (as sender) *─1 User (as recipient)
 User 1─* UserBadge
 Goal 1─* Reminder
