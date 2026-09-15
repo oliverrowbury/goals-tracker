@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useDarkMode } from "@/lib/useDarkMode";
 
 function SunIcon({ className }: { className?: string }) {
   return (
@@ -29,40 +29,13 @@ function MoonIcon({ className }: { className?: string }) {
   );
 }
 
-// Reads the class set synchronously by the inline script in the root layout
-// (so there's no flash of the wrong theme) — this component just toggles it.
 export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
-
-  useEffect(() => {
-    // Deferred to an effect (not a lazy useState initializer) on purpose —
-    // this component is server-rendered too, where `document` doesn't
-    // exist, so the initial render always shows the light-mode icon. A
-    // lazy initializer reading `document` would make the client's first
-    // hydration pass disagree with that server output whenever dark mode
-    // is actually active, which is a hydration mismatch, not a fix for
-    // one. Correcting the icon here, after mount, avoids that at the cost
-    // of a harmless one-frame icon flash — the same tradeoff the inline
-    // theme script in the root layout accepts for the page background.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
-
-  function toggle() {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    try {
-      localStorage.setItem("theme", next ? "dark" : "light");
-    } catch {
-      // not persisted this session — not worth surfacing to the user
-    }
-  }
+  const { isDark, setDark } = useDarkMode();
 
   return (
     <button
       type="button"
-      onClick={toggle}
+      onClick={() => setDark(!isDark)}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="flex items-center justify-center p-2 -m-0.5 text-ink-muted hover:text-accent"
     >

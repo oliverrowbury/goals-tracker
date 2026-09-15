@@ -7,6 +7,7 @@ import { UsernameForm } from "./UsernameForm";
 import { UnitsForm } from "./UnitsForm";
 import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
+import { DarkModeSwitch } from "./DarkModeSwitch";
 import { HelpSection } from "./HelpSection";
 import { FeedbackForm } from "./FeedbackForm";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
@@ -20,6 +21,7 @@ import {
   FlameIcon,
   JournalIcon,
   TargetIcon,
+  MoonIcon,
 } from "@/components/Icons";
 import { formatLong, todayISO } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
@@ -170,6 +172,15 @@ export default async function SettingsPage() {
             );
           })}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <MoonIcon className="h-4 w-4 text-ink-muted" />
+          Appearance
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">Light or dark — no other color options, that&apos;s the whole picker.</p>
+        <DarkModeSwitch />
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
