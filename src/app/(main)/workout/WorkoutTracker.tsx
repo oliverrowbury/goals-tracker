@@ -12,13 +12,14 @@ import {
   createExercise,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { formatPace, formatDistance, formatWeight, fromKg, computeVolume, fromKm, haversineKm } from "@/lib/workout";
+import { formatPace, formatDistance, formatWeight, fromKg, computeVolume, formatClock, fromKm, toKm, haversineKm } from "@/lib/workout";
 import { useClockOffsetMs } from "@/lib/time";
-import { todayISO, shiftISO } from "@/lib/dates";
+import { todayISO, shiftISO, weekdayShortDayMonth } from "@/lib/dates";
 import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
 import { ShareButton } from "@/components/ShareButton";
+import { WorkoutSummary, type JustFinishedWorkout } from "./WorkoutSummary";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
@@ -47,14 +48,6 @@ function useElapsedSeconds(startedAt: string | null, clockOffsetMs: number): num
   }, [startedAt, clockOffsetMs]);
   if (!startedAt) return 0;
   return Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1000));
-}
-
-function formatClock(totalSeconds: number): string {
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
 // A rest timer between sets, the way Hevy/Strong do it — one countdown for
@@ -263,12 +256,7 @@ function dayLabel(dateISO: string): string {
   const today = todayISO();
   if (dateISO === today) return "Today";
   if (dateISO === shiftISO(today, -1)) return "Yesterday";
-  return new Date(`${dateISO}T00:00:00.000Z`).toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
+  return weekdayShortDayMonth(dateISO);
 }
 
 function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
@@ -604,7 +592,9 @@ export function WorkoutTracker({
     openWorkout ? Array.from(new Set(openWorkout.sets.map((s) => s.exerciseId))) : [],
   );
   const [addingExercise, setAddingExercise] = useState(false);
-  const [startTab, setStartTab] = useState<WorkoutType>("STRENGTH");
+  const [startTab, setStartTab] = useState<WorkoutType | null>(null);
+  const [selectedCardioActivity, setSelectedCardioActivity] = useState<string | null>(null);
+  const [justFinished, setJustFinished] = useState<JustFinishedWorkout | null>(null);
   const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
   const [restEndAt, setRestEndAt] = useState<number | null>(null);
@@ -630,24 +620,47 @@ export function WorkoutTracker({
     setAddingExercise(false);
     setDistanceOverride(null);
     setRestEndAt(null);
+    // A new workout starting means any previous "just finished" summary is
+    // stale — clear it so discarding *this* one doesn't flash the old one
+    // back. Finishing sets a fresh snapshot right as it happens, so this
+    // never races with that.
+    if (openWorkout) {
+      setJustFinished(null);
+      setStartTab(null);
+      setSelectedCardioActivity(null);
+    }
   }
 
   const exerciseById = new Map(localExercises.map((e) => [e.id, e]));
 
   return (
     <div className="space-y-8">
-      {!openWorkout && (
+      {!openWorkout && justFinished && (
+        <WorkoutSummary
+          workout={justFinished}
+          weightUnit={weightUnit}
+          distanceUnit={distanceUnit}
+          onDone={() => setJustFinished(null)}
+        />
+      )}
+
+      {!openWorkout && !justFinished && (
         <div>
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Start a workout</h2>
           <div className="grid grid-cols-2 gap-3">
-            {/* Strength has no sub-type, so tapping it starts a workout right
-                away — same one-tap feel as tapping a specific cardio
-                activity below, rather than a tap-to-select-then-tap-to-start
-                two-step. */}
+            {/* Tapping a type only selects it — it doesn't start anything
+                yet. Starting is its own deliberate action below, so a stray
+                tap here can't accidentally kick off a timed workout. */}
             <button
-              disabled={isPending}
-              onClick={() => startTransition(() => startWorkout("STRENGTH", "Workout"))}
-              className="flex flex-col items-center gap-2 rounded-xl border border-line bg-card p-4 text-ink-muted transition hover:border-workout hover:text-workout disabled:opacity-50"
+              onClick={() => {
+                setStartTab("STRENGTH");
+                setSelectedCardioActivity(null);
+              }}
+              className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
+                startTab === "STRENGTH"
+                  ? "border-workout bg-workout-soft text-workout"
+                  : "border-line bg-card text-ink-muted hover:border-workout hover:text-workout"
+              }`}
             >
               <DumbbellIcon className="h-6 w-6" />
               <span className="text-sm font-medium">Strength</span>
@@ -672,15 +685,30 @@ export function WorkoutTracker({
                 {CARDIO_ACTIVITIES.map((activity) => (
                   <button
                     key={activity}
-                    disabled={isPending}
-                    onClick={() => startTransition(() => startWorkout("CARDIO", activity))}
-                    className="rounded-lg border border-line bg-card px-3.5 py-2 text-sm text-ink hover:border-workout hover:text-workout disabled:opacity-50"
+                    onClick={() => setSelectedCardioActivity(activity)}
+                    className={`rounded-lg border px-3.5 py-2 text-sm transition ${
+                      selectedCardioActivity === activity
+                        ? "border-workout bg-workout-soft text-workout"
+                        : "border-line bg-card text-ink hover:border-workout hover:text-workout"
+                    }`}
                   >
                     {activity}
                   </button>
                 ))}
               </div>
             </div>
+          )}
+
+          {startTab && (startTab === "STRENGTH" || selectedCardioActivity) && (
+            <button
+              disabled={isPending}
+              onClick={() =>
+                startTransition(() => startWorkout(startTab, startTab === "STRENGTH" ? "Workout" : selectedCardioActivity!))
+              }
+              className="mt-4 w-full rounded-xl bg-workout py-3.5 text-base font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
+            >
+              Start {startTab === "STRENGTH" ? "Workout" : selectedCardioActivity}
+            </button>
           )}
         </div>
       )}
@@ -698,7 +726,17 @@ export function WorkoutTracker({
             <div className="mt-4 flex items-center gap-2">
               <button
                 disabled={isPending}
-                onClick={() => startTransition(() => finishStrengthWorkout(openWorkout.id))}
+                onClick={() => {
+                  setJustFinished({
+                    type: "STRENGTH",
+                    label: openWorkout.label,
+                    durationSeconds: elapsedSeconds,
+                    exerciseCount: activeExerciseIds.length,
+                    setCount: openWorkout.sets.filter((s) => !s.isWarmup).length,
+                    volumeKg: computeVolume(openWorkout.sets),
+                  });
+                  startTransition(() => finishStrengthWorkout(openWorkout.id));
+                }}
                 className="rounded-lg bg-ink-solid px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
                 Finish
@@ -795,6 +833,17 @@ export function WorkoutTracker({
 
           <form
             action={finishCardioWorkout.bind(null, openWorkout.id)}
+            onSubmit={() => {
+              const displayDistance = distanceOverride ?? (gpsDistanceKm > 0 ? fromKm(gpsDistanceKm, distanceUnit).toFixed(2) : "");
+              const distanceKm = displayDistance ? toKm(Number(displayDistance), distanceUnit) : undefined;
+              setJustFinished({
+                type: "CARDIO",
+                label: openWorkout.label,
+                durationSeconds: elapsedSeconds,
+                distanceKm,
+                route: gpsPoints,
+              });
+            }}
             className="mt-5 flex items-center justify-center gap-2"
           >
             <input type="hidden" name="route" value={JSON.stringify(gpsPoints)} />

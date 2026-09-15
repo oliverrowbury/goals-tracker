@@ -6,6 +6,16 @@ export function computeVolume(sets: { weight: number; reps: number; isWarmup: bo
   return sets.filter((s) => !s.isWarmup).reduce((sum, s) => sum + s.weight * s.reps, 0);
 }
 
+// "12:04" under an hour, "1:02:04" once it runs past one — shared between
+// the live in-progress timer and the post-workout summary.
+export function formatClock(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
 const KG_PER_LB = 0.45359237;
 const KM_PER_MILE = 1.609344;
 

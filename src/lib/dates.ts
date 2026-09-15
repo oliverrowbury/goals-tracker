@@ -2,6 +2,30 @@
 // "date" we deal with in the UI is a plain YYYY-MM-DD string — no timezone
 // arithmetic to get wrong.
 
+// Weekday/month names are built by hand rather than via
+// `toLocaleDateString` wherever `weekday` is involved — Node's ICU data
+// (server-rendered HTML) and the browser's (hydration) have disagreed on
+// whether a comma follows a short/long weekday name (e.g. "Sun 13 Sept" vs
+// "Sun, 13 Sept"), which trips a hydration mismatch on every page that
+// renders one. Fixed lookups can't drift between server and client.
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAY_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
+const MONTH_LONG = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -93,11 +117,20 @@ export function formatWeekRange(startISO: string, endISO: string): string {
 }
 
 export function formatLong(iso: string): string {
-  return isoToDate(iso).toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  const d = isoToDate(iso);
+  return `${WEEKDAY_LONG[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTH_LONG[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+
+// "Sun 13 Sept" — the short weekday+day+month label used for recent-history
+// rows (workout log, study sessions) once something's more than a day old.
+export function weekdayShortDayMonth(iso: string): string {
+  const d = isoToDate(iso);
+  return `${WEEKDAY_SHORT[d.getUTCDay()]} ${d.getUTCDate()} ${MONTH_SHORT[d.getUTCMonth()]}`;
+}
+
+// "Sun 13" — same as above but without the month, for rows that are
+// already grouped/scoped to a single month.
+export function weekdayShortDay(iso: string): string {
+  const d = isoToDate(iso);
+  return `${WEEKDAY_SHORT[d.getUTCDay()]} ${d.getUTCDate()}`;
 }

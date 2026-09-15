@@ -1,6 +1,6 @@
 import { deleteStudySession } from "./actions";
 import { formatMinutes } from "@/lib/study";
-import { todayISO, shiftISO } from "@/lib/dates";
+import { todayISO, shiftISO, weekdayShortDay } from "@/lib/dates";
 import { ShareButton } from "@/components/ShareButton";
 
 type Subject = { id: string; name: string; color: string };
@@ -11,7 +11,7 @@ function dayLabel(startedAtISO: string): string {
   const today = todayISO();
   if (dateISO === today) return "Today";
   if (dateISO === shiftISO(today, -1)) return "Yesterday";
-  return new Date(startedAtISO).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" });
+  return weekdayShortDay(dateISO);
 }
 
 export function RecentSessions({ subjects, sessions }: { subjects: Subject[]; sessions: Session[] }) {
