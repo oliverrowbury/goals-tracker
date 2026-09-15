@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE } from "@/lib/auth";
+import { CURRENT_USER_HEADER } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 
 // Proxy (formerly "middleware") runs on the Node.js runtime by default as
@@ -7,13 +8,24 @@ import { prisma } from "@/lib/prisma";
 // check the session against the database directly. No signed tokens, no
 // duplicating the password anywhere: the cookie is only ever an opaque
 // session id.
+//
+// The user row fetched here is forwarded to the page/action via a request
+// header (read by lib/user.ts's getCurrentUser) so it doesn't have to look
+// the session up again — every protected route was hitting the database
+// twice for the same row on every single request before this. The header
+// never reaches the browser (Next.js only forwards it into the app's own
+// server-side request handling), so this is the same trust boundary as
+// keeping it in a shared variable, just across the proxy/page split
+// Next.js requires.
 export async function proxy(request: NextRequest) {
   const token = request.cookies.get(AUTH_COOKIE)?.value;
 
   if (token) {
     const user = await prisma.user.findUnique({ where: { sessionToken: token } });
     if (user) {
-      return NextResponse.next();
+      const headers = new Headers(request.headers);
+      headers.set(CURRENT_USER_HEADER, JSON.stringify(user));
+      return NextResponse.next({ request: { headers } });
     }
   }
 

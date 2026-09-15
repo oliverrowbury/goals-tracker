@@ -1,29 +1,50 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO, isoToDate, formatWeekRange } from "@/lib/dates";
 import { weekRangeContaining, isGoalDueOn } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace } from "@/lib/workout";
 import { ChartIcon } from "@/components/Icons";
+import type { DistanceUnit } from "@/lib/constants";
 
-export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
+type GoalSummary = { title: string; hit: boolean; detail: string };
+type WorkoutSummary = { id: string; label: string; type: string; distanceKm: number | null; durationMinutes: number | null };
+
+export type WeeklyRecapData = {
+  startISO: string;
+  endISO: string;
+  isCurrentWeek: boolean;
+  goalSummaries: GoalSummary[];
+  subjectMinutes: { subjectId: string; name: string; color: string; minutes: number }[];
+  totalMinutes: number;
+  workouts: WorkoutSummary[];
+  workoutSessionCount: number;
+  workoutMinutes: number;
+  cardioKm: number;
+};
+
+// Split from the WeeklyRecap component itself so its queries can run in the
+// same Promise.all as the rest of the home page's data-fetching, instead of
+// only starting once HomePage's own async function body has already
+// finished and returned JSX — nested async Server Components otherwise
+// fetch in strict sequence, not parallel, doubling the wait on the busiest
+// page in the app.
+export async function getWeeklyRecapData(userId: string, anchorISO: string): Promise<WeeklyRecapData> {
   const { startISO, endISO } = weekRangeContaining(anchorISO);
   const today = todayISO();
   const days = Array.from({ length: 7 }, (_, i) => shiftISO(startISO, i));
 
-  const user = await getCurrentUser();
   const rangeStart = isoToDate(startISO);
   const rangeEnd = new Date(`${endISO}T23:59:59.999Z`);
 
   const [goals, sessions, subjects, workouts] = await Promise.all([
-    prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
+    prisma.goal.findMany({ where: { userId, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
-      where: { userId: user.id, endedAt: { not: null }, startedAt: { gte: rangeStart, lte: rangeEnd } },
+      where: { userId, endedAt: { not: null }, startedAt: { gte: rangeStart, lte: rangeEnd } },
     }),
-    prisma.subject.findMany({ where: { userId: user.id } }),
+    prisma.subject.findMany({ where: { userId } }),
     prisma.workout.findMany({
-      where: { userId: user.id, endedAt: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
+      where: { userId, endedAt: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
       orderBy: { date: "asc" },
     }),
   ]);
@@ -61,7 +82,32 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
 
-  const isCurrentWeek = startISO === weekRangeContaining(today).startISO;
+  const subjectMinutes = Array.from(minutesBySubject.entries())
+    .map(([subjectId, minutes]) => ({
+      subjectId,
+      name: subjectById.get(subjectId)?.name ?? "Unknown subject",
+      color: subjectById.get(subjectId)?.color ?? "#999",
+      minutes,
+    }))
+    .sort((a, b) => b.minutes - a.minutes);
+
+  return {
+    startISO,
+    endISO,
+    isCurrentWeek: startISO === weekRangeContaining(today).startISO,
+    goalSummaries,
+    subjectMinutes,
+    totalMinutes,
+    workouts: workouts.map((w) => ({ id: w.id, label: w.label, type: w.type, distanceKm: w.distanceKm, durationMinutes: w.durationMinutes })),
+    workoutSessionCount,
+    workoutMinutes,
+    cardioKm,
+  };
+}
+
+export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; distanceUnit: DistanceUnit }) {
+  const { startISO, endISO, isCurrentWeek, goalSummaries, subjectMinutes, totalMinutes, workouts, workoutSessionCount, workoutMinutes, cardioKm } =
+    data;
 
   return (
     <div id="recap" className="mt-10 scroll-mt-6">
@@ -114,22 +160,20 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-study" /> Study time
           </h3>
-          {sessions.length === 0 ? (
+          {subjectMinutes.length === 0 ? (
             <p className="text-sm text-ink-muted">No study time logged this week.</p>
           ) : (
             <>
               <ul className="-mx-5 divide-y divide-line">
-                {Array.from(minutesBySubject.entries())
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([subjectId, minutes]) => (
-                    <li key={subjectId} className="flex items-center justify-between px-5 py-2 text-sm">
-                      <span className="flex items-center gap-2 text-ink">
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subjectById.get(subjectId)?.color ?? "#999" }} />
-                        {subjectById.get(subjectId)?.name ?? "Unknown subject"}
-                      </span>
-                      <span className="text-ink-muted">{formatMinutes(minutes)}</span>
-                    </li>
-                  ))}
+                {subjectMinutes.map((s) => (
+                  <li key={s.subjectId} className="flex items-center justify-between px-5 py-2 text-sm">
+                    <span className="flex items-center gap-2 text-ink">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                      {s.name}
+                    </span>
+                    <span className="text-ink-muted">{formatMinutes(s.minutes)}</span>
+                  </li>
+                ))}
               </ul>
               <p className="mt-3 text-xs text-ink-muted">{formatMinutes(totalMinutes)} total this week</p>
             </>
@@ -146,12 +190,12 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
             <>
               <ul className="-mx-5 divide-y divide-line">
                 {workouts.map((w) => {
-                  const pace = formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit);
+                  const pace = formatPace(w.distanceKm, w.durationMinutes, distanceUnit);
                   return (
                     <li key={w.id} className="flex items-center justify-between px-5 py-2 text-sm">
                       <span className="text-ink">{w.label}</span>
                       <span className="text-ink-muted">
-                        {w.type === "CARDIO" && w.distanceKm ? `${formatDistance(w.distanceKm, user.distanceUnit)} · ` : ""}
+                        {w.type === "CARDIO" && w.distanceKm ? `${formatDistance(w.distanceKm, distanceUnit)} · ` : ""}
                         {formatMinutes(w.durationMinutes ?? 0)}
                         {pace ? ` · ${pace}` : ""}
                       </span>
@@ -161,7 +205,7 @@ export async function WeeklyRecap({ anchorISO }: { anchorISO: string }) {
               </ul>
               <p className="mt-3 text-xs text-ink-muted">
                 {workoutSessionCount} session{workoutSessionCount === 1 ? "" : "s"} · {formatMinutes(workoutMinutes)} total
-                {cardioKm > 0 && ` · ${formatDistance(cardioKm, user.distanceUnit)} covered`}
+                {cardioKm > 0 && ` · ${formatDistance(cardioKm, distanceUnit)} covered`}
               </p>
             </>
           )}

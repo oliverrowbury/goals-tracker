@@ -8,7 +8,7 @@ import { JournalIcon, TargetIcon, ClockIcon, AlarmIcon } from "@/components/Icon
 import { promptForDate } from "@/lib/prompts";
 import { daysBetween, dateToISO } from "@/lib/dates";
 import { PromptOfDayCard } from "./PromptOfDayCard";
-import { WeeklyRecap } from "./WeeklyRecap";
+import { WeeklyRecap, getWeeklyRecapData } from "./WeeklyRecap";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +30,7 @@ export default async function HomePage({
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
 
-  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount] = await Promise.all([
+  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount, recapData] = await Promise.all([
     prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(today) } } }),
     prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
@@ -47,6 +47,10 @@ export default async function HomePage({
     prisma.subject.count({ where: { userId: user.id } }),
     prisma.workout.count({ where: { userId: user.id, endedAt: { not: null } } }),
     prisma.journalEntry.count({ where: { userId: user.id, bodyText: { not: "" } } }),
+    // Fetched here (not inside <WeeklyRecap>) so it runs in this same
+    // parallel batch instead of only starting once this function returns —
+    // nested async Server Components otherwise fetch in strict sequence.
+    getWeeklyRecapData(user.id, week ?? today),
   ]);
 
   const dueToday = goals.filter((g) => isGoalDueOn(g, today) && g.frequencyType !== "WEEKLY_TARGET");
@@ -148,7 +152,7 @@ export default async function HomePage({
         </Link>
       </div>
 
-      <WeeklyRecap anchorISO={week ?? today} />
+      <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} />
     </div>
   );
 }
