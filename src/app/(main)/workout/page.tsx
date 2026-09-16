@@ -144,6 +144,7 @@ export default async function WorkoutPage() {
           durationMinutes: w.durationMinutes,
           distanceKm: w.distanceKm,
           route: (w.route as { lat: number; lng: number }[] | null) ?? null,
+          photoUrl: w.photoUrl,
           sets: w.sets.map((s) => ({
             id: s.id,
             exerciseName: s.exercise.name,

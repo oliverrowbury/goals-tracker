@@ -60,6 +60,7 @@ type HistoryWorkout = {
   durationMinutes: number | null;
   distanceKm: number | null;
   route: RoutePoint[] | null;
+  photoUrl: string | null;
   sets: HistorySet[];
 };
 
@@ -1096,6 +1097,10 @@ function WorkoutLogCard({
   const isCardio = workout.type === "CARDIO";
   const hasRoute = (workout.route?.length ?? 0) >= 2;
   const pace = isCardio ? formatPace(workout.distanceKm, workout.durationMinutes, distanceUnit) : null;
+  // Whether there's anything for "Show sets"/tapping the name to expand
+  // into — a strength workout always has its set breakdown, but cardio
+  // only has something to show once you add a route, note, or photo.
+  const hasDetails = !isCardio || hasRoute || !!workout.note || !!workout.photoUrl;
 
   // Group sets by exercise, in first-seen order, for the expanded detail
   // view — a proper per-set breakdown like Hevy's own workout log, not
@@ -1123,7 +1128,17 @@ function WorkoutLogCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="font-medium text-ink">{workout.label}</p>
+            {hasDetails ? (
+              <button
+                type="button"
+                onClick={onToggleExpand}
+                className="text-left font-medium text-ink hover:text-workout hover:underline"
+              >
+                {workout.label}
+              </button>
+            ) : (
+              <p className="font-medium text-ink">{workout.label}</p>
+            )}
             <p className="shrink-0 text-xs text-ink-muted">{dayLabel(workout.dateISO)}</p>
           </div>
           <p className="mt-0.5 text-ink-muted">
@@ -1143,13 +1158,13 @@ function WorkoutLogCard({
           </p>
 
           <div className="mt-1.5 flex items-center gap-3">
-            {(!isCardio || hasRoute) && (
+            {hasDetails && (
               <button
                 type="button"
                 onClick={onToggleExpand}
                 className="flex items-center gap-1 py-1 text-xs font-medium text-workout hover:underline"
               >
-                {expanded ? "Hide details" : isCardio ? "View route" : "Show sets"}
+                {expanded ? "Hide details" : "Show details"}
                 <ChevronDownIcon className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
               </button>
             )}
@@ -1296,6 +1311,19 @@ function WorkoutLogCard({
                 </div>
               ))}
             </div>
+          )}
+
+          {expanded && !editing && workout.note && (
+            <p className="mt-3 whitespace-pre-wrap border-t border-line pt-3 text-sm text-ink">{workout.note}</p>
+          )}
+
+          {expanded && !editing && workout.photoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a local asset next/image can optimize
+            <img
+              src={workout.photoUrl}
+              alt=""
+              className="mt-3 max-h-72 rounded-2xl border border-line object-cover"
+            />
           )}
         </div>
         <form action={deleteWorkout.bind(null, workout.id)}>
