@@ -14,6 +14,7 @@ import {
   CalendarIcon,
   AlarmIcon,
   UsersIcon,
+  MessageIcon,
   SignOutIcon,
   MenuIcon,
   CloseIcon,
@@ -26,6 +27,7 @@ const LINKS = [
   { href: "/study", label: "Study", Icon: ClockIcon, color: "study" },
   { href: "/workout", label: "Workout", Icon: DumbbellIcon, color: "workout" },
   { href: "/friends", label: "Friends", Icon: UsersIcon, color: "calm" },
+  { href: "/messages", label: "Messages", Icon: MessageIcon, color: "calm" },
   { href: "/calendar", label: "Calendar", Icon: CalendarIcon, color: "ink" },
   { href: "/settings", label: "Settings", Icon: GearIcon, color: "ink" },
 ] as const;
@@ -43,7 +45,7 @@ const ACTIVE_CLASSES: Record<(typeof LINKS)[number]["color"], string> = {
   ink: "bg-line text-ink",
 };
 
-export function Sidebar({ level }: { level: number }) {
+export function Sidebar({ level, unreadMessageCount = 0 }: { level: number; unreadMessageCount?: number }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
@@ -62,6 +64,11 @@ export function Sidebar({ level }: { level: number }) {
           >
             <Icon className="h-5 w-5 shrink-0" />
             {label}
+            {href === "/messages" && unreadMessageCount > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-calm px-1.5 text-xs font-medium text-white">
+                {unreadMessageCount}
+              </span>
+            )}
           </Link>
         );
       })}

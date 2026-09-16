@@ -11,12 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const today = todayISO();
-  const [todayEntry, badges] = await Promise.all([
+  const [todayEntry, badges, unreadMessageCount] = await Promise.all([
     prisma.journalEntry.findUnique({
       where: { userId_date: { userId: user.id, date: isoToDate(today) } },
       select: { mood: true },
     }),
     prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true, earnedAt: true } }),
+    prisma.message.count({ where: { recipientId: user.id, readAt: null } }),
   ]);
   const { level } = levelForXp(user.xp);
 
@@ -24,7 +25,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
     <div className="flex min-h-screen">
       {todayEntry?.mood == null && <MoodCheckInModal dateISO={today} />}
       <BadgeWatcher badges={badges.map((b) => ({ badge: b.badge, earnedAtMs: b.earnedAt.getTime() }))} />
-      <Sidebar level={level} />
+      <Sidebar level={level} unreadMessageCount={unreadMessageCount} />
       {/* pt-14 clears the fixed mobile top bar Sidebar renders below sm —
           it's out of normal flow, so this is the only thing that would
           otherwise account for its height. */}

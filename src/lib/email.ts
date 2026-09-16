@@ -77,6 +77,20 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   });
 }
 
+export async function sendNewMessageEmail(to: string, name: string, fromName: string): Promise<void> {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  await sendEmail({
+    to,
+    subject: `${fromName} sent you a message on Proudly`,
+    html: layout(`
+      <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:#2b2420;">
+        ${fromName} just sent you a message on Proudly — open the app to read and reply.
+      </p>
+    `),
+  });
+}
+
 export async function sendPasswordChangedEmail(to: string, name: string): Promise<void> {
   const firstName = name.trim().split(/\s+/)[0] || name;
   await sendEmail({

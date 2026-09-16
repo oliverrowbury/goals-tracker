@@ -436,6 +436,11 @@ export default async function FriendsPage() {
                   </Link>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="rounded-full bg-calm-soft px-2.5 py-1 text-xs font-medium text-calm">Lv {otherLevel}</span>
+                    {followerIdSet.has(other.id) && (
+                      <Link href={`/messages/${other.username}`} className="text-sm text-ink-muted hover:text-calm">
+                        Message
+                      </Link>
+                    )}
                     <UnfollowButton userId={other.id} name={other.name} />
                   </div>
                 </div>

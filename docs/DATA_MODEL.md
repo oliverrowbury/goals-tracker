@@ -249,6 +249,29 @@ separately — one like per person per activity. Also indexed on `workout_id`
 and `study_session_id` alone, since the friend feed's like-count lookup
 filters by those directly, not by `from_user_id`.
 
+## Message
+Direct messages between two users, gated to mutual follows only (see
+`src/lib/friends.ts`'s `isMutualFollow`) — a stricter bar than `Follow`
+itself, which is one-directional. There's no separate thread/conversation
+table: a thread is just "every `Message` between these two `user_id`s,"
+derived at query time the same way pace/splits are derived on `Workout`
+rather than stored.
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| sender_id | uuid | |
+| recipient_id | uuid | |
+| body | text | plain text, capped at 2000 characters at the application layer |
+| created_at | timestamp | |
+| read_at | timestamp, nullable | set when the recipient opens the thread |
+
+Indexed on `(sender_id, recipient_id, created_at)` and
+`(recipient_id, sender_id, created_at)` — one per direction, since a thread
+lookup is "every message between A and B, either direction." Also indexed
+on `(recipient_id, read_at)` for the unread-count nav badge and mark-as-read
+queries, which filter by recipient alone.
+
 ## UserBadge
 A fixed, curated set of milestones (first journal entry, streaks, XP levels,
 lifetime workout/study totals, first follow, time-of-day, etc. — the full
@@ -283,6 +306,7 @@ User 1─* Deadline *─1 Subject (optional)
 Deadline 1─* DeadlineReminderSent
 User 1─* Follow (as follower) *─1 User (as followed)
 User 1─* Cheer (as sender) *─1 User (as recipient)
+User 1─* Message (as sender) *─1 User (as recipient)
 User 1─* UserBadge
 Goal 1─* Reminder
 ```

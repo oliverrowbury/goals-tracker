@@ -184,6 +184,8 @@ model User {
   followers Follow[] @relation("Following")
   cheersSent     Cheer[] @relation("CheerFrom")
   cheersReceived Cheer[] @relation("CheerTo")
+  messagesSent     Message[] @relation("MessageFrom")
+  messagesReceived Message[] @relation("MessageTo")
 }
 
 model PushSubscription {
@@ -527,6 +529,32 @@ model Cheer {
   // cover since fromUserId is their leading column.
   @@index([workoutId])
   @@index([studySessionId])
+}
+
+// Direct messages — gated to mutual follows only (see lib/friends.ts's
+// isMutualFollow), a stricter bar than the rest of the app's one-directional
+// follow model. No separate Conversation/thread table: a thread is derived
+// at query time as "every Message between these two users," same convention
+// as deriving pace/splits on Workout rather than storing them.
+model Message {
+  id String @id @default(uuid())
+
+  senderId    String
+  sender      User   @relation("MessageFrom", fields: [senderId], references: [id])
+  recipientId String
+  recipient   User   @relation("MessageTo", fields: [recipientId], references: [id])
+
+  body      String
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  // A thread lookup is "every message between A and B, either direction" —
+  // one index per direction so Postgres never has to scan the whole table
+  // for either half of that OR. recipientId+readAt covers the unread-count
+  // (nav badge) and mark-as-read queries, which filter by recipient alone.
+  @@index([senderId, recipientId, createdAt])
+  @@index([recipientId, senderId, createdAt])
+  @@index([recipientId, readAt])
 }
 
 // A curated, fixed set of milestones rather than an open-ended point
