@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
@@ -13,6 +12,8 @@ import { PhotoUpload } from "./PhotoUpload";
 import { Flashbacks } from "./Flashbacks";
 import { JournalIcon } from "@/components/Icons";
 import { deleteStudySession } from "../study/actions";
+import { PageHeader } from "@/components/PageHeader";
+import { NavPill } from "@/components/NavPill";
 
 // How many years back to look for "on this day" flashbacks.
 const FLASHBACK_YEARS = 8;
@@ -145,35 +146,21 @@ export default async function JournalPage({
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-baseline gap-2.5">
-          <JournalIcon className="h-5 w-5 shrink-0 translate-y-0.5 text-accent" />
-          <div>
-            <h1 className="font-serif text-2xl font-semibold text-ink">{formatLong(dateISO)}</h1>
-            {isToday && <p className="text-sm text-accent">Today</p>}
+      <PageHeader
+        icon={JournalIcon}
+        title={formatLong(dateISO)}
+        subtitle={isToday && <p className="text-sm text-accent">Today</p>}
+        align="baseline"
+        className="mb-8"
+        right={
+          <div className="flex items-center gap-2">
+            {isPast && <NavPill href="/calendar">← Calendar</NavPill>}
+            <NavPill href={`/journal?date=${prevISO}`}>← Prev</NavPill>
+            {isPast && <NavPill href="/journal">Today</NavPill>}
+            {isPast && <NavPill href={`/journal?date=${nextISO}`}>Next →</NavPill>}
           </div>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          {isPast && (
-            <Link href="/calendar" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
-              ← Calendar
-            </Link>
-          )}
-          <Link href={`/journal?date=${prevISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
-            ← Prev
-          </Link>
-          {isPast && (
-            <Link href="/journal" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
-              Today
-            </Link>
-          )}
-          {isPast && (
-            <Link href={`/journal?date=${nextISO}`} className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
-              Next →
-            </Link>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       <Flashbacks flashbacks={flashbacks} />
 

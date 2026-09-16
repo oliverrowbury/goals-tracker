@@ -17,6 +17,8 @@ import { LikeButton } from "./LikeButton";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { FocusTagPills } from "./FocusTagPills";
 import { requestFollowVoid, acceptFollowRequest, removeFollow } from "./actions";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -225,10 +227,7 @@ export default async function FriendsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <UsersIcon className="h-5 w-5 shrink-0 text-calm" />
-        <h1 className="font-serif text-2xl font-semibold text-ink">Friends</h1>
-      </div>
+      <PageHeader icon={UsersIcon} iconClassName="text-calm" title="Friends" />
 
       <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
         <div className="flex items-start gap-4">
@@ -415,12 +414,7 @@ export default async function FriendsPage() {
         </h2>
 
         {following.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-            <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-calm-soft text-calm">
-              <UsersIcon className="h-5 w-5" />
-            </span>
-            <p className="mt-3 text-sm text-ink-muted">Follow someone above to see their streaks and progress.</p>
-          </div>
+          <EmptyState icon={UsersIcon} iconClassName="bg-calm-soft text-calm" message="Follow someone above to see their streaks and progress." />
         )}
 
         <div className="space-y-3">
@@ -484,12 +478,7 @@ export default async function FriendsPage() {
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Activity</h2>
 
           {feed.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-              <p className="text-sm text-ink-muted">
-                Nothing from people you follow in the last two weeks — workouts and study sessions show up here once
-                someone finishes one and has that category shared.
-              </p>
-            </div>
+            <EmptyState message="Nothing from people you follow in the last two weeks — workouts and study sessions show up here once someone finishes one and has that category shared." />
           ) : (
             <ul className="space-y-3">
               {feed.map((item) => {

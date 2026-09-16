@@ -32,6 +32,7 @@ import { levelForXp } from "@/lib/xp";
 import { BADGE_INFO } from "@/lib/badges";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { fromKg, fromCm } from "@/lib/workout";
+import { PageHeader } from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -98,10 +99,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-2.5">
-        <GearIcon className="h-5 w-5 shrink-0 text-ink-muted" />
-        <h1 className="font-serif text-2xl font-semibold text-ink">Settings</h1>
-      </div>
+      <PageHeader icon={GearIcon} iconClassName="text-ink-muted" title="Settings" className="" />
 
       <section id="account" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Account</h2>

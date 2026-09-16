@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { todayISO } from "@/lib/dates";
+import { Select } from "@/components/Select";
 
 type DeadlineFormValues = {
   title: string;
@@ -87,14 +88,14 @@ export function DeadlineForm({
           <label className={labelClass} htmlFor="subjectId">
             Subject <span className="text-ink-muted">(optional)</span>
           </label>
-          <select id="subjectId" name="subjectId" defaultValue={values.subjectId} className={inputClass}>
+          <Select id="subjectId" name="subjectId" defaultValue={values.subjectId} className={inputClass}>
             <option value="">None</option>
             {subjects.map((subject) => (
               <option key={subject.id} value={subject.id}>
                 {subject.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       )}
 

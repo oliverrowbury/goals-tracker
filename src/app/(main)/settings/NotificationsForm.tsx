@@ -23,6 +23,7 @@ function initialStatus(): Status {
 
 export function NotificationsForm() {
   const [status, setStatus] = useState<Status>(initialStatus);
+  const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -42,7 +43,7 @@ export function NotificationsForm() {
 
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!publicKey) {
-      alert("Push notifications aren't configured yet — missing VAPID key.");
+      setUnavailable(true);
       return;
     }
 
@@ -94,6 +95,7 @@ export function NotificationsForm() {
           {status === "subscribed" && <span className="text-sm text-ink-muted">Enabled here ✓</span>}
         </div>
       )}
+      {unavailable && <p className="text-sm text-ink-muted">Push notifications aren&apos;t available yet — check back soon.</p>}
 
       <p className="border-t border-line pt-4 text-sm text-ink-muted">
         Reminders are set per goal now, since different goals need different days — turn one on from that goal’s{" "}

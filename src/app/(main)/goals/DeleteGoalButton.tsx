@@ -1,24 +1,19 @@
 "use client";
 
-import { useTransition } from "react";
 import { deleteGoal } from "./actions";
+import { ConfirmButton } from "@/components/ConfirmButton";
 
 export function DeleteGoalButton({ goalId, title }: { goalId: string; title: string }) {
-  const [isPending, startTransition] = useTransition();
-
   return (
-    <button
-      type="button"
-      title="Delete goal"
-      disabled={isPending}
-      onClick={() => {
-        if (confirm(`Delete "${title}"? This removes all its history too — this can't be undone.`)) {
-          startTransition(() => deleteGoal(goalId));
-        }
-      }}
-      className="text-ink-muted hover:text-accent disabled:opacity-50"
+    <ConfirmButton
+      triggerTitle="Delete goal"
+      triggerClassName="text-ink-muted hover:text-accent disabled:opacity-50"
+      title="Delete this goal?"
+      message={`Delete "${title}"? This removes all its history too — this can't be undone.`}
+      confirmLabel="Delete"
+      onConfirm={() => deleteGoal(goalId)}
     >
       ×
-    </button>
+    </ConfirmButton>
   );
 }

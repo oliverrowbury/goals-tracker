@@ -12,6 +12,7 @@ import {
   type RoutePoint,
 } from "@/lib/workout";
 import { ShareButton } from "@/components/ShareButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { RouteMap } from "./RouteMap";
 import { setWorkoutVisibility, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto } from "./actions";
 import type { WorkoutType, WeightUnit, DistanceUnit } from "@/lib/constants";
@@ -128,7 +129,6 @@ export function WorkoutSummary({
   distanceUnit: DistanceUnit;
   onDone: () => void;
 }) {
-  const [deleting, startDeleteTransition] = useTransition();
   const isCardio = workout.type === "CARDIO";
   const pace = isCardio ? formatPace(workout.distanceKm ?? null, workout.durationSeconds / 60, distanceUnit) : null;
   const splits = isCardio && workout.route ? computeSplits(workout.route, distanceUnit) : [];
@@ -249,20 +249,19 @@ export function WorkoutSummary({
         </button>
       </div>
 
-      <button
-        type="button"
-        disabled={deleting}
-        onClick={() => {
-          if (confirm("Delete this workout? This can't be undone.")) {
-            startDeleteTransition(() => deleteWorkout(workout.id));
-            onDone();
-          }
+      <ConfirmButton
+        triggerClassName="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+        title="Delete this workout?"
+        message="This can't be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          deleteWorkout(workout.id);
+          onDone();
         }}
-        className="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
       >
         <TrashIcon className="h-3.5 w-3.5" />
         Delete this workout
-      </button>
+      </ConfirmButton>
     </div>
   );
 }

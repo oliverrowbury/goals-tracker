@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { updateUnits } from "./actions";
+import { Select } from "@/components/Select";
 
 export function UnitsForm({ weightUnit, distanceUnit }: { weightUnit: "KG" | "LB"; distanceUnit: "KM" | "MI" }) {
   const [state, formAction, isPending] = useActionState(updateUnits, null);
@@ -22,7 +23,7 @@ export function UnitsForm({ weightUnit, distanceUnit }: { weightUnit: "KG" | "LB
         <label className="mb-1 block text-xs text-ink-muted" htmlFor="weightUnit">
           Weight
         </label>
-        <select
+        <Select
           key={currentWeight}
           id="weightUnit"
           name="weightUnit"
@@ -31,13 +32,13 @@ export function UnitsForm({ weightUnit, distanceUnit }: { weightUnit: "KG" | "LB
         >
           <option value="KG">Kilograms (kg)</option>
           <option value="LB">Pounds (lb)</option>
-        </select>
+        </Select>
       </div>
       <div>
         <label className="mb-1 block text-xs text-ink-muted" htmlFor="distanceUnit">
           Distance
         </label>
-        <select
+        <Select
           key={currentDistance}
           id="distanceUnit"
           name="distanceUnit"
@@ -46,7 +47,7 @@ export function UnitsForm({ weightUnit, distanceUnit }: { weightUnit: "KG" | "LB
         >
           <option value="KM">Kilometres (km)</option>
           <option value="MI">Miles (mi)</option>
-        </select>
+        </Select>
       </div>
       <button
         type="submit"

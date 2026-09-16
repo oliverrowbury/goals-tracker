@@ -2,6 +2,8 @@ import { deleteStudySession } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import { todayISO, shiftISO, weekdayShortDay } from "@/lib/dates";
 import { ShareButton } from "@/components/ShareButton";
+import { EmptyState } from "@/components/EmptyState";
+import { ClockIcon } from "@/components/Icons";
 
 type Subject = { id: string; name: string; color: string };
 type Session = { id: string; subjectId: string; durationMinutes: number | null; startedAt: string };
@@ -15,7 +17,9 @@ function dayLabel(startedAtISO: string): string {
 }
 
 export function RecentSessions({ subjects, sessions }: { subjects: Subject[]; sessions: Session[] }) {
-  if (sessions.length === 0) return null;
+  if (sessions.length === 0) {
+    return <EmptyState icon={ClockIcon} iconClassName="bg-study-soft text-study" message="No sessions logged yet this week." />;
+  }
 
   const subjectById = new Map(subjects.map((s) => [s.id, s]));
 

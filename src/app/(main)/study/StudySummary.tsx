@@ -4,6 +4,7 @@ import { useTransition, useState } from "react";
 import { ClockIcon, TrashIcon } from "@/components/Icons";
 import { formatMinutes } from "@/lib/study";
 import { ShareButton } from "@/components/ShareButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
 import { setStudySessionVisibility, deleteStudySession } from "./actions";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
@@ -42,8 +43,6 @@ function VisibilityPicker({ sessionId }: { sessionId: string }) {
 // The study-timer equivalent of WorkoutSummary — same "who sees this" +
 // delete pattern, without photos/splits (those are workout-specific).
 export function StudySummary({ session, onDone }: { session: JustFinishedSession; onDone: () => void }) {
-  const [deleting, startDeleteTransition] = useTransition();
-
   return (
     <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm sm:p-8">
       <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-study-soft text-study">
@@ -75,20 +74,19 @@ export function StudySummary({ session, onDone }: { session: JustFinishedSession
         </button>
       </div>
 
-      <button
-        type="button"
-        disabled={deleting}
-        onClick={() => {
-          if (confirm("Delete this session? This can't be undone.")) {
-            startDeleteTransition(() => deleteStudySession(session.id));
-            onDone();
-          }
+      <ConfirmButton
+        triggerClassName="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+        title="Delete this session?"
+        message="This can't be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          deleteStudySession(session.id);
+          onDone();
         }}
-        className="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
       >
         <TrashIcon className="h-3.5 w-3.5" />
         Delete this session
-      </button>
+      </ConfirmButton>
     </div>
   );
 }

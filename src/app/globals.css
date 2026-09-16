@@ -109,6 +109,18 @@
   --shadow-lg: 0 8px 16px rgb(0 0 0 / var(--shadow-opacity)), 0 28px 56px rgb(0 0 0 / var(--shadow-opacity-strong));
 }
 
+/* Without this, native <input type="date">/"time"> pickers always render
+   their popover/spinner chrome in light colors — invisible-on-dark text on
+   a light dropdown when the rest of the page is in dark mode. This tells
+   the browser which palette its own UI chrome should draw in, independent
+   of the custom colors already applied to the input itself via Tailwind. */
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
 body {
   /* Flat fill, deliberately — the noise/dot-grid texture this used to have
      read as busy against the sidebar nav and cards, closer to the cluttered

@@ -6,6 +6,7 @@ import { StudyTimer } from "./StudyTimer";
 import { StudyStats } from "./StudyStats";
 import { RecentSessions } from "./RecentSessions";
 import { ClockIcon } from "@/components/Icons";
+import { PageHeader } from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -79,10 +80,7 @@ export default async function StudyPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <ClockIcon className="h-5 w-5 shrink-0 text-study" />
-        <h1 className="font-serif text-2xl font-semibold text-ink">Study</h1>
-      </div>
+      <PageHeader icon={ClockIcon} iconClassName="text-study" title="Study" />
       <StudyTimer
         subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
         serverNow={new Date().toISOString()}

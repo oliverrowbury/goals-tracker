@@ -5,6 +5,8 @@ import { todayISO, dateToISO, daysBetween, formatLong } from "@/lib/dates";
 import { AlarmIcon } from "@/components/Icons";
 import { DeadlineCheckbox } from "./DeadlineCheckbox";
 import { DeleteDeadlineButton } from "./DeleteDeadlineButton";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -32,26 +34,21 @@ export default async function DeadlinesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <AlarmIcon className="h-5 w-5 shrink-0 text-accent" />
-          <h1 className="font-serif text-2xl font-semibold text-ink">Deadlines</h1>
-        </div>
-        <Link
-          href="/deadlines/new"
-          className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
-        >
-          New deadline
-        </Link>
-      </div>
+      <PageHeader
+        icon={AlarmIcon}
+        title="Deadlines"
+        right={
+          <Link
+            href="/deadlines/new"
+            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
+          >
+            New deadline
+          </Link>
+        }
+      />
 
       {upcoming.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
-            <AlarmIcon className="h-5 w-5" />
-          </span>
-          <p className="mt-3 text-sm text-ink-muted">No deadlines yet — add an exam or assignment to track it.</p>
-        </div>
+        <EmptyState icon={AlarmIcon} message="No deadlines yet — add an exam or assignment to track it." />
       )}
 
       <div className="space-y-2.5">

@@ -8,6 +8,8 @@ import { DeleteGoalButton } from "./DeleteGoalButton";
 import { GoalTodayCheckbox } from "./GoalTodayCheckbox";
 import { GoalExtraInput } from "./GoalExtraInput";
 import { TargetIcon, FlameIcon } from "@/components/Icons";
+import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
 
 const HISTORY_DAYS = 14;
 
@@ -61,26 +63,22 @@ export default async function GoalsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <TargetIcon className="h-5 w-5 shrink-0 text-goals" />
-          <h1 className="font-serif text-2xl font-semibold text-ink">Goals</h1>
-        </div>
-        <Link
-          href="/goals/new"
-          className="rounded-lg bg-goals px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
-        >
-          New goal
-        </Link>
-      </div>
+      <PageHeader
+        icon={TargetIcon}
+        iconClassName="text-goals"
+        title="Goals"
+        right={
+          <Link
+            href="/goals/new"
+            className="rounded-lg bg-goals px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:opacity-90 hover:shadow-md active:scale-[0.98]"
+          >
+            New goal
+          </Link>
+        }
+      />
 
       {active.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-line px-6 py-10 text-center">
-          <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-goals-soft text-goals">
-            <TargetIcon className="h-5 w-5" />
-          </span>
-          <p className="mt-3 text-sm text-ink-muted">No goals yet — add one to start tracking.</p>
-        </div>
+        <EmptyState icon={TargetIcon} iconClassName="bg-goals-soft text-goals" message="No goals yet — add one to start tracking." />
       )}
 
       <div className="space-y-3">

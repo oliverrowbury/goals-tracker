@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { WEEKDAYS, REMINDER_SLOTS, REMINDER_SLOT_LABELS } from "@/lib/constants";
+import { Select } from "@/components/Select";
 
 type GoalFormValues = {
   title: string;
@@ -105,7 +106,7 @@ export function GoalForm({
         <label className={labelClass} htmlFor="frequencyType">
           Frequency
         </label>
-        <select
+        <Select
           id="frequencyType"
           name="frequencyType"
           value={frequencyType}
@@ -115,7 +116,7 @@ export function GoalForm({
           <option value="DAILY">Every day</option>
           <option value="SPECIFIC_DAYS">Specific days of the week</option>
           <option value="WEEKLY_TARGET">A weekly total (e.g. hours/sessions)</option>
-        </select>
+        </Select>
       </div>
 
       {frequencyType === "SPECIFIC_DAYS" && (
@@ -179,7 +180,7 @@ export function GoalForm({
           <label className={labelClass} htmlFor="autoTrack">
             Auto-track from <span className="text-ink-muted">(optional)</span>
           </label>
-          <select
+          <Select
             id="autoTrack"
             name="autoTrack"
             defaultValue={values.subjectId ? `subject:${values.subjectId}` : values.workoutMetric ? `workout:${values.workoutMetric}` : ""}
@@ -193,7 +194,7 @@ export function GoalForm({
             ))}
             <option value="workout:SESSIONS">Workouts logged this week (Workout)</option>
             <option value="workout:MINUTES">Workout minutes this week (Workout)</option>
-          </select>
+          </Select>
           <p className="mt-1 text-xs text-ink-muted">
             When set, this goal’s weekly total is computed automatically instead of needing manual entry.
           </p>

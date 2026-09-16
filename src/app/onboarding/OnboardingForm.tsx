@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { GENDERS, GENDER_LABELS } from "@/lib/constants";
 import { completeProfile } from "./actions";
+import { Select } from "@/components/Select";
 
 const inputClass =
   "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none";
@@ -54,7 +55,7 @@ export function OnboardingForm({
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="gender">
           Gender
         </label>
-        <select id="gender" name="gender" required defaultValue="" className={inputClass}>
+        <Select id="gender" name="gender" required defaultValue="" className={inputClass}>
           <option value="" disabled>
             Choose one
           </option>
@@ -63,7 +64,7 @@ export function OnboardingForm({
               {GENDER_LABELS[g]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div>

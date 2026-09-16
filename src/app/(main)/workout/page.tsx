@@ -6,6 +6,7 @@ import { WorkoutTracker } from "./WorkoutTracker";
 import { ExerciseProgress } from "./ExerciseProgress";
 import { estimateOneRepMax } from "@/lib/workout";
 import { DumbbellIcon } from "@/components/Icons";
+import { PageHeader } from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -104,10 +105,7 @@ export default async function WorkoutPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center gap-2.5">
-        <DumbbellIcon className="h-5 w-5 shrink-0 text-workout" />
-        <h1 className="font-serif text-2xl font-semibold text-ink">Workout</h1>
-      </div>
+      <PageHeader icon={DumbbellIcon} iconClassName="text-workout" title="Workout" />
 
       <WorkoutTracker
         weightUnit={user.weightUnit}

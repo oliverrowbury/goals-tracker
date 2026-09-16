@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, monthISOOf, shiftMonth, formatMonth, monthGridDays, isoToDate } from "@/lib/dates";
 import { CalendarIcon } from "@/components/Icons";
 import { moodFace } from "@/lib/mood";
+import { PageHeader } from "@/components/PageHeader";
+import { NavPill } from "@/components/NavPill";
 
 export const dynamic = "force-dynamic";
 
@@ -52,31 +54,18 @@ export default async function CalendarPage({
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <CalendarIcon className="h-5 w-5 shrink-0 text-ink-muted" />
-          <h1 className="font-serif text-2xl font-semibold text-ink">{formatMonth(monthISO)}</h1>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <Link
-            href={`/calendar?month=${shiftMonth(monthISO, -1)}`}
-            className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
-          >
-            ← Prev
-          </Link>
-          {monthISO !== monthISOOf(today) && (
-            <Link href="/calendar" className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent">
-              This month
-            </Link>
-          )}
-          <Link
-            href={`/calendar?month=${shiftMonth(monthISO, 1)}`}
-            className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
-          >
-            Next →
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        icon={CalendarIcon}
+        iconClassName="text-ink-muted"
+        title={formatMonth(monthISO)}
+        right={
+          <div className="flex items-center gap-2">
+            <NavPill href={`/calendar?month=${shiftMonth(monthISO, -1)}`}>← Prev</NavPill>
+            {monthISO !== monthISOOf(today) && <NavPill href="/calendar">This month</NavPill>}
+            <NavPill href={`/calendar?month=${shiftMonth(monthISO, 1)}`}>Next →</NavPill>
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-7 gap-1.5 text-center text-xs font-medium text-ink-muted">
         {WEEKDAY_LABELS.map((label) => (

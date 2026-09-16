@@ -35,6 +35,9 @@ import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/compon
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
 import { ShareButton } from "@/components/ShareButton";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { EmptyState } from "@/components/EmptyState";
+import { Select } from "@/components/Select";
 import { WorkoutSummary, type JustFinishedWorkout } from "./WorkoutSummary";
 import { EXERCISE_REFERENCE_IMAGE } from "@/lib/exerciseReference";
 
@@ -327,7 +330,7 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
           placeholder="e.g. Cable Fly"
           className="min-w-0 flex-1 rounded-lg border border-line bg-card px-3 py-2 text-base focus:border-workout focus:outline-none"
         />
-        <select
+        <Select
           name="category"
           defaultValue="Chest"
           className="rounded-lg border border-line bg-card px-2.5 py-2 text-sm focus:border-workout focus:outline-none"
@@ -345,7 +348,7 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
           <option value="Abdominals">Abdominals</option>
           <option value="Full Body & Olympic">Full Body & Olympic</option>
           <option value="Other">Other</option>
-        </select>
+        </Select>
         <button
           type="submit"
           disabled={isPending}
@@ -848,18 +851,17 @@ export function WorkoutTracker({
               >
                 Finish
               </button>
-              <button
+              <ConfirmButton
                 disabled={isPending}
-                onClick={() => {
-                  if (confirm("Discard this workout? It won't be saved anywhere.")) {
-                    startTransition(() => deleteWorkout(openWorkout.id));
-                  }
-                }}
-                className="flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+                triggerClassName="flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+                title="Discard this workout?"
+                message="It won't be saved anywhere — this can't be undone."
+                confirmLabel="Discard"
+                onConfirm={() => deleteWorkout(openWorkout.id)}
               >
                 <TrashIcon className="h-3.5 w-3.5" />
                 Started by accident? Discard it
-              </button>
+              </ConfirmButton>
             </div>
             {restEndAt && (
               <RestTimer
@@ -978,18 +980,17 @@ export function WorkoutTracker({
           <p className="mt-1.5 text-xs text-ink-muted">
             {gpsStatus === "tracking" ? "Tracked automatically — edit it above if it’s off." : "Distance is up to you to enter."}
           </p>
-          <button
+          <ConfirmButton
             disabled={isPending}
-            onClick={() => {
-              if (confirm("Discard this session? It won't be saved anywhere.")) {
-                startTransition(() => deleteWorkout(openWorkout.id));
-              }
-            }}
-            className="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+            triggerClassName="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
+            title="Discard this session?"
+            message="It won't be saved anywhere — this can't be undone."
+            confirmLabel="Discard"
+            onConfirm={() => deleteWorkout(openWorkout.id)}
           >
             <TrashIcon className="h-3.5 w-3.5" />
             Started by accident? Discard it
-          </button>
+          </ConfirmButton>
         </div>
       )}
 
@@ -1009,9 +1010,9 @@ export function WorkoutTracker({
         )}
       </div>
 
-      {history.length > 0 && (
-        <div>
-          <h2 className="mb-2 text-sm font-medium text-ink-muted">Log</h2>
+      <div>
+        <h2 className="mb-2 text-sm font-medium text-ink-muted">Log</h2>
+        {history.length > 0 ? (
           <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
             {history.map((w) => (
               <WorkoutLogCard
@@ -1031,8 +1032,10 @@ export function WorkoutTracker({
               />
             ))}
           </ul>
-        </div>
-      )}
+        ) : (
+          <EmptyState icon={DumbbellIcon} iconClassName="bg-workout-soft text-workout" message="No workouts logged yet." />
+        )}
+      </div>
     </div>
   );
 }

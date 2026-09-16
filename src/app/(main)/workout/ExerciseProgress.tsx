@@ -4,6 +4,7 @@ import { useState } from "react";
 import { fromKg, formatWeight } from "@/lib/workout";
 import { weekdayShortDayMonth } from "@/lib/dates";
 import type { WeightUnit } from "@/lib/constants";
+import { Select } from "@/components/Select";
 
 type ProgressPoint = { dateISO: string; weightKg: number; reps: number; estOneRmKg: number };
 type ExerciseSeries = { exerciseId: string; exerciseName: string; points: ProgressPoint[] };
@@ -49,7 +50,7 @@ export function ExerciseProgress({ exercises, weightUnit }: { exercises: Exercis
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-medium text-ink-muted">Progress</h2>
-        <select
+        <Select
           value={series.exerciseId}
           onChange={(e) => setExerciseId(e.target.value)}
           className="rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:border-workout focus:outline-none"
@@ -59,7 +60,7 @@ export function ExerciseProgress({ exercises, weightUnit }: { exercises: Exercis
               {e.exerciseName}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {points.length < 2 ? (

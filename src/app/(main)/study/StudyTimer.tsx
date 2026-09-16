@@ -14,6 +14,8 @@ import { formatMinutes } from "@/lib/study";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { useClockOffsetMs } from "@/lib/time";
 import { ClockIcon, PlayIcon, TrashIcon } from "@/components/Icons";
+import { ConfirmButton } from "@/components/ConfirmButton";
+import { Select } from "@/components/Select";
 import { StudySummary, type JustFinishedSession } from "./StudySummary";
 
 type Subject = { id: string; name: string; color: string };
@@ -35,7 +37,7 @@ function ManualEntryForm({ subjects, onDone }: { subjects: Subject[]; onDone: ()
         <label className="mb-1 block text-xs text-ink-muted" htmlFor="manual-subject">
           Subject
         </label>
-        <select
+        <Select
           id="manual-subject"
           name="subjectId"
           required
@@ -46,7 +48,7 @@ function ManualEntryForm({ subjects, onDone }: { subjects: Subject[]; onDone: ()
               {s.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
       <div>
         <label className="mb-1 block text-xs text-ink-muted" htmlFor="manual-minutes">
@@ -431,18 +433,17 @@ export function StudyTimer({
               Finish
             </button>
           </div>
-          <button
+          <ConfirmButton
             disabled={isPending}
-            onClick={() => {
-              if (confirm("Discard this session? It won't be saved anywhere — use Finish instead if you want to keep it.")) {
-                startTransition(() => deleteStudySession(openSession.id));
-              }
-            }}
-            className="mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50 mx-auto"
+            triggerClassName="mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50 mx-auto"
+            title="Discard this session?"
+            message="It won't be saved anywhere — use Finish instead if you want to keep it."
+            confirmLabel="Discard"
+            onConfirm={() => deleteStudySession(openSession.id)}
           >
             <TrashIcon className="h-3.5 w-3.5" />
             Started by accident? Discard it
-          </button>
+          </ConfirmButton>
         </div>
       ) : (
         !justFinished && (

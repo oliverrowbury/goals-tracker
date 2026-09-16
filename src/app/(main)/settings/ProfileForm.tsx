@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { GENDERS, GENDER_LABELS, type Gender, FOCUS_TAGS, FOCUS_TAG_LABELS, type FocusTag } from "@/lib/constants";
 import { updateProfile, type SettingsActionState } from "./actions";
+import { Select } from "@/components/Select";
 
 const inputClass =
   "w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none";
@@ -65,7 +66,7 @@ export function ProfileForm({
         <label className="mb-1 block text-sm font-medium text-ink" htmlFor="gender">
           Gender
         </label>
-        <select id="gender" name="gender" required defaultValue={gender ?? ""} className={inputClass}>
+        <Select id="gender" name="gender" required defaultValue={gender ?? ""} className={inputClass}>
           <option value="" disabled>
             Choose one
           </option>
@@ -74,7 +75,7 @@ export function ProfileForm({
               {GENDER_LABELS[g]}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <div>
