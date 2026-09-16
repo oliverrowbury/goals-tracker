@@ -363,11 +363,15 @@ function AddExerciseForm({ onCreated }: { onCreated: (ex: Exercise) => void }) {
 // picker works and much easier to use one-handed on a phone.
 function ExercisePicker({
   exercises,
+  lastPerformed,
+  weightUnit,
   onPick,
   onCreated,
   onCancel,
 }: {
   exercises: Exercise[];
+  lastPerformed: LastPerformed;
+  weightUnit: WeightUnit;
   onPick: (id: string) => void;
   onCreated: (ex: Exercise) => void;
   onCancel: () => void;
@@ -403,16 +407,24 @@ function ExercisePicker({
         {Array.from(byCategory.entries()).map(([category, exs]) => (
           <div key={category}>
             <p className="px-1 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-ink-muted">{category}</p>
-            {exs.map((ex) => (
-              <button
-                key={ex.id}
-                type="button"
-                onClick={() => onPick(ex.id)}
-                className="block w-full rounded-lg px-3 py-3 text-left text-sm text-ink hover:bg-workout-soft active:bg-workout-soft"
-              >
-                {ex.name}
-              </button>
-            ))}
+            {exs.map((ex) => {
+              const last = lastPerformed[ex.id];
+              return (
+                <button
+                  key={ex.id}
+                  type="button"
+                  onClick={() => onPick(ex.id)}
+                  className="block w-full rounded-lg px-3 py-3 text-left text-sm text-ink hover:bg-workout-soft active:bg-workout-soft"
+                >
+                  {ex.name}
+                  {last && (
+                    <span className="ml-2 text-xs text-ink-muted">
+                      Last: {last.sets.map((s) => `${formatWeight(s.weight, weightUnit)}×${s.reps}`).join(", ")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>
@@ -885,6 +897,8 @@ export function WorkoutTracker({
             ) : (
               <ExercisePicker
                 exercises={localExercises}
+                lastPerformed={lastPerformed}
+                weightUnit={weightUnit}
                 onCancel={() => setAddingExercise(false)}
                 onPick={(id) => {
                   setActiveExerciseIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
