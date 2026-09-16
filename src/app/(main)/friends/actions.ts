@@ -18,9 +18,10 @@ export type FriendSearchResult = {
 };
 
 // Username matches as a prefix (like most apps' public-handle search) so
-// someone can be found without knowing their exact spelling; email only
-// matches exactly, so this can't be used to enumerate every account by
-// guessing partial addresses — an email has to already be known to add by it.
+// someone can be found without knowing their exact spelling. Deliberately
+// username-only — no name/email search — so the only way to find someone
+// is a handle they've actually shared, not by guessing real names or
+// (even exact) email addresses.
 export async function searchUsers(query: string): Promise<FriendSearchResult[]> {
   const q = query.trim().toLowerCase();
   if (q.length < 2) return [];
@@ -29,7 +30,7 @@ export async function searchUsers(query: string): Promise<FriendSearchResult[]> 
   const candidates = await prisma.user.findMany({
     where: {
       id: { not: user.id },
-      OR: [{ username: { startsWith: q } }, { email: q }],
+      username: { startsWith: q },
     },
     select: { id: true, name: true, username: true },
     take: 8,

@@ -44,7 +44,7 @@ export function AddFriendSearch() {
         type="text"
         value={query}
         onChange={(e) => handleChange(e.target.value)}
-        placeholder="Search by username, or paste an exact email"
+        placeholder="Search by username"
         className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:border-calm focus:outline-none"
       />
 
