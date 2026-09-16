@@ -10,17 +10,28 @@ export default async function LoginPage({
   const { from = "/", error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      {/* Ambient glow — the one bit of continuous motion on this page,
+          same "always something quietly alive" idea as the breathing
+          exercise's halo. Purely decorative (aria-hidden), sits behind
+          the card via z-index, not interactive. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute left-1/2 top-1/2 -z-0 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-[40%] bg-accent opacity-0 blur-2xl [animation:glow-in_1.6s_ease-out_0.5s_forwards,glow-drift_14s_ease-in-out_infinite_2s]"
+      />
+
       <form
         action="/api/login"
         method="POST"
-        className="w-full max-w-sm animate-[fade-in_0.3s_ease-out_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
+        className="relative z-10 w-full max-w-sm animate-[fade-in_0.3s_ease-out_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
       >
-        {/* Staged entrance — the wordmark settles in first, then the rest
-            of the form follows a beat later (animation-delay), rather than
-            everything appearing at once. */}
-        <h1 className="mb-1 origin-left animate-[logo-in_0.4s_ease-out_both] text-3xl text-ink">
-          <Wordmark />
+        {/* Staged entrance — the wordmark settles in first (word fades/
+            scales in, then its bars grow up in sequence — see Wordmark's
+            `animated` prop), then the rest of the form follows a beat
+            later (animation-delay), rather than everything appearing at
+            once. */}
+        <h1 className="mb-1 text-3xl text-ink">
+          <Wordmark animated />
         </h1>
 
         <div className="animate-[fade-up_0.45s_ease-out_both] [animation-delay:120ms]">
@@ -60,7 +71,7 @@ export default async function LoginPage({
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98]"
+            className="btn-sheen relative w-full overflow-hidden rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98]"
           >
             Sign in
           </button>

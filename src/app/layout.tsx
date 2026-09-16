@@ -30,6 +30,17 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Proudly",
   },
+  // Opts every same-origin navigation into the browser's native
+  // cross-document View Transition — used for the login/signup → main app
+  // handoff (a real page navigation via /api/login's redirect, not a
+  // client-side route change, so this is the only way to animate across
+  // it). No JS required: the browser snapshots the outgoing and incoming
+  // page and crossfades between them (customized in globals.css's
+  // ::view-transition-old/new(root) rules); unsupported browsers just do a
+  // normal navigation, so this is purely additive.
+  other: {
+    "view-transition": "same-origin",
+  },
 };
 
 export const viewport: Viewport = {

@@ -212,9 +212,94 @@ textarea {
   }
 }
 
+/* Login's ambient glow — the one bit of continuous (not one-shot) motion
+   on that page, same "always something quietly alive" idea as the
+   breathing orb's halo above, just a soft drift instead of a spin since
+   it's sitting behind a static card rather than driving a breathing
+   rhythm. */
+@keyframes glow-in {
+  to {
+    opacity: 0.16;
+  }
+}
+@keyframes glow-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(3%, -4%) scale(1.06);
+  }
+}
+
+/* The wordmark's four ascending bars growing up in sequence, on top of
+   the word itself fading/scaling in via logo-in — only used where
+   Wordmark's `animated` prop is set (the login page), not the plain
+   nav-bar/sidebar usage. */
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Customizes the browser's native cross-document View Transition (see
+   the `view-transition` meta tag in app/layout.tsx) for the login/signup →
+   main app handoff — a soft settle instead of the default hard crossfade,
+   the outgoing page eases away as the incoming one eases in. Applies to
+   every same-origin hard navigation, but in practice that's only ever
+   this boundary, since everything inside (main) is client-side routed and
+   never triggers a cross-document transition at all. */
+::view-transition-old(root) {
+  animation: 200ms ease-in both vt-old-out;
+}
+::view-transition-new(root) {
+  animation: 340ms cubic-bezier(0.22, 1, 0.36, 1) both vt-new-in;
+}
+@keyframes vt-old-out {
+  to {
+    opacity: 0;
+    transform: scale(0.99);
+  }
+}
+@keyframes vt-new-in {
+  from {
+    opacity: 0;
+    transform: scale(1.01);
+  }
+}
+
+/* A quiet light sweep across a button on hover, once per hover rather than
+   looping (a looping shimmer nags at the eye) — used on login's Sign in
+   button. Needs `relative overflow-hidden` on the button itself. */
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  transform: skewX(-15deg);
+}
+.btn-sheen:hover::after {
+  animation: btn-sheen-sweep 0.75s ease;
+}
+@keyframes btn-sheen-sweep {
+  to {
+    left: 140%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }
