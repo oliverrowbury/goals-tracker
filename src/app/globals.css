@@ -168,7 +168,23 @@ textarea {
   }
 }
 
-/* BadgeWatcher's toast — already horizontally centered via the
+/* Login's staged entrance — the wordmark settles in first (a touch of
+   scale so it reads as "arriving" rather than just fading), then the rest
+   of the card follows a beat later via fade-up + animation-delay. Kept
+   short (well under a second total) so it reads as a nice touch on load,
+   not something you sit through. */
+@keyframes logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* AchievementWatcher's toast — already horizontally centered via the
    -translate-x-1/2 utility, so the animation's own transform keeps that
    -50% throughout (an animation's transform fully replaces the element's
    static one while running, not composes with it — dropping the -50% here
