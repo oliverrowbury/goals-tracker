@@ -445,12 +445,17 @@ function NumberStepper({
   onChange,
   step,
   min,
+  allowAnyValue,
   className,
 }: {
   value: string;
   onChange: (v: string) => void;
   step: number;
   min: number;
+  // The +/- buttons still bump by `step` (e.g. 2.5kg), but some gyms' plates
+  // and machines don't land on that increment — this lets someone type any
+  // value by hand instead of the native step attribute rejecting it.
+  allowAnyValue?: boolean;
   className?: string;
 }) {
   const round = (n: number) => Math.round(n * 100) / 100;
@@ -475,7 +480,7 @@ function NumberStepper({
         type="number"
         inputMode="decimal"
         min={min}
-        step={step}
+        step={allowAnyValue ? "any" : step}
         required
         className="w-14 min-w-0 bg-transparent px-1 py-2 text-center text-base focus:outline-none"
       />
@@ -619,7 +624,7 @@ function ExerciseSection({
       <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap items-end gap-2.5">
         <div>
           <label className="mb-1 block text-xs text-ink-muted">Weight ({weightUnit === "LB" ? "lb" : "kg"})</label>
-          <NumberStepper value={weight} onChange={setWeight} step={weightStep} min={0} />
+          <NumberStepper value={weight} onChange={setWeight} step={weightStep} min={0} allowAnyValue />
         </div>
         <div>
           <label className="mb-1 block text-xs text-ink-muted">Reps</label>
@@ -1042,6 +1047,7 @@ function EditableSetRow({ set, index, weightUnit }: { set: HistorySet; index: nu
         type="number"
         inputMode="decimal"
         min={0}
+        step="any"
         className="w-14 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
       />
       <span>{weightUnit === "LB" ? "lb" : "kg"} ×</span>
