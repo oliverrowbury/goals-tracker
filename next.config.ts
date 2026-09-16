@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Next 16 otherwise writes AGENTS.md/CLAUDE.md into the repo root on every
+  // dev/build run — noise this project doesn't want checked in.
+  agentRules: false,
   // Our Prisma client generates into src/generated/prisma instead of the
   // default node_modules/.prisma/client. Next.js's file tracing (which
   // decides what actually ships inside each Vercel serverless function)
