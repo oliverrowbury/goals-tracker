@@ -84,6 +84,7 @@ type FeedItem = {
   when: Date;
   title: string;
   detail: string;
+  note?: string | null;
   photoUrl?: string | null;
 };
 
@@ -101,6 +102,12 @@ const PROFILE_SELECT = {
 export default async function FriendsPage() {
   const user = await getCurrentUser();
   const today = todayISO();
+
+  // Opening this page is "I've seen my likes" — same convention as
+  // messages/actions.ts's markThreadRead. Awaited rather than left dangling
+  // — see signup/actions.ts's note on why an unawaited write can get cut
+  // off once a serverless function's response finishes.
+  await prisma.user.update({ where: { id: user.id }, data: { likesSeenAt: new Date() } });
 
   const [following, followers, incomingRequests, outgoingRequests, journalCount, studySessionCount, workoutCount, goalsDoneCount] =
     await Promise.all([
@@ -192,6 +199,7 @@ export default async function FriendsPage() {
               .filter(Boolean)
               .join(" · ")
           : formatMinutes(w.durationMinutes ?? 0),
+      note: w.note,
       photoUrl: w.photoUrl,
     })),
     ...feedStudySessions.map((s) => ({
@@ -199,6 +207,7 @@ export default async function FriendsPage() {
       kind: "study" as const,
       userId: s.userId,
       when: s.endedAt!,
+      note: s.note,
       title: s.subject.name,
       detail: formatMinutes(s.durationMinutes ?? 0),
     })),
@@ -507,6 +516,7 @@ export default async function FriendsPage() {
                         <p className="mt-0.5 text-sm font-medium text-ink">
                           {item.title} <span className="font-normal text-ink-muted">· {item.detail}</span>
                         </p>
+                        {item.note && <p className="mt-1 text-sm text-ink">{item.note}</p>}
                         <p className="mt-0.5 text-xs text-ink-muted">{relativeLabel(item.when, today)}</p>
                       </div>
                       <span

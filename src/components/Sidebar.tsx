@@ -45,14 +45,31 @@ const ACTIVE_CLASSES: Record<(typeof LINKS)[number]["color"], string> = {
   ink: "bg-line text-ink",
 };
 
-export function Sidebar({ level, unreadMessageCount = 0 }: { level: number; unreadMessageCount?: number }) {
+export function Sidebar({
+  level,
+  unreadMessageCount = 0,
+  friendsNotificationCount = 0,
+}: {
+  level: number;
+  unreadMessageCount?: number;
+  friendsNotificationCount?: number;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+
+  // Orange (the app's one accent color) rather than each link's own
+  // section color — a notification count needs to read as "something to
+  // look at" regardless of which section it's attached to.
+  const BADGE_COUNTS: Partial<Record<string, number>> = {
+    "/messages": unreadMessageCount,
+    "/friends": friendsNotificationCount,
+  };
 
   const links = (
     <nav className="flex flex-1 flex-col gap-0.5">
       {LINKS.map(({ href, label, Icon, color }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
+        const badgeCount = BADGE_COUNTS[href] ?? 0;
         return (
           <Link
             key={href}
@@ -64,9 +81,9 @@ export function Sidebar({ level, unreadMessageCount = 0 }: { level: number; unre
           >
             <Icon className="h-5 w-5 shrink-0" />
             {label}
-            {href === "/messages" && unreadMessageCount > 0 && (
-              <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-calm px-1.5 text-xs font-medium text-white">
-                {unreadMessageCount}
+            {badgeCount > 0 && (
+              <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-medium text-white">
+                {badgeCount}
               </span>
             )}
           </Link>
