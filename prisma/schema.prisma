@@ -168,6 +168,11 @@ model User {
   // mutually exclusive, same reasoning as Goal.targetDays being an array
   // rather than a single enum: no reason someone can't be here for all of it.
   focusTags FocusTag[] @default([])
+  // "I've seen the likes on my posts up to here" — the Friends nav badge's
+  // unseen-likes count is Cheer rows toward me created after this, reset to
+  // now() whenever /friends (where likes are visible) is opened. Null means
+  // "never viewed" for a genuinely new account, not "see everything ever."
+  likesSeenAt DateTime?
 
   journalEntries    JournalEntry[]
   goals             Goal[]

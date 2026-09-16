@@ -277,9 +277,9 @@ A fixed, curated set of milestones (first journal entry, streaks, XP levels,
 lifetime workout/study totals, first follow, time-of-day, etc. — the full
 list and copy lives in `src/lib/badgeInfo.ts`, imported by both the
 server-only award logic in `src/lib/badges.ts` and the client-side
-`BadgeWatcher` toast) rather than an open-ended point system, so each badge
+`AchievementWatcher` toast) rather than an open-ended point system, so each badge
 means something specific. Awarded automatically from the same actions that
-award XP; `BadgeWatcher` (mounted in the (main) layout) diffs the current
+award XP; `AchievementWatcher` (mounted in the (main) layout) diffs the current
 user's badges against what it's already shown (tracked in localStorage) and
 pops up a toast for anything earned in roughly the last few minutes — not a
 push mechanism, just piggybacking on the router refresh every award-eligible
