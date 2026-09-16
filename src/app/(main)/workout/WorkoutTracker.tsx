@@ -1099,6 +1099,7 @@ function WorkoutLogCard({
   onToggleExpand: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [savingDetails, startSavingDetails] = useTransition();
   const isCardio = workout.type === "CARDIO";
   const hasRoute = (workout.route?.length ?? 0) >= 2;
   const pace = isCardio ? formatPace(workout.distanceKm, workout.durationMinutes, distanceUnit) : null;
@@ -1212,7 +1213,18 @@ function WorkoutLogCard({
 
           {editing && (
             <form
-              action={updateWorkoutDetails.bind(null, workout.id)}
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                startSavingDetails(async () => {
+                  await updateWorkoutDetails(workout.id, formData);
+                  // Saving is "done" with this edit — collapse back to the
+                  // normal view instead of leaving the form sitting open,
+                  // same as every other edit flow in the app returns you to
+                  // where you were once you save.
+                  setEditing(false);
+                });
+              }}
               className="mt-3 space-y-2.5 border-t border-line pt-3"
             >
               <div>
@@ -1269,9 +1281,10 @@ function WorkoutLogCard({
               </div>
               <button
                 type="submit"
-                className="rounded-lg bg-workout px-3.5 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                disabled={savingDetails}
+                className="rounded-lg bg-workout px-3.5 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
               >
-                Save changes
+                {savingDetails ? "Saving…" : "Save changes"}
               </button>
 
               {!isCardio && exerciseOrder.length > 0 && (
