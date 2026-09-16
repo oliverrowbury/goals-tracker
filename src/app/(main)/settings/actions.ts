@@ -51,7 +51,7 @@ export async function changePassword(_prev: SettingsActionState, formData: FormD
 
 export async function updateName(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) return;
+  if (!name || name.split(/\s+/).length < 2) return;
 
   const user = await getCurrentUser();
   await prisma.user.update({ where: { id: user.id }, data: { name } });

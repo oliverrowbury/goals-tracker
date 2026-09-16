@@ -91,7 +91,16 @@ export function SignupForm() {
       </h1>
       <p className="mb-6 text-sm text-ink-muted">Create your own account — your data stays yours alone.</p>
 
-      <Field id="name" label="Name" type="text" autoComplete="name" autoFocus error={errors.name} defaultValue={state?.values.name} />
+      <Field
+        id="name"
+        label="Full name"
+        type="text"
+        autoComplete="name"
+        autoFocus
+        error={errors.name}
+        defaultValue={state?.values.name}
+        hint="First and last name."
+      />
       <Field
         id="username"
         label="Username"

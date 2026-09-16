@@ -45,6 +45,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
 
   const fieldErrors: NonNullable<SignupState>["fieldErrors"] = {};
   if (!name) fieldErrors.name = "Enter your name.";
+  else if (name.split(/\s+/).length < 2) fieldErrors.name = "Enter your first and last name.";
   if (!username) fieldErrors.username = "Choose a username.";
   else if (!USERNAME_RE.test(username)) {
     fieldErrors.username = "3-20 characters, starting with a letter — lowercase letters, numbers, and underscores only.";

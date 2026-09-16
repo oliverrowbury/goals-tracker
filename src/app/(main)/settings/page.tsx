@@ -112,12 +112,15 @@ export default async function SettingsPage() {
             name="name"
             defaultValue={user.name}
             required
+            pattern="\S+\s+\S.*"
+            title="First and last name"
             className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
           />
           <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
             Save
           </button>
         </form>
+        <p className="mt-1 text-xs text-ink-muted">First and last name.</p>
 
         <div className="mt-6 border-t border-line pt-6">
           <p className="mb-3 text-sm font-medium text-ink">Username</p>
