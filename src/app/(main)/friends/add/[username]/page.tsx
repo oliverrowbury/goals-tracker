@@ -82,14 +82,29 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         )}
 
         <div className="mt-4 flex justify-center gap-5 border-t border-line pt-4 text-sm">
-          <span>
-            <span className="font-serif text-base font-semibold text-ink">{followingCount}</span>{" "}
-            <span className="text-ink-muted">following</span>
-          </span>
-          <span>
-            <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
-            <span className="text-ink-muted">followers</span>
-          </span>
+          {isSelf || isFollowing ? (
+            <>
+              <Link href={`/friends/${target.username}/following`} className="hover:opacity-70">
+                <span className="font-serif text-base font-semibold text-ink">{followingCount}</span>{" "}
+                <span className="text-ink-muted">following</span>
+              </Link>
+              <Link href={`/friends/${target.username}/followers`} className="hover:opacity-70">
+                <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
+                <span className="text-ink-muted">followers</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <span>
+                <span className="font-serif text-base font-semibold text-ink">{followingCount}</span>{" "}
+                <span className="text-ink-muted">following</span>
+              </span>
+              <span>
+                <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
+                <span className="text-ink-muted">followers</span>
+              </span>
+            </>
+          )}
         </div>
 
         <div className="mt-4 border-t border-line pt-4">

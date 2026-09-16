@@ -2,17 +2,15 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO, isoToDate, weekdayShortDayMonth, formatMonthYear } from "@/lib/dates";
-import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace } from "@/lib/workout";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
 import { ADMIN_EMAIL } from "@/lib/auth";
-import { UsersIcon, FlameIcon, JournalIcon, ClockIcon, DumbbellIcon, ActivityIcon, TargetIcon } from "@/components/Icons";
+import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, ActivityIcon, TargetIcon } from "@/components/Icons";
 import { AddFriendSearch } from "./AddFriendSearch";
 import { ShareActivityToggle } from "./ShareActivityToggle";
-import { UnfollowButton } from "./UnfollowButton";
 import { LikeButton } from "./LikeButton";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { FocusTagPills } from "./FocusTagPills";
@@ -21,47 +19,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
-
-type FollowedUser = {
-  id: string;
-  name: string;
-  username: string;
-  avatarUrl: string | null;
-  shareJournalStreak: boolean;
-  shareStudyStreak: boolean;
-  shareWorkoutStreak: boolean;
-  xp: number;
-};
-
-// The only place in the app that reads another user's rows — gated behind
-// an ACCEPTED follow (checked by the caller) and, per category, that
-// user's own share*Streak opt-in, so it's never reachable just by knowing
-// a user id. Journal *content* is never included here regardless — only
-// whether an entry exists on a given day, the same way the streak is
-// already computed for the signed-in user's own settings page. Each
-// category is fetched independently so one person can show their workout
-// streak without also showing their journal streak.
-async function followedActivity(other: FollowedUser, today: string) {
-  const [journalDates, studyDates, workoutDates] = await Promise.all([
-    other.shareJournalStreak
-      ? prisma.journalEntry.findMany({ where: { userId: other.id, bodyText: { not: "" } }, select: { date: true } })
-      : null,
-    other.shareStudyStreak
-      ? prisma.studySession.findMany({
-          where: { userId: other.id, durationMinutes: { not: null } },
-          select: { startedAt: true },
-        })
-      : null,
-    other.shareWorkoutStreak
-      ? prisma.workout.findMany({ where: { userId: other.id, endedAt: { not: null } }, select: { date: true } })
-      : null,
-  ]);
-  return {
-    journalStreak: journalDates && computeStreak(new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10))), today),
-    studyStreak: studyDates && computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today),
-    workoutStreak: workoutDates && computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today),
-  };
-}
 
 // "Just now" / "2 hours ago" / "Yesterday" / "Sun 13 Sept" — same idea as
 // the workout log and study session dayLabels, just with same-day
@@ -139,7 +96,6 @@ export default async function FriendsPage() {
 
   const followingList = following.map((f) => f.following);
   const followingIdSet = new Set(followingList.map((f) => f.id));
-  const followerIdSet = new Set(followers.map((f) => f.follower.id));
   // Someone I already have a pending or accepted row toward, from either
   // side — used to hide the "Follow back" button once a request is already
   // in flight rather than letting it be sent twice.
@@ -154,17 +110,7 @@ export default async function FriendsPage() {
   const FEED_SINCE = isoToDate(shiftISO(today, -14));
   const FEED_LIMIT = 25;
 
-  const [activityByUserId, feedWorkouts, feedStudySessions] = await Promise.all([
-    (async () => {
-      const map = new Map<string, Awaited<ReturnType<typeof followedActivity>>>();
-      await Promise.all(
-        followingList.map(async (other) => {
-          if (!other.shareJournalStreak && !other.shareStudyStreak && !other.shareWorkoutStreak) return;
-          map.set(other.id, await followedActivity(other, today));
-        }),
-      );
-      return map;
-    })(),
+  const [feedWorkouts, feedStudySessions] = await Promise.all([
     shareWorkoutIds.length > 0
       ? prisma.workout.findMany({
           where: { userId: { in: shareWorkoutIds }, endedAt: { gte: FEED_SINCE }, visibility: "FRIENDS" },
@@ -264,14 +210,14 @@ export default async function FriendsPage() {
         )}
 
         <div className="mt-4 flex gap-5 border-t border-line pt-4 text-sm">
-          <span>
+          <Link href={`/friends/${user.username}/following`} className="hover:opacity-70">
             <span className="font-serif text-base font-semibold text-ink">{following.length}</span>{" "}
             <span className="text-ink-muted">following</span>
-          </span>
-          <span>
+          </Link>
+          <Link href={`/friends/${user.username}/followers`} className="hover:opacity-70">
             <span className="font-serif text-base font-semibold text-ink">{followers.length}</span>{" "}
             <span className="text-ink-muted">followers</span>
-          </span>
+          </Link>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-line pt-4 sm:grid-cols-4">
@@ -417,76 +363,6 @@ export default async function FriendsPage() {
         </section>
       )}
 
-      <section>
-        <h2 className="mb-3 text-sm font-medium text-ink-muted">
-          {following.length === 0 ? "Not following anyone yet" : `Following ${following.length}`}
-        </h2>
-
-        {following.length === 0 && (
-          <EmptyState icon={UsersIcon} iconClassName="bg-calm-soft text-calm" message="Follow someone above to see their streaks and progress." />
-        )}
-
-        <div className="space-y-3">
-          {followingList.map((other) => {
-            const activity = activityByUserId.get(other.id);
-            const { level: otherLevel } = levelForXp(other.xp);
-            return (
-              <div key={other.id} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <Link href={`/friends/add/${other.username}`} className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
-                    <Avatar name={other.name} avatarUrl={other.avatarUrl} size={36} />
-                    <div className="min-w-0">
-                      <h3 className="truncate font-medium text-ink">{other.name}</h3>
-                      <p className="text-sm text-ink-muted">
-                        @{other.username}
-                        {followerIdSet.has(other.id) && <span> · Follows you</span>}
-                      </p>
-                    </div>
-                  </Link>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="rounded-full bg-calm-soft px-2.5 py-1 text-xs font-medium text-calm">Lv {otherLevel}</span>
-                    {followerIdSet.has(other.id) && (
-                      <Link href={`/messages/${other.username}`} className="text-sm text-ink-muted hover:text-calm">
-                        Message
-                      </Link>
-                    )}
-                    <UnfollowButton userId={other.id} name={other.name} />
-                  </div>
-                </div>
-
-                {activity && (activity.journalStreak != null || activity.studyStreak != null || activity.workoutStreak != null) ? (
-                  <div className="mt-3 flex flex-wrap gap-4 border-t border-line pt-3 text-sm">
-                    {activity.journalStreak != null && (
-                      <span className="flex items-center gap-1.5 text-ink-muted">
-                        <JournalIcon className="h-4 w-4 text-accent" />
-                        {activity.journalStreak} day{activity.journalStreak === 1 ? "" : "s"}
-                      </span>
-                    )}
-                    {activity.studyStreak != null && (
-                      <span className="flex items-center gap-1.5 text-ink-muted">
-                        <ClockIcon className="h-4 w-4 text-study" />
-                        {activity.studyStreak} day{activity.studyStreak === 1 ? "" : "s"}
-                      </span>
-                    )}
-                    {activity.workoutStreak != null && (
-                      <span className="flex items-center gap-1.5 text-ink-muted">
-                        <DumbbellIcon className="h-4 w-4 text-workout" />
-                        {activity.workoutStreak} day{activity.workoutStreak === 1 ? "" : "s"}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <p className="mt-3 flex items-center gap-1.5 border-t border-line pt-3 text-xs text-ink-muted">
-                    <FlameIcon className="h-3.5 w-3.5" />
-                    Activity is private
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
       {following.length > 0 && (
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Activity</h2>
@@ -498,17 +374,20 @@ export default async function FriendsPage() {
               {feed.map((item) => {
                 const followed = followedById.get(item.userId);
                 if (!followed) return null;
+                // Avatar links to the profile; the rest of the post (text
+                // and, when there's one, the photo — the main event, Insta-
+                // style) links to the post's own detail view. Two sibling
+                // links rather than one wrapping the whole card, since a
+                // link can't be nested inside another link.
                 return (
-                  <li key={`${item.kind}-${item.id}`} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
-                    <div className="flex items-start gap-3">
+                  <li key={`${item.kind}-${item.id}`} className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
+                    <div className="flex items-start gap-3 p-4">
                       <Link href={`/friends/add/${followed.username}`} className="shrink-0">
                         <Avatar name={followed.name} avatarUrl={followed.avatarUrl} size={32} />
                       </Link>
-                      <div className="min-w-0 flex-1">
+                      <Link href={`/friends/post/${item.kind}/${item.id}`} className="min-w-0 flex-1 hover:opacity-90">
                         <p className="text-sm text-ink">
-                          <Link href={`/friends/add/${followed.username}`} className="font-medium hover:underline">
-                            {followed.name}
-                          </Link>{" "}
+                          <span className="font-medium">{followed.name}</span>{" "}
                           <span className="text-ink-muted">
                             {item.kind === "workout" ? "finished a workout" : "studied"}
                           </span>
@@ -518,7 +397,7 @@ export default async function FriendsPage() {
                         </p>
                         {item.note && <p className="mt-1 text-sm text-ink">{item.note}</p>}
                         <p className="mt-0.5 text-xs text-ink-muted">{relativeLabel(item.when, today)}</p>
-                      </div>
+                      </Link>
                       <span
                         className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                           item.kind === "workout" ? "bg-workout-soft text-workout" : "bg-study-soft text-study"
@@ -532,10 +411,12 @@ export default async function FriendsPage() {
                       </span>
                     </div>
                     {item.photoUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.photoUrl} alt="" className="mt-3 max-h-80 w-full rounded-xl object-cover" />
+                      <Link href={`/friends/post/${item.kind}/${item.id}`} className="block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={item.photoUrl} alt="" className="aspect-square w-full object-cover" />
+                      </Link>
                     )}
-                    <div className="mt-3 border-t border-line pt-3">
+                    <div className="border-t border-line px-4 py-3">
                       <LikeButton
                         kind={item.kind}
                         activityId={item.id}
