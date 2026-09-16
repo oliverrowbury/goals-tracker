@@ -18,6 +18,7 @@ function Field({
   autoFocus,
   error,
   defaultValue,
+  hint,
 }: {
   id: "name" | "username" | "email" | "password" | "confirmPassword";
   label: string;
@@ -26,6 +27,7 @@ function Field({
   autoFocus?: boolean;
   error?: string;
   defaultValue?: string;
+  hint?: string;
 }) {
   const fieldClassName = `${inputClass} ${error ? "border-accent" : "border-line focus:border-accent"}`;
 
@@ -57,7 +59,7 @@ function Field({
           className={fieldClassName}
         />
       )}
-      {error && <p className="text-xs text-accent-strong">{error}</p>}
+      {error ? <p className="text-xs text-accent-strong">{error}</p> : hint && <p className="text-xs text-ink-muted">{hint}</p>}
     </div>
   );
 }
@@ -97,6 +99,7 @@ export function SignupForm() {
         autoComplete="username"
         error={errors.username}
         defaultValue={state?.values.username}
+        hint="Your public @handle — check it's what you want (your browser may have filled it in). You can change it later in Settings."
       />
       <Field id="email" label="Email" type="email" autoComplete="email" error={errors.email} defaultValue={state?.values.email} />
       <Field id="password" label="Password" type="password" autoComplete="new-password" error={errors.password} />
