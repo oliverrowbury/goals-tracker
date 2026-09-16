@@ -107,6 +107,14 @@ export async function setStudySessionVisibility(sessionId: string, visibility: A
   revalidatePath("/friends");
 }
 
+// The post-finish summary screen's caption field — StudySession.note
+// already exists in the schema but had no UI anywhere until now.
+export async function setStudySessionNote(sessionId: string, note: string) {
+  const user = await getCurrentUser();
+  await prisma.studySession.updateMany({ where: { id: sessionId, userId: user.id }, data: { note: note.trim() || null } });
+  revalidatePath("/friends");
+}
+
 export async function deleteStudySession(sessionId: string) {
   const session = await prisma.studySession.findUnique({ where: { id: sessionId } });
   if (!session) return; // already gone — nothing to do

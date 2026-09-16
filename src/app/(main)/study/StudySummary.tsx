@@ -5,7 +5,8 @@ import { ClockIcon, TrashIcon } from "@/components/Icons";
 import { formatMinutes } from "@/lib/study";
 import { ShareButton } from "@/components/ShareButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
-import { setStudySessionVisibility, deleteStudySession } from "./actions";
+import { setStudySessionVisibility, setStudySessionNote, deleteStudySession } from "./actions";
+import { CaptionField } from "@/components/CaptionField";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 export type JustFinishedSession = {
@@ -52,7 +53,11 @@ export function StudySummary({ session, onDone }: { session: JustFinishedSession
       <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">{session.subjectName}</h2>
       <p className="mt-4 font-serif text-5xl font-semibold tabular-nums text-ink">{formatMinutes(session.durationMinutes)}</p>
 
-      <div className="mt-6 border-t border-line pt-5">
+      <div className="mt-5 border-t border-line pt-5 text-left">
+        <CaptionField initialValue="" onSave={(value) => setStudySessionNote(session.id, value)} focusClassName="focus:border-study" />
+      </div>
+
+      <div className="mt-4">
         <VisibilityPicker sessionId={session.id} />
       </div>
 

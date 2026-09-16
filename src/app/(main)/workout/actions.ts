@@ -254,6 +254,16 @@ export async function setWorkoutVisibility(workoutId: string, visibility: Activi
   revalidatePath("/friends");
 }
 
+// The post-finish summary screen's caption field — same note the workout
+// already has (also editable mid-workout via WorkoutNoteField, and from the
+// log via updateWorkoutDetails), just reachable from the one moment a
+// workout's guaranteed to be on screen right after being created.
+export async function setWorkoutNote(workoutId: string, note: string) {
+  const user = await getCurrentUser();
+  await prisma.workout.updateMany({ where: { id: workoutId, userId: user.id }, data: { note: note.trim() || null } });
+  revalidatePath("/friends");
+}
+
 export async function uploadWorkoutPhoto(workoutId: string, formData: FormData): Promise<{ error: string } | null> {
   const user = await getCurrentUser();
   const file = formData.get("photo");

@@ -14,7 +14,8 @@ import {
 import { ShareButton } from "@/components/ShareButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { RouteMap } from "./RouteMap";
-import { setWorkoutVisibility, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto } from "./actions";
+import { setWorkoutVisibility, setWorkoutNote, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto } from "./actions";
+import { CaptionField } from "@/components/CaptionField";
 import type { WorkoutType, WeightUnit, DistanceUnit } from "@/lib/constants";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
@@ -22,6 +23,7 @@ export type JustFinishedWorkout = {
   id: string;
   type: WorkoutType;
   label: string;
+  note: string | null;
   durationSeconds: number;
   exerciseCount?: number;
   setCount?: number;
@@ -213,7 +215,15 @@ export function WorkoutSummary({
 
       <PhotoAttach workoutId={workout.id} />
 
-      <div className="mt-6 border-t border-line pt-5">
+      <div className="mt-5 border-t border-line pt-5 text-left">
+        <CaptionField
+          initialValue={workout.note ?? ""}
+          onSave={(value) => setWorkoutNote(workout.id, value)}
+          focusClassName="focus:border-workout"
+        />
+      </div>
+
+      <div className="mt-4">
         <VisibilityPicker workoutId={workout.id} />
       </div>
 
