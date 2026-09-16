@@ -1,6 +1,6 @@
 import type { Badge } from "@/generated/prisma/enums";
 
-// Split out from lib/badges.ts so client components (e.g. BadgeWatcher) can
+// Split out from lib/badges.ts so client components (e.g. AchievementWatcher) can
 // import just the display data without pulling in that file's `prisma`
 // import — a server-only dependency that breaks the client bundle.
 

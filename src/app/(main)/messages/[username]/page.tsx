@@ -26,7 +26,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ usernam
   if (!(await isMutualFollow(user.id, other.id))) redirect("/messages");
 
   // Opening the thread is "I've seen this" — same as the rest of the app's
-  // read-state (e.g. BadgeWatcher piggybacking on a normal page render).
+  // read-state (e.g. AchievementWatcher piggybacking on a normal page render).
   await markThreadRead(other.id);
 
   const messages = await prisma.message.findMany({
