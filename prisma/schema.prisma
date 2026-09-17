@@ -191,6 +191,7 @@ model User {
   cheersReceived Cheer[] @relation("CheerTo")
   messagesSent     Message[] @relation("MessageFrom")
   messagesReceived Message[] @relation("MessageTo")
+  comments         Comment[]
 }
 
 model PushSubscription {
@@ -532,6 +533,26 @@ model Cheer {
   // The friend feed's like-count lookup filters by workoutId/studySessionId
   // directly (not fromUserId), which the two unique indexes above don't
   // cover since fromUserId is their leading column.
+  @@index([workoutId])
+  @@index([studySessionId])
+}
+
+// A comment on one specific activity in a friend's feed — same
+// exactly-one-of-workoutId/studySessionId shape as Cheer above, and the
+// same reasoning for plain string FKs (no cascade needed; a comment on a
+// since-deleted activity just stops showing up with it).
+model Comment {
+  id String @id @default(uuid())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  workoutId      String?
+  studySessionId String?
+
+  body      String
+  createdAt DateTime @default(now())
+
   @@index([workoutId])
   @@index([studySessionId])
 }

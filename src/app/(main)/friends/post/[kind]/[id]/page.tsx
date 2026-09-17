@@ -8,6 +8,8 @@ import { formatDistance, formatPace, formatWeight, computeVolume } from "@/lib/w
 import { Avatar } from "@/components/Avatar";
 import { ActivityIcon, ClockIcon } from "@/components/Icons";
 import { LikeButton } from "../../../LikeButton";
+import { CommentSection } from "../../../CommentSection";
+import type { CommentDTO } from "../../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,7 @@ export const dynamic = "force-dynamic";
 // each get their own properly-typed branch instead of one shared type
 // TypeScript can't narrow between.
 function PostCard({
+  ownerId,
   ownerName,
   ownerUsername,
   ownerAvatarUrl,
@@ -31,7 +34,10 @@ function PostCard({
   id,
   likeCount,
   likedByMe,
+  currentUserId,
+  comments,
 }: {
+  ownerId: string;
   ownerName: string;
   ownerUsername: string;
   ownerAvatarUrl: string | null;
@@ -46,6 +52,8 @@ function PostCard({
   id: string;
   likeCount: number;
   likedByMe: boolean;
+  currentUserId: string;
+  comments: CommentDTO[];
 }) {
   return (
     <div className="mx-auto max-w-md">
@@ -88,10 +96,35 @@ function PostCard({
           <div className="mt-4 border-t border-line pt-4">
             <LikeButton kind={kind} activityId={id} count={likeCount} likedByMe={likedByMe} />
           </div>
+
+          <CommentSection
+            kind={kind}
+            activityId={id}
+            currentUserId={currentUserId}
+            postOwnerId={ownerId}
+            initialComments={comments}
+          />
         </div>
       </div>
     </div>
   );
+}
+
+async function fetchComments(kind: "workout" | "study", id: string): Promise<CommentDTO[]> {
+  const comments = await prisma.comment.findMany({
+    where: kind === "workout" ? { workoutId: id } : { studySessionId: id },
+    orderBy: { createdAt: "asc" },
+    include: { author: { select: { name: true, username: true, avatarUrl: true } } },
+  });
+  return comments.map((c) => ({
+    id: c.id,
+    authorId: c.authorId,
+    authorName: c.author.name,
+    authorUsername: c.author.username,
+    authorAvatarUrl: c.author.avatarUrl,
+    body: c.body,
+    createdAt: c.createdAt.toISOString(),
+  }));
 }
 
 // The feed's Instagram-style "tap a post" destination — photo first (when
@@ -117,9 +150,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
       if (workout.visibility !== "FRIENDS" || !workout.user.shareWorkoutStreak || !viewerFollowsOwner) redirect("/friends");
     }
 
-    const [likeCount, likedByMe] = await Promise.all([
+    const [likeCount, likedByMe, comments] = await Promise.all([
       prisma.cheer.count({ where: { workoutId: id } }),
       prisma.cheer.findFirst({ where: { fromUserId: viewer.id, workoutId: id } }),
+      fetchComments("workout", id),
     ]);
 
     const isCardio = workout.type === "CARDIO";
@@ -137,6 +171,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
 
     return (
       <PostCard
+        ownerId={workout.userId}
         ownerName={workout.user.name}
         ownerUsername={workout.user.username}
         ownerAvatarUrl={workout.user.avatarUrl}
@@ -151,6 +186,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
         id={id}
         likeCount={likeCount}
         likedByMe={!!likedByMe}
+        currentUserId={viewer.id}
+        comments={comments}
       />
     );
   }
@@ -165,13 +202,15 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
     if (session.visibility !== "FRIENDS" || !session.user.shareStudyStreak || !viewerFollowsOwner) redirect("/friends");
   }
 
-  const [likeCount, likedByMe] = await Promise.all([
+  const [likeCount, likedByMe, comments] = await Promise.all([
     prisma.cheer.count({ where: { studySessionId: id } }),
     prisma.cheer.findFirst({ where: { fromUserId: viewer.id, studySessionId: id } }),
+    fetchComments("study", id),
   ]);
 
   return (
     <PostCard
+      ownerId={session.userId}
       ownerName={session.user.name}
       ownerUsername={session.user.username}
       ownerAvatarUrl={session.user.avatarUrl}
@@ -185,6 +224,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
       id={id}
       likeCount={likeCount}
       likedByMe={!!likedByMe}
+      currentUserId={viewer.id}
+      comments={comments}
     />
   );
 }

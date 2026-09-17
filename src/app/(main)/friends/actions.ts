@@ -170,3 +170,82 @@ export async function likeActivity(kind: ActivityKind, activityId: string) {
   }
   revalidatePath("/friends");
 }
+
+const MAX_COMMENT_LENGTH = 500;
+
+// Same privacy boundary as the post-detail page's own access check
+// (friends/post/[kind]/[id]/page.tsx) — re-verified here rather than
+// trusted from wherever the comment form happened to be rendered. Unlike
+// likeActivity, commenting on your own post is allowed (no self-block),
+// same as any real social app.
+async function canCommentOn(userId: string, kind: ActivityKind, activityId: string): Promise<{ ownerId: string } | null> {
+  const activity =
+    kind === "workout"
+      ? await prisma.workout.findUnique({ where: { id: activityId }, select: { userId: true, visibility: true } })
+      : await prisma.studySession.findUnique({ where: { id: activityId }, select: { userId: true, visibility: true } });
+  if (!activity) return null;
+  if (activity.userId === userId) return { ownerId: activity.userId };
+
+  const [follow, ownerUser] = await Promise.all([
+    prisma.follow.findFirst({ where: { followerId: userId, followingId: activity.userId, status: "ACCEPTED" } }),
+    prisma.user.findUnique({ where: { id: activity.userId }, select: { shareWorkoutStreak: true, shareStudyStreak: true } }),
+  ]);
+  if (!follow || !ownerUser || activity.visibility !== "FRIENDS") return null;
+  if (kind === "workout" && !ownerUser.shareWorkoutStreak) return null;
+  if (kind === "study" && !ownerUser.shareStudyStreak) return null;
+  return { ownerId: activity.userId };
+}
+
+export type CommentDTO = {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorUsername: string;
+  authorAvatarUrl: string | null;
+  body: string;
+  createdAt: string;
+};
+
+export async function addComment(kind: ActivityKind, activityId: string, formData: FormData): Promise<{ error?: string }> {
+  const user = await getCurrentUser();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return { error: "Type something first." };
+  if (body.length > MAX_COMMENT_LENGTH) return { error: `Keep it under ${MAX_COMMENT_LENGTH} characters.` };
+
+  const access = await canCommentOn(user.id, kind, activityId);
+  if (!access) return { error: "You can't comment on this." };
+
+  await prisma.comment.create({
+    data: {
+      authorId: user.id,
+      body,
+      workoutId: kind === "workout" ? activityId : null,
+      studySessionId: kind === "study" ? activityId : null,
+    },
+  });
+  revalidatePath(`/friends/post/${kind}/${activityId}`);
+  return {};
+}
+
+// The comment's own author, or the activity's owner (same "your post, your
+// call" moderation bar most feeds use), can remove it — re-checked here
+// rather than trusted from the delete button only being shown to those two
+// people client-side.
+export async function deleteComment(commentId: string) {
+  const user = await getCurrentUser();
+  const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+  if (!comment) return;
+
+  let ownerId: string | null = null;
+  if (comment.workoutId) {
+    ownerId = (await prisma.workout.findUnique({ where: { id: comment.workoutId }, select: { userId: true } }))?.userId ?? null;
+  } else if (comment.studySessionId) {
+    ownerId = (await prisma.studySession.findUnique({ where: { id: comment.studySessionId }, select: { userId: true } }))?.userId ?? null;
+  }
+  if (comment.authorId !== user.id && ownerId !== user.id) return;
+
+  await prisma.comment.delete({ where: { id: commentId } });
+  const kind = comment.workoutId ? "workout" : "study";
+  const activityId = comment.workoutId ?? comment.studySessionId;
+  revalidatePath(`/friends/post/${kind}/${activityId}`);
+}

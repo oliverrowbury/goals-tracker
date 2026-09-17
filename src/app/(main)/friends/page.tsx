@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO, isoToDate, weekdayShortDayMonth, formatMonthYear } from "@/lib/dates";
 import { levelForXp } from "@/lib/xp";
 import { formatMinutes } from "@/lib/study";
-import { formatDistance, formatPace } from "@/lib/workout";
+import { formatDistance, formatPace, formatWeight, computeVolume } from "@/lib/workout";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
 import { ADMIN_EMAIL } from "@/lib/auth";
@@ -116,6 +116,7 @@ export default async function FriendsPage() {
           where: { userId: { in: shareWorkoutIds }, endedAt: { gte: FEED_SINCE }, visibility: "FRIENDS" },
           orderBy: { endedAt: "desc" },
           take: FEED_LIMIT,
+          include: { sets: true },
         })
       : [],
     shareStudyIds.length > 0
@@ -144,7 +145,11 @@ export default async function FriendsPage() {
             ]
               .filter(Boolean)
               .join(" · ")
-          : formatMinutes(w.durationMinutes ?? 0),
+          : [
+              formatMinutes(w.durationMinutes ?? 0),
+              `${new Set(w.sets.map((s) => s.exerciseId)).size} exercises`,
+              `${formatWeight(computeVolume(w.sets), user.weightUnit)} volume`,
+            ].join(" · "),
       note: w.note,
       photoUrl: w.photoUrl,
     })),

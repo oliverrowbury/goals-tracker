@@ -156,6 +156,14 @@ function useElapsedSeconds(startedAt: string | null, pausedAt: string | null, cl
   const [now, setNow] = useState(() => Date.now() - clockOffsetMs);
   useEffect(() => {
     if (!startedAt || pausedAt) return; // frozen while paused
+    // Resync immediately rather than waiting for the interval's first tick
+    // up to a second later — without this, `now` still held whatever it
+    // was last set to before the pause, so the moment a resume cleared
+    // `pausedAt`, `end` (below) briefly fell back to that stale pre-pause
+    // value instead of the real current time, and the display jumped
+    // backwards by roughly however long the pause had lasted.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to startedAt/pausedAt changing (a pause ending server-side), not a per-render update; there's no external-system subscription to attach this to
+    setNow(Date.now() - clockOffsetMs);
     const interval = setInterval(() => setNow(Date.now() - clockOffsetMs), 1000);
     return () => clearInterval(interval);
   }, [startedAt, pausedAt, clockOffsetMs]);
