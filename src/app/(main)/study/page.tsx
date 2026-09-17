@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { weekRangeContaining } from "@/lib/goals";
-import { todayISO, monthRangeContaining, yearRangeContaining } from "@/lib/dates";
+import { todayISO, shiftISO, monthRangeContaining, yearRangeContaining } from "@/lib/dates";
 import { StudyTimer } from "./StudyTimer";
 import { StudyStats } from "./StudyStats";
+import { WeeklyStudyChart } from "./WeeklyStudyChart";
 import { RecentSessions } from "./RecentSessions";
 import { ClockIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
@@ -38,6 +39,24 @@ function withOpenSession(
   const elapsedMs = (openSession.pausedAt ?? new Date()).getTime() - openSession.startedAt.getTime();
   const elapsedMinutes = Math.max(0, Math.floor(elapsedMs / 60_000));
   return { ...totals, [openSession.subjectId]: (totals[openSession.subjectId] ?? 0) + elapsedMinutes };
+}
+
+// Same shape as totalsBySubject, but bucketed per calendar day first — what
+// the week-at-a-glance chart needs that a single period total can't answer
+// (which days were actually the busy ones, not just "12h this week").
+function totalsByDaySubject(
+  sessions: { subjectId: string; durationMinutes: number | null; startedAt: Date }[],
+  weekStartISO: string,
+): Record<string, Record<string, number>> {
+  const days: Record<string, Record<string, number>> = {};
+  for (let i = 0; i < 7; i++) days[shiftISO(weekStartISO, i)] = {};
+
+  for (const s of sessions) {
+    const dateISO = s.startedAt.toISOString().slice(0, 10);
+    if (!(dateISO in days)) continue;
+    days[dateISO][s.subjectId] = (days[dateISO][s.subjectId] ?? 0) + (s.durationMinutes ?? 0);
+  }
+  return days;
 }
 
 export default async function StudyPage() {
@@ -78,6 +97,22 @@ export default async function StudyPage() {
     }),
   ]);
 
+  const daysBySubject = totalsByDaySubject(weekSessions, week.startISO);
+  if (openSession) {
+    const startedISO = openSession.startedAt.toISOString().slice(0, 10);
+    if (startedISO in daysBySubject) {
+      const elapsedMs = (openSession.pausedAt ?? new Date()).getTime() - openSession.startedAt.getTime();
+      const elapsedMinutes = Math.max(0, Math.floor(elapsedMs / 60_000));
+      daysBySubject[startedISO] = {
+        ...daysBySubject[startedISO],
+        [openSession.subjectId]: (daysBySubject[startedISO][openSession.subjectId] ?? 0) + elapsedMinutes,
+      };
+    }
+  }
+  const weekDays = Object.entries(daysBySubject)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([dateISO, totals]) => ({ dateISO, totalsBySubject: totals }));
+
   return (
     <div>
       <PageHeader icon={ClockIcon} iconClassName="text-study" title="Study" />
@@ -96,6 +131,14 @@ export default async function StudyPage() {
         }
         weekTotals={totalsBySubject(weekSessions)}
       />
+
+      <div className="mt-8">
+        <WeeklyStudyChart
+          subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
+          todayISO={today}
+          days={weekDays}
+        />
+      </div>
 
       <div className="mt-8">
         <StudyStats

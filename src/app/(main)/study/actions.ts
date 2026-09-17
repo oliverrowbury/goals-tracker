@@ -189,7 +189,12 @@ export async function createSubject(_prev: CreateSubjectState, formData: FormDat
     };
   }
 
-  const colors = ["#c1592f", "#4f7ba6", "#5f9e6f", "#a25fa6", "#c99a3e"];
+  // A validated categorical palette (see the dataviz color-formula six checks) —
+  // every slot clears the OKLCH lightness band, chroma floor, and CVD/contrast
+  // gates in both light and dark mode, so a subject's color still reads as
+  // distinct identity (not just a gray smudge) wherever it shows up: this
+  // rotation, the study charts, the small color dot next to its name.
+  const colors = ["#c1592f", "#3573b3", "#3f9c5a", "#a2478f", "#b8790f"];
   const count = await prisma.subject.count({ where: { userId: user.id } });
 
   await prisma.subject.create({

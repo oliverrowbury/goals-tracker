@@ -157,3 +157,9 @@ export function weekdayShortDay(iso: string): string {
   const d = isoToDate(iso);
   return `${WEEKDAY_SHORT[d.getUTCDay()]} ${d.getUTCDate()}`;
 }
+
+// Just "Sun" — chart axis labels, where the day number would be redundant
+// (an adjacent tooltip/label already gives the exact date).
+export function weekdayShort(iso: string): string {
+  return WEEKDAY_SHORT[isoToDate(iso).getUTCDay()];
+}
