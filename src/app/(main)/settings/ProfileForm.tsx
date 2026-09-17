@@ -145,7 +145,7 @@ export function ProfileForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong disabled:opacity-50"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98] disabled:opacity-50"
       >
         {isPending ? "Saving…" : "Save profile"}
       </button>

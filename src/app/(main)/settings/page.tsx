@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { updateName, renameSubject, setSubjectActive } from "./actions";
+import { setSubjectActive } from "./actions";
+import { UpdateNameForm } from "./UpdateNameForm";
+import { RenameSubjectForm } from "./RenameSubjectForm";
 import { PasswordForm } from "./PasswordForm";
 import { UsernameForm } from "./UsernameForm";
 import { UnitsForm } from "./UnitsForm";
@@ -107,19 +109,7 @@ export default async function SettingsPage() {
 
         <AvatarUpload name={user.name} initialAvatarUrl={user.avatarUrl} />
 
-        <form action={updateName} className="mt-4 flex max-w-sm gap-2">
-          <input
-            name="name"
-            defaultValue={user.name}
-            required
-            pattern="\S+\s+\S.*"
-            title="First and last name"
-            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
-          />
-          <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong">
-            Save
-          </button>
-        </form>
+        <UpdateNameForm name={user.name} />
         <p className="mt-1 text-xs text-ink-muted">First and last name.</p>
 
         <div className="mt-6 border-t border-line pt-6">
@@ -284,16 +274,7 @@ export default async function SettingsPage() {
           {active.map((subject) => (
             <li key={subject.id} className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subject.color }} />
-              <form action={renameSubject.bind(null, subject.id)} className="flex flex-1 gap-2">
-                <input
-                  name="name"
-                  defaultValue={subject.name}
-                  className="flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-sm focus:border-accent focus:outline-none"
-                />
-                <button type="submit" className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-muted hover:border-accent hover:text-accent">
-                  Save
-                </button>
-              </form>
+              <RenameSubjectForm subjectId={subject.id} name={subject.name} />
               <form action={setSubjectActive.bind(null, subject.id, false)}>
                 <button type="submit" className="text-sm text-ink-muted hover:text-accent">
                   Archive

@@ -24,6 +24,11 @@ function initialStatus(): Status {
 export function NotificationsForm() {
   const [status, setStatus] = useState<Status>(initialStatus);
   const [unavailable, setUnavailable] = useState(false);
+  // The permission prompt → service worker register → subscribe chain can
+  // take a noticeable moment (or sit waiting on the user to answer the
+  // permission dialog) — without this the button just looks inert the
+  // whole time, and a double-tap could fire the flow twice.
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -35,39 +40,49 @@ export function NotificationsForm() {
   }, []);
 
   async function enable() {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      setStatus("denied");
-      return;
+    setPending(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setStatus("denied");
+        return;
+      }
+
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        setUnavailable(true);
+        return;
+      }
+
+      await navigator.serviceWorker.register("/sw.js");
+      // register() can resolve before the worker is actually active — wait
+      // for `.ready`, which only resolves once one is, or subscribe() throws.
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+
+      await savePushSubscription(subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } });
+      setStatus("subscribed");
+    } finally {
+      setPending(false);
     }
-
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-    if (!publicKey) {
-      setUnavailable(true);
-      return;
-    }
-
-    await navigator.serviceWorker.register("/sw.js");
-    // register() can resolve before the worker is actually active — wait
-    // for `.ready`, which only resolves once one is, or subscribe() throws.
-    const registration = await navigator.serviceWorker.ready;
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
-
-    await savePushSubscription(subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } });
-    setStatus("subscribed");
   }
 
   async function disable() {
-    const registration = await navigator.serviceWorker.getRegistration();
-    const subscription = await registration?.pushManager.getSubscription();
-    if (subscription) {
-      await removePushSubscription(subscription.endpoint);
-      await subscription.unsubscribe();
+    setPending(true);
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        await removePushSubscription(subscription.endpoint);
+        await subscription.unsubscribe();
+      }
+      setStatus("unsubscribed");
+    } finally {
+      setPending(false);
     }
-    setStatus("unsubscribed");
   }
 
   return (
@@ -84,15 +99,22 @@ export function NotificationsForm() {
         <div className="flex items-center gap-3">
           <button
             onClick={status === "subscribed" ? disable : enable}
+            disabled={pending}
             className={
               status === "subscribed"
-                ? "rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent"
-                : "rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-strong"
+                ? "rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink hover:border-accent disabled:opacity-50"
+                : "rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98] disabled:opacity-50"
             }
           >
-            {status === "subscribed" ? "Disable on this device" : "Enable notifications on this device"}
+            {pending
+              ? status === "subscribed"
+                ? "Disabling…"
+                : "Enabling…"
+              : status === "subscribed"
+                ? "Disable on this device"
+                : "Enable notifications on this device"}
           </button>
-          {status === "subscribed" && <span className="text-sm text-ink-muted">Enabled here ✓</span>}
+          {status === "subscribed" && !pending && <span className="text-sm text-ink-muted">Enabled here ✓</span>}
         </div>
       )}
       {unavailable && <p className="text-sm text-ink-muted">Push notifications aren&apos;t available yet — check back soon.</p>}

@@ -10,7 +10,7 @@ export function DeleteAccountForm() {
 
   if (!confirming) {
     return (
-      <button type="button" onClick={() => setConfirming(true)} className="text-sm text-red-600 hover:underline">
+      <button type="button" onClick={() => setConfirming(true)} className="text-sm text-accent-strong hover:underline">
         Delete my account
       </button>
     );
@@ -41,7 +41,7 @@ export function DeleteAccountForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98] disabled:opacity-50"
         >
           {isPending ? "Deleting…" : "Permanently delete my account"}
         </button>
