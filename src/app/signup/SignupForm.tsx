@@ -70,7 +70,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98] disabled:opacity-50"
+      className="btn-sheen relative w-full overflow-hidden rounded-lg bg-accent px-3 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-strong hover:shadow-md active:scale-[0.98] disabled:opacity-50"
     >
       {pending ? "Creating…" : "Create account"}
     </button>
@@ -84,66 +84,71 @@ export function SignupForm() {
   return (
     <form
       action={formAction}
-      className="w-full max-w-sm animate-[fade-up_0.5s_ease-out_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
+      className="relative z-10 w-full max-w-sm animate-[fade-in_0.3s_ease-out_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
     >
+      {/* Same staged entrance as login — wordmark first, then everything
+          else a beat later. */}
       <h1 className="mb-1 text-3xl text-ink">
-        <Wordmark />
+        <Wordmark animated />
       </h1>
-      <p className="mb-6 text-sm text-ink-muted">Create your own account — your data stays yours alone.</p>
 
-      <Field
-        id="name"
-        label="Full name"
-        type="text"
-        autoComplete="name"
-        autoFocus
-        error={errors.name}
-        defaultValue={state?.values.name}
-        hint="First and last name."
-      />
-      <Field
-        id="username"
-        label="Username"
-        type="text"
-        autoComplete="username"
-        error={errors.username}
-        defaultValue={state?.values.username}
-        hint="Your public @handle — check it's what you want (your browser may have filled it in). You can change it later in Settings."
-      />
-      <Field id="email" label="Email" type="email" autoComplete="email" error={errors.email} defaultValue={state?.values.email} />
-      <Field id="password" label="Password" type="password" autoComplete="new-password" error={errors.password} />
-      <Field
-        id="confirmPassword"
-        label="Confirm password"
-        type="password"
-        autoComplete="new-password"
-        error={errors.confirmPassword}
-      />
+      <div className="animate-[fade-up_0.45s_ease-out_both] [animation-delay:120ms]">
+        <p className="mb-6 text-sm text-ink-muted">Create your own account — your data stays yours alone.</p>
 
-      <label className="mb-4 flex items-start gap-2 text-sm text-ink-muted">
-        <input type="checkbox" name="agreeToTerms" required className="mt-0.5" />
-        <span>
-          I&apos;m 13 or older, and I agree to the{" "}
-          <Link href="/terms" target="_blank" className="text-accent hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" target="_blank" className="text-accent hover:underline">
-            Privacy Policy
+        <Field
+          id="name"
+          label="Full name"
+          type="text"
+          autoComplete="name"
+          autoFocus
+          error={errors.name}
+          defaultValue={state?.values.name}
+          hint="First and last name."
+        />
+        <Field
+          id="username"
+          label="Username"
+          type="text"
+          autoComplete="username"
+          error={errors.username}
+          defaultValue={state?.values.username}
+          hint="Your public @handle — check it's what you want (your browser may have filled it in). You can change it later in Settings."
+        />
+        <Field id="email" label="Email" type="email" autoComplete="email" error={errors.email} defaultValue={state?.values.email} />
+        <Field id="password" label="Password" type="password" autoComplete="new-password" error={errors.password} />
+        <Field
+          id="confirmPassword"
+          label="Confirm password"
+          type="password"
+          autoComplete="new-password"
+          error={errors.confirmPassword}
+        />
+
+        <label className="mb-4 flex items-start gap-2 text-sm text-ink-muted">
+          <input type="checkbox" name="agreeToTerms" required className="mt-0.5" />
+          <span>
+            I&apos;m 13 or older, and I agree to the{" "}
+            <Link href="/terms" target="_blank" className="text-accent hover:underline">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/privacy" target="_blank" className="text-accent hover:underline">
+              Privacy Policy
+            </Link>
+            .
+          </span>
+        </label>
+        {errors.agreeToTerms && <p className="mb-4 -mt-3 text-xs text-accent-strong">{errors.agreeToTerms}</p>}
+
+        <SubmitButton />
+
+        <p className="mt-4 text-center text-sm text-ink-muted">
+          Already have one?{" "}
+          <Link href="/login" className="font-medium text-accent hover:underline">
+            Sign in
           </Link>
-          .
-        </span>
-      </label>
-      {errors.agreeToTerms && <p className="mb-4 -mt-3 text-xs text-accent-strong">{errors.agreeToTerms}</p>}
-
-      <SubmitButton />
-
-      <p className="mt-4 text-center text-sm text-ink-muted">
-        Already have one?{" "}
-        <Link href="/login" className="font-medium text-accent hover:underline">
-          Sign in
-        </Link>
-      </p>
+        </p>
+      </div>
     </form>
   );
 }
