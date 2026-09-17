@@ -208,8 +208,11 @@ export function StudyTimer({
   // resumeStudySession. Nothing new is persisted; the session's own
   // startedAt/pausedAt already account for the paused break time correctly.
   const [pomodoroEnabled, setPomodoroEnabled] = useState(false);
-  const [workMinutes, setWorkMinutes] = useState(DEFAULT_WORK_MINUTES);
-  const [breakMinutes, setBreakMinutes] = useState(DEFAULT_BREAK_MINUTES);
+  // Fixed at the standard Pomodoro lengths — no longer user-configurable
+  // (the inline "Work Xm / Break Xm" inputs cluttered the toggle's off
+  // state for no real benefit; 25/5 is what most people expect anyway).
+  const workMinutes = DEFAULT_WORK_MINUTES;
+  const breakMinutes = DEFAULT_BREAK_MINUTES;
   const [pomodoroPhase, setPomodoroPhase] = useState<"work" | "break">("work");
   const [phaseSecondsLeft, setPhaseSecondsLeft] = useState(DEFAULT_WORK_MINUTES * 60);
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
@@ -265,7 +268,7 @@ export function StudyTimer({
       setPhaseSecondsLeft(breakMinutes * 60);
     } else {
       startTransition(() => resumeStudySession(openSessionId));
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setPomodoroPhase("work");
       setPhaseSecondsLeft(workMinutes * 60);
       setCompletedPomodoros((c) => c + 1);
@@ -328,7 +331,7 @@ export function StudyTimer({
         <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm">
           <p className="text-sm text-ink-muted">{onPomodoroBreak ? "On a break" : isPaused ? "Paused" : "Studying"}</p>
           <p className="mt-1 font-serif text-2xl font-semibold text-ink">{activeSubject.name}</p>
-          <p className={`mt-3 font-mono text-4xl tabular-nums ${isPaused ? "text-ink-muted" : "text-study"}`}>
+          <p className={`mt-3 font-serif text-4xl font-semibold tabular-nums ${isPaused ? "text-ink-muted" : "text-study"}`}>
             {formatClock(elapsedSeconds)}
           </p>
           {isPaused && autoPaused && !pomodoroEnabled && (
@@ -345,34 +348,6 @@ export function StudyTimer({
             >
               🍅 Pomodoro {pomodoroEnabled ? "on" : "off"}
             </button>
-            {!pomodoroEnabled && (
-              <>
-                <label className="flex items-center gap-1 text-ink-muted">
-                  Work
-                  <input
-                    type="number"
-                    min={1}
-                    max={180}
-                    value={workMinutes}
-                    onChange={(e) => setWorkMinutes(Math.min(180, Math.max(1, Number(e.target.value) || 1)))}
-                    className="w-12 rounded border border-line bg-paper px-1 py-0.5 text-center focus:border-study focus:outline-none"
-                  />
-                  m
-                </label>
-                <label className="flex items-center gap-1 text-ink-muted">
-                  Break
-                  <input
-                    type="number"
-                    min={1}
-                    max={60}
-                    value={breakMinutes}
-                    onChange={(e) => setBreakMinutes(Math.min(60, Math.max(1, Number(e.target.value) || 1)))}
-                    className="w-12 rounded border border-line bg-paper px-1 py-0.5 text-center focus:border-study focus:outline-none"
-                  />
-                  m
-                </label>
-              </>
-            )}
             {pomodoroEnabled && (
               <span className="text-ink-muted">
                 {pomodoroPhase === "work" ? "Work" : "Break"} · {formatClock(phaseSecondsLeft)} left

@@ -16,7 +16,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ usernam
 
   const other = await prisma.user.findUnique({
     where: { username },
-    select: { id: true, name: true, username: true },
+    select: { id: true, name: true, username: true, avatarUrl: true },
   });
   if (!other) notFound();
   if (other.id === user.id) redirect("/messages");
@@ -48,6 +48,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ usernam
         title={other.name}
         subtitle={<p className="text-sm text-ink-muted">@{other.username}</p>}
         align="baseline"
+        className="mb-4"
         right={
           <Link href="/messages" className="text-sm text-ink-muted hover:text-calm">
             ← All messages
@@ -55,8 +56,15 @@ export default async function ThreadPage({ params }: { params: Promise<{ usernam
         }
       />
       <MessageThread
+        // Keyed on the conversation so navigating from one thread straight
+        // to another (same route, different params) remounts rather than
+        // reusing state — otherwise useState's initialMessages would only
+        // ever apply once and a stale conversation could bleed into a new one.
+        key={other.id}
         currentUserId={user.id}
         otherUserId={other.id}
+        otherName={other.name}
+        otherAvatarUrl={other.avatarUrl}
         initialMessages={messages.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }))}
       />
     </div>

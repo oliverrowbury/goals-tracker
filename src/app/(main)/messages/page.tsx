@@ -94,28 +94,31 @@ export default async function MessagesPage() {
 
       {conversationList.length > 0 && (
         <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
-          {conversationList.map((c) => (
-            <li key={c.otherId}>
-              <Link href={`/messages/${c.otherUsername}`} className="flex items-center gap-3 p-4 hover:bg-paper">
-                <Avatar name={c.otherName} avatarUrl={c.otherAvatarUrl} size={40} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="truncate font-medium text-ink">{c.otherName}</p>
-                    <span className="shrink-0 text-xs text-ink-muted">{dayLabel(c.lastAt)}</span>
+          {conversationList.map((c) => {
+            const unread = c.unreadCount > 0;
+            return (
+              <li key={c.otherId}>
+                <Link href={`/messages/${c.otherUsername}`} className="flex items-center gap-3 p-4 transition-colors hover:bg-paper">
+                  <Avatar name={c.otherName} avatarUrl={c.otherAvatarUrl} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className={`truncate ${unread ? "font-semibold text-ink" : "font-medium text-ink"}`}>{c.otherName}</p>
+                      <span className={`shrink-0 text-xs ${unread ? "font-medium text-calm" : "text-ink-muted"}`}>{dayLabel(c.lastAt)}</span>
+                    </div>
+                    <p className={`truncate text-sm ${unread ? "font-medium text-ink" : "text-ink-muted"}`}>
+                      {c.lastFromMe && "You: "}
+                      {c.lastBody}
+                    </p>
                   </div>
-                  <p className="truncate text-sm text-ink-muted">
-                    {c.lastFromMe && "You: "}
-                    {c.lastBody}
-                  </p>
-                </div>
-                {c.unreadCount > 0 && (
-                  <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-calm px-1.5 text-xs font-medium text-white">
-                    {c.unreadCount}
-                  </span>
-                )}
-              </Link>
-            </li>
-          ))}
+                  {unread && (
+                    <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-calm px-1.5 text-xs font-medium text-white">
+                      {c.unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
 

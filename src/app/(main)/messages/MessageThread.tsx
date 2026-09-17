@@ -1,18 +1,83 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { Avatar } from "@/components/Avatar";
 import { sendMessage, getNewMessages, type MessageDTO } from "./actions";
 
 const POLL_MS = 4000;
 const isOptimistic = (id: string) => id.startsWith("optimistic-");
+// Consecutive messages from the same person within this window are grouped
+// into one visual cluster (no repeated avatar/gap) — the same "burst of
+// texts" convention iMessage/WhatsApp use, rather than every single message
+// getting its own fully-spaced bubble regardless of how it was actually sent.
+const GROUP_WINDOW_MS = 3 * 60_000;
+
+function timeLabel(iso: string) {
+  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function dateLabel(iso: string) {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (sameDay(d, today)) return "Today";
+  if (sameDay(d, yesterday)) return "Yesterday";
+  return d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+}
+
+// Auto-growing textarea — a single row that expands with content instead of
+// a fixed multi-row box, the standard chat-input feel (iMessage/WhatsApp),
+// capped so a long paste doesn't take over the screen.
+function useAutoGrow(value: string) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 128)}px`;
+  }, [value]);
+  return ref;
+}
+
+type Row =
+  | { kind: "date"; key: string; label: string }
+  | { kind: "message"; key: string; message: MessageDTO; mine: boolean; showAvatar: boolean; showTail: boolean };
+
+function buildRows(messages: MessageDTO[], currentUserId: string): Row[] {
+  const rows: Row[] = [];
+  let lastDateKey = "";
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i];
+    const dKey = new Date(m.createdAt).toDateString();
+    if (dKey !== lastDateKey) {
+      rows.push({ kind: "date", key: `date-${dKey}`, label: dateLabel(m.createdAt) });
+      lastDateKey = dKey;
+    }
+    const next = messages[i + 1];
+    const mine = m.senderId === currentUserId;
+    // "Tail" (the little rounded corner pointing at the sender) and the
+    // avatar both only render on the last bubble of a consecutive run from
+    // the same person — a lone message is its own run of one.
+    const isLastOfRun =
+      !next || next.senderId !== m.senderId || new Date(next.createdAt).getTime() - new Date(m.createdAt).getTime() > GROUP_WINDOW_MS;
+    rows.push({ kind: "message", key: m.id, message: m, mine, showAvatar: !mine && isLastOfRun, showTail: isLastOfRun });
+  }
+  return rows;
+}
 
 export function MessageThread({
   currentUserId,
   otherUserId,
+  otherName,
+  otherAvatarUrl,
   initialMessages,
 }: {
   currentUserId: string;
   otherUserId: string;
+  otherName: string;
+  otherAvatarUrl: string | null;
   initialMessages: MessageDTO[];
 }) {
   const [messages, setMessages] = useState<MessageDTO[]>(initialMessages);
@@ -20,6 +85,7 @@ export function MessageThread({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useAutoGrow(body);
   // Mirrors `messages` for the polling loop and send handler, both of which
   // read the latest value from inside a setInterval/async callback where a
   // captured `messages` from render time would otherwise go stale.
@@ -83,21 +149,55 @@ export function MessageThread({
     });
   }
 
-  function timeLabel(iso: string) {
-    return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  }
+  const rows = buildRows(messages, currentUserId);
 
   return (
-    <div className="flex h-[70vh] min-h-[400px] flex-col rounded-2xl border border-line bg-card shadow-sm">
-      <div className="flex-1 space-y-2 overflow-y-auto p-4">
-        {messages.length === 0 && <p className="py-8 text-center text-sm text-ink-muted">Say hi to start the conversation.</p>}
-        {messages.map((m) => {
-          const mine = m.senderId === currentUserId;
+    <div className="flex h-[calc(100dvh-13rem)] min-h-[420px] flex-col overflow-hidden rounded-2xl border border-line bg-card shadow-sm sm:h-[75vh]">
+      <div className="flex-1 space-y-0.5 overflow-y-auto p-4">
+        {messages.length === 0 && (
+          <div className="flex h-full flex-col items-center justify-center gap-3 py-8 text-center">
+            <Avatar name={otherName} avatarUrl={otherAvatarUrl} size={56} />
+            <div>
+              <p className="font-medium text-ink">{otherName}</p>
+              <p className="mt-0.5 text-sm text-ink-muted">Say hi to start the conversation.</p>
+            </div>
+          </div>
+        )}
+        {rows.map((row) => {
+          if (row.kind === "date") {
+            return (
+              <div key={row.key} className="flex justify-center py-3 first:pt-0">
+                <span className="rounded-full bg-paper px-2.5 py-1 text-[11px] font-medium text-ink-muted">{row.label}</span>
+              </div>
+            );
+          }
+          const { message: m, mine, showAvatar, showTail } = row;
+          const optimistic = isOptimistic(m.id);
           return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${mine ? "bg-calm text-white" : "bg-paper text-ink"}`}>
-                <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                <p className={`mt-1 text-[10px] ${mine ? "text-white/70" : "text-ink-muted"}`}>{timeLabel(m.createdAt)}</p>
+            <div
+              key={row.key}
+              className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"} ${showTail ? "mb-2.5" : "mb-0.5"} animate-[fade-up_0.22s_ease-out_both]`}
+            >
+              {!mine && (
+                <div className="w-6 shrink-0">{showAvatar && <Avatar name={otherName} avatarUrl={otherAvatarUrl} size={24} />}</div>
+              )}
+              <div className={`group relative max-w-[75%] ${mine ? "order-1" : ""}`}>
+                <div
+                  className={`px-3.5 py-2 text-[15px] leading-snug ${optimistic ? "opacity-60" : ""} ${
+                    mine
+                      ? `bg-calm text-white ${showTail ? "rounded-2xl rounded-br-md" : "rounded-2xl"}`
+                      : `bg-paper text-ink ${showTail ? "rounded-2xl rounded-bl-md" : "rounded-2xl"}`
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                </div>
+                <p
+                  className={`pointer-events-none absolute top-1/2 hidden -translate-y-1/2 whitespace-nowrap text-[10px] text-ink-muted group-hover:block ${
+                    mine ? "right-full mr-2" : "left-full ml-2"
+                  }`}
+                >
+                  {timeLabel(m.createdAt)}
+                </p>
               </div>
             </div>
           );
@@ -110,10 +210,11 @@ export function MessageThread({
           e.preventDefault();
           submit();
         }}
-        className="border-t border-line p-3"
+        className="border-t border-line bg-card p-3"
       >
         <div className="flex items-end gap-2">
           <textarea
+            ref={textareaRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={(e) => {
@@ -125,14 +226,17 @@ export function MessageThread({
             rows={1}
             maxLength={2000}
             placeholder="Message…"
-            className="max-h-32 min-h-10 flex-1 resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-calm focus:outline-none"
+            className="max-h-32 min-h-10 flex-1 resize-none rounded-2xl border border-line bg-paper px-4 py-2.5 text-sm focus:border-calm focus:outline-none"
           />
           <button
             type="submit"
             disabled={isPending || !body.trim()}
-            className="rounded-lg bg-calm px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            aria-label="Send"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-calm text-white transition-transform hover:opacity-90 active:scale-90 disabled:opacity-40 disabled:active:scale-100"
           >
-            Send
+            <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px] -translate-x-px translate-y-px rotate-45">
+              <path d="M4 12L20 4L12 20L10 13L4 12Z" fill="currentColor" />
+            </svg>
           </button>
         </div>
         {error && <p className="mt-1.5 text-xs text-accent-strong">{error}</p>}
