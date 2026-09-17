@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { AUTH_COOKIE, LOGIN_REDIRECT_COOKIE } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, generateSessionToken } from "@/lib/password";
+
+// Only ever redirects to a same-origin, path-only destination — the cookie
+// is set by our own proxy.ts to a bare pathname (see LOGIN_REDIRECT_COOKIE's
+// comment in lib/auth.ts), never to a full URL, so there's nothing here an
+// attacker could point at another origin even if the cookie were tampered
+// with some other way.
+function safeRedirectPath(path: string | undefined): string {
+  return path && path.startsWith("/") && !path.startsWith("//") ? path : "/";
+}
 
 export async function POST(request: Request) {
   const form = await request.formData();
@@ -9,7 +19,9 @@ export async function POST(request: Request) {
     .trim()
     .toLowerCase();
   const password = String(form.get("password") ?? "");
-  const from = typeof form.get("from") === "string" ? (form.get("from") as string) : "/";
+
+  const cookieStore = await cookies();
+  const from = safeRedirectPath(cookieStore.get(LOGIN_REDIRECT_COOKIE)?.value);
 
   const user = email ? await prisma.user.findUnique({ where: { email } }) : null;
 
@@ -22,9 +34,10 @@ export async function POST(request: Request) {
   const valid = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
 
   if (!user || !valid) {
+    // The redirect-target cookie is left as-is (not cleared) so a retry
+    // after a typo still lands back where the user was trying to go.
     const url = new URL("/login", request.url);
     url.searchParams.set("error", "1");
-    url.searchParams.set("from", from);
     return NextResponse.redirect(url, { status: 303 });
   }
 
@@ -39,5 +52,9 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 24 * 30,
     path: "/",
   });
+  // Used once — clearing it means a plain "open the app" login later (no
+  // prior redirect-from-a-protected-page) correctly lands on "/" instead of
+  // replaying wherever an earlier redirect happened to point.
+  response.cookies.delete(LOGIN_REDIRECT_COOKIE);
   return response;
 }

@@ -5,9 +5,9 @@ import { PasswordInput } from "@/components/PasswordInput";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; error?: string }>;
+  searchParams: Promise<{ error?: string }>;
 }) {
-  const { from = "/", error } = await searchParams;
+  const { error } = await searchParams;
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
@@ -49,7 +49,6 @@ export default async function LoginPage({
             </p>
           )}
 
-          <input type="hidden" name="from" value={from} />
           <label className="mb-1 block text-sm font-medium text-ink" htmlFor="email">
             Email
           </label>

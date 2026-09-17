@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { AUTH_COOKIE, LOGIN_REDIRECT_COOKIE } from "@/lib/auth";
 import { CURRENT_USER_HEADER } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 
@@ -35,9 +35,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("from", request.nextUrl.pathname);
-  return NextResponse.redirect(loginUrl);
+  // The login URL itself stays plain (no `?from=`) — see LOGIN_REDIRECT_COOKIE's
+  // comment in lib/auth.ts for why that matters for Safari's saved passwords.
+  const response = NextResponse.redirect(new URL("/login", request.url));
+  response.cookies.set(LOGIN_REDIRECT_COOKIE, request.nextUrl.pathname, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 10,
+    path: "/",
+  });
+  return response;
 }
 
 export const config = {
