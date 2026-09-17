@@ -84,15 +84,15 @@ export function SignupForm() {
   return (
     <form
       action={formAction}
-      className="relative z-10 w-full max-w-sm animate-[fade-in_0.3s_ease-out_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
+      className="relative z-10 w-full max-w-sm animate-[card-in_0.75s_cubic-bezier(0.16,1,0.3,1)_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
     >
-      {/* Same staged entrance as login — wordmark first, then everything
-          else a beat later. */}
+      {/* Same staged entrance as login — the card settles, then the
+          wordmark, then everything else once that's mostly done. */}
       <h1 className="mb-1 text-3xl text-ink">
         <Wordmark animated />
       </h1>
 
-      <div className="animate-[fade-up_0.45s_ease-out_both] [animation-delay:120ms]">
+      <div className="animate-[fade-up_0.6s_cubic-bezier(0.16,1,0.3,1)_both] [animation-delay:1s]">
         <p className="mb-6 text-sm text-ink-muted">Create your own account — your data stays yours alone.</p>
 
         <Field

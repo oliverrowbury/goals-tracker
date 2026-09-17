@@ -168,19 +168,37 @@ textarea {
   }
 }
 
-/* Login's staged entrance — the wordmark settles in first (a touch of
-   scale so it reads as "arriving" rather than just fading), then the rest
-   of the card follows a beat later via fade-up + animation-delay. Kept
-   short (well under a second total) so it reads as a nice touch on load,
-   not something you sit through. */
+/* Login/signup's staged entrance — the card itself materializes first
+   (card-in below), the wordmark settles a beat into that (a deeper scale
+   dip than a plain fade so it reads as "arriving"), then its bars grow up
+   in sequence, then the rest of the form follows (fade-up + delay). The
+   whole sequence runs a little over a second and a half — deliberately
+   unhurried, a moment worth watching rather than a flash you'd blink
+   through. */
 @keyframes logo-in {
   from {
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(0.85);
   }
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* The card materializing — a soft settle (ease toward, no bounce) rather
+   than a hard cut, with a slight blur clearing alongside the fade/rise so
+   it reads as coming into focus, not just sliding up. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
@@ -227,14 +245,21 @@ textarea {
   }
 }
 
-/* Login's ambient glow — the one bit of continuous (not one-shot) motion
-   on that page, same "always something quietly alive" idea as the
-   breathing orb's halo above, just a soft drift instead of a spin since
-   it's sitting behind a static card rather than driving a breathing
-   rhythm. */
+/* Login/signup's ambient glow — the one bit of continuous (not one-shot)
+   motion on those pages, same "always something quietly alive" idea as
+   the breathing orb's halo above, just a slow drift instead of a spin
+   since it's sitting behind a static card rather than driving a breathing
+   rhythm. Two blobs (see the two divs using this in login/signup's
+   page.tsx) drift at different speeds/phases for a bit of parallax depth
+   rather than one flat glow. */
 @keyframes glow-in {
   to {
     opacity: 0.16;
+  }
+}
+@keyframes glow-in-soft {
+  to {
+    opacity: 0.12;
   }
 }
 @keyframes glow-drift {
@@ -243,7 +268,16 @@ textarea {
     transform: translate(0, 0) scale(1);
   }
   50% {
-    transform: translate(3%, -4%) scale(1.06);
+    transform: translate(4%, -5%) scale(1.08);
+  }
+}
+@keyframes glow-drift-reverse {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-5%, 4%) scale(1.1);
   }
 }
 
