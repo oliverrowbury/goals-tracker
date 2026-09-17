@@ -123,7 +123,12 @@ export function AchievementWatcher({ badges, level }: { badges: EarnedBadge[]; l
         ×
       </button>
       <div className="flex items-center gap-3 pr-4">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-soft text-2xl">{emoji}</span>
+        <span
+          key={current.kind === "level" ? `level-${current.level}` : current.badge}
+          className="flex h-11 w-11 shrink-0 origin-center animate-[icon-pop_0.4s_cubic-bezier(0.34,1.56,0.64,1)_0.15s_both] items-center justify-center rounded-full bg-accent-soft text-2xl"
+        >
+          {emoji}
+        </span>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-accent">{current.kind === "level" ? "Level up" : "Badge earned"}</p>
           <p className="font-serif text-base font-semibold text-ink">{label}</p>

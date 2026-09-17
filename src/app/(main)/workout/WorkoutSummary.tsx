@@ -13,6 +13,7 @@ import {
 } from "@/lib/workout";
 import { ShareButton } from "@/components/ShareButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
+import { useCountUp } from "@/lib/time";
 import { RouteMap } from "./RouteMap";
 import { setWorkoutVisibility, setWorkoutNote, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto } from "./actions";
 import { CaptionField } from "@/components/CaptionField";
@@ -136,6 +137,14 @@ export function WorkoutSummary({
   const splits = isCardio && workout.route ? computeSplits(workout.route, distanceUnit) : [];
   const elevationGainM = isCardio && workout.route ? computeElevationGainM(workout.route) : null;
 
+  // The hero number counts up from 0 rather than just appearing — same
+  // "just finished, here's the payoff" beat Strava/Hevy's own recap
+  // screens use. Both are always computed (cheap) so the hook order never
+  // changes between renders; only whichever one's actually displayed
+  // below depends on isCardio.
+  const animatedSeconds = useCountUp(workout.durationSeconds);
+  const animatedDistanceKm = useCountUp(workout.distanceKm ?? 0);
+
   return (
     <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm sm:p-8">
       <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-workout-soft text-workout">
@@ -148,7 +157,7 @@ export function WorkoutSummary({
           for strength (Hevy's), since that's what each type is really
           measured by. */}
       <p className="mt-4 font-serif text-5xl font-semibold tabular-nums text-ink">
-        {isCardio && workout.distanceKm ? formatDistance(workout.distanceKm, distanceUnit) : formatClock(workout.durationSeconds)}
+        {isCardio && workout.distanceKm ? formatDistance(animatedDistanceKm, distanceUnit) : formatClock(Math.round(animatedSeconds))}
       </p>
 
       {isCardio && workout.route && workout.route.length >= 2 && (

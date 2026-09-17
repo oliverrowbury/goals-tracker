@@ -200,6 +200,21 @@ textarea {
   }
 }
 
+/* The achievement toast's icon circle popping in with a bit of overshoot,
+   a beat after the toast itself has slid in (badge-in above) — draws the
+   eye to the actual achievement rather than the whole card moving at once. */
+@keyframes icon-pop {
+  from {
+    transform: scale(0.5);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
 /* Ambient halo behind the breathing orb — rotates continuously and
    independently of the breathing phase, so the animation never looks
    static even during a 4s "hold". */
