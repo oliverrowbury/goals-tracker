@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, shiftISO, isoToDate, weekdayShortDayMonth, formatMonthYear } from "@/lib/dates";
+import { todayISO, shiftISO, isoToDate, formatMonthYear, relativeLabel } from "@/lib/dates";
 import { levelForXp } from "@/lib/xp";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace, formatWeight, computeVolume } from "@/lib/workout";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
 import { ADMIN_EMAIL } from "@/lib/auth";
-import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, ActivityIcon, TargetIcon } from "@/components/Icons";
+import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, ActivityIcon, TargetIcon, MessageIcon } from "@/components/Icons";
 import { AddFriendSearch } from "./AddFriendSearch";
 import { ShareActivityToggle } from "./ShareActivityToggle";
 import { LikeButton } from "./LikeButton";
@@ -19,20 +19,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
-
-// "Just now" / "2 hours ago" / "Yesterday" / "Sun 13 Sept" — same idea as
-// the workout log and study session dayLabels, just with same-day
-// hour-granularity like Strava/Hevy's feed instead of only "Today".
-function relativeLabel(date: Date, today: string): string {
-  const dateISO = date.toISOString().slice(0, 10);
-  if (dateISO === today) {
-    const hoursAgo = Math.floor((Date.now() - date.getTime()) / (60 * 60 * 1000));
-    if (hoursAgo < 1) return "Just now";
-    return `${hoursAgo} hour${hoursAgo === 1 ? "" : "s"} ago`;
-  }
-  if (dateISO === shiftISO(today, -1)) return "Yesterday";
-  return weekdayShortDayMonth(dateISO);
-}
 
 type FeedItem = {
   id: string;
@@ -168,12 +154,16 @@ export default async function FriendsPage() {
 
   const workoutIds = feedWorkouts.map((w) => w.id);
   const studySessionIds = feedStudySessions.map((s) => s.id);
-  const [likesGivenByMe, likeCounts] = await Promise.all([
+  const [likesGivenByMe, likeCounts, comments] = await Promise.all([
     prisma.cheer.findMany({
       where: { fromUserId: user.id, OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }] },
     }),
     prisma.cheer.findMany({
       where: { OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }] },
+    }),
+    prisma.comment.findMany({
+      where: { OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }] },
+      select: { workoutId: true, studySessionId: true },
     }),
   ]);
   const likedByMeSet = new Set(likesGivenByMe.map((c) => c.workoutId ?? c.studySessionId));
@@ -181,6 +171,11 @@ export default async function FriendsPage() {
   for (const c of likeCounts) {
     const key = c.workoutId ?? c.studySessionId!;
     likeCountMap.set(key, (likeCountMap.get(key) ?? 0) + 1);
+  }
+  const commentCountMap = new Map<string, number>();
+  for (const c of comments) {
+    const key = c.workoutId ?? c.studySessionId!;
+    commentCountMap.set(key, (commentCountMap.get(key) ?? 0) + 1);
   }
 
   const { level } = levelForXp(user.xp);
@@ -393,10 +388,9 @@ export default async function FriendsPage() {
                       <Link href={`/friends/post/${item.kind}/${item.id}`} className="min-w-0 flex-1 hover:opacity-90">
                         <p className="text-sm text-ink">
                           <span className="font-medium">{followed.name}</span>{" "}
-                          <span className="text-ink-muted">
-                            {item.kind === "workout" ? "finished a workout" : "studied"}
-                          </span>
+                          <span className="text-ink-muted">@{followed.username}</span>
                         </p>
+                        <p className="text-sm text-ink-muted">{item.kind === "workout" ? "finished a workout" : "studied"}</p>
                         <p className="mt-0.5 text-sm font-medium text-ink">
                           {item.title} <span className="font-normal text-ink-muted">· {item.detail}</span>
                         </p>
@@ -421,13 +415,22 @@ export default async function FriendsPage() {
                         <img src={item.photoUrl} alt="" className="aspect-square w-full object-cover" />
                       </Link>
                     )}
-                    <div className="border-t border-line px-4 py-3">
+                    <div className="flex items-center gap-3 border-t border-line px-4 py-3">
                       <LikeButton
                         kind={item.kind}
                         activityId={item.id}
                         count={likeCountMap.get(item.id) ?? 0}
                         likedByMe={likedByMeSet.has(item.id)}
                       />
+                      <Link
+                        href={`/friends/post/${item.kind}/${item.id}#comments`}
+                        className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-calm hover:text-calm"
+                      >
+                        <MessageIcon className="h-4 w-4" />
+                        {(commentCountMap.get(item.id) ?? 0) > 0 && (
+                          <span className="tabular-nums">{commentCountMap.get(item.id)}</span>
+                        )}
+                      </Link>
                     </div>
                   </li>
                 );

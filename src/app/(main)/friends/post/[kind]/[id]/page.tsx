@@ -2,11 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { weekdayShortDayMonth } from "@/lib/dates";
+import { todayISO, relativeLabel } from "@/lib/dates";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace, formatWeight, computeVolume } from "@/lib/workout";
 import { Avatar } from "@/components/Avatar";
-import { ActivityIcon, ClockIcon } from "@/components/Icons";
+import { ActivityIcon, ClockIcon, MessageIcon } from "@/components/Icons";
 import { LikeButton } from "../../../LikeButton";
 import { CommentSection } from "../../../CommentSection";
 import type { CommentDTO } from "../../../actions";
@@ -23,7 +23,7 @@ function PostCard({
   ownerName,
   ownerUsername,
   ownerAvatarUrl,
-  dateISO,
+  when,
   photoUrl,
   badgeClass,
   icon,
@@ -41,7 +41,7 @@ function PostCard({
   ownerName: string;
   ownerUsername: string;
   ownerAvatarUrl: string | null;
-  dateISO: string;
+  when: Date;
   photoUrl?: string | null;
   badgeClass: string;
   icon: React.ReactNode;
@@ -76,7 +76,9 @@ function PostCard({
               <Link href={`/friends/add/${ownerUsername}`} className="font-medium text-ink hover:underline">
                 {ownerName}
               </Link>
-              <p className="text-xs text-ink-muted">{weekdayShortDayMonth(dateISO)}</p>
+              <p className="text-xs text-ink-muted">
+                @{ownerUsername} · {relativeLabel(when, todayISO())}
+              </p>
             </div>
             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${badgeClass}`}>{icon}</span>
           </div>
@@ -93,17 +95,26 @@ function PostCard({
             ))}
           </div>
 
-          <div className="mt-4 border-t border-line pt-4">
+          <div className="mt-4 flex items-center gap-3 border-t border-line pt-4">
             <LikeButton kind={kind} activityId={id} count={likeCount} likedByMe={likedByMe} />
+            <a
+              href="#comments"
+              className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-calm hover:text-calm"
+            >
+              <MessageIcon className="h-4 w-4" />
+              {comments.length > 0 && <span className="tabular-nums">{comments.length}</span>}
+            </a>
           </div>
 
-          <CommentSection
-            kind={kind}
-            activityId={id}
-            currentUserId={currentUserId}
-            postOwnerId={ownerId}
-            initialComments={comments}
-          />
+          <div id="comments" className="scroll-mt-6">
+            <CommentSection
+              kind={kind}
+              activityId={id}
+              currentUserId={currentUserId}
+              postOwnerId={ownerId}
+              initialComments={comments}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -175,7 +186,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
         ownerName={workout.user.name}
         ownerUsername={workout.user.username}
         ownerAvatarUrl={workout.user.avatarUrl}
-        dateISO={workout.endedAt.toISOString().slice(0, 10)}
+        when={workout.endedAt}
         photoUrl={workout.photoUrl}
         badgeClass="bg-workout-soft text-workout"
         icon={<ActivityIcon className="h-4 w-4" />}
@@ -214,7 +225,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
       ownerName={session.user.name}
       ownerUsername={session.user.username}
       ownerAvatarUrl={session.user.avatarUrl}
-      dateISO={session.endedAt.toISOString().slice(0, 10)}
+      when={session.endedAt}
       badgeClass="bg-study-soft text-study"
       icon={<ClockIcon className="h-4 w-4" />}
       title={session.subject.name}

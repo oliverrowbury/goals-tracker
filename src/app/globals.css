@@ -29,6 +29,13 @@
   --workout: #b8474a;
   --workout-soft: #f4e2e1;
 
+  /* Deadlines get their own hue too, rather than sharing the journal
+     accent — it was the one pillar still borrowing another section's
+     color. Same gold used for the study-subject color rotation (already
+     checked against the dataviz palette's contrast/chroma gates). */
+  --deadline: #b8790f;
+  --deadline-soft: #f5ecd9;
+
   /* Wellness (mood + breathing) gets its own hue too — a fourth pillar
      alongside Journal/Goals/Study rather than borrowing the accent color. */
   --calm: #8570b3;
@@ -66,6 +73,9 @@
   --workout: #e08a8a;
   --workout-soft: #3a2321;
 
+  --deadline: #e0ac4a;
+  --deadline-soft: #3a2f1a;
+
   --calm: #ab98d6;
   --calm-strong: #beafdf;
   --calm-soft: #2c2438;
@@ -91,6 +101,8 @@
   --color-study-soft: var(--study-soft);
   --color-workout: var(--workout);
   --color-workout-soft: var(--workout-soft);
+  --color-deadline: var(--deadline);
+  --color-deadline-soft: var(--deadline-soft);
   --color-calm: var(--calm);
   --color-calm-strong: var(--calm-strong);
   --color-calm-soft: var(--calm-soft);

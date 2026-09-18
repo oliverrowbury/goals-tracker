@@ -163,3 +163,19 @@ export function weekdayShortDay(iso: string): string {
 export function weekdayShort(iso: string): string {
   return WEEKDAY_SHORT[isoToDate(iso).getUTCDay()];
 }
+
+// "Just now" / "2 hours ago" / "Yesterday" / "Sun 13 Sept" — the friend
+// feed's post timestamp, with same-day hour-granularity like Strava/Hevy's
+// feed instead of only "Today". Shared by the feed list and each post's
+// own detail page, so a post always says the same thing about itself in
+// both places.
+export function relativeLabel(date: Date, today: string): string {
+  const dateISO = date.toISOString().slice(0, 10);
+  if (dateISO === today) {
+    const hoursAgo = Math.floor((Date.now() - date.getTime()) / (60 * 60 * 1000));
+    if (hoursAgo < 1) return "Just now";
+    return `${hoursAgo} hour${hoursAgo === 1 ? "" : "s"} ago`;
+  }
+  if (dateISO === shiftISO(today, -1)) return "Yesterday";
+  return weekdayShortDayMonth(dateISO);
+}
