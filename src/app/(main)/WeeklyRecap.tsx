@@ -137,8 +137,12 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
         </div>
       </div>
 
-      <div className="space-y-6">
-        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+      {/* One panel with three divided sections rather than three separate
+          bordered/shadowed cards — the repeated chrome was reading as
+          template-y busyness rather than structure; a hairline between
+          sections carries the same separation with far less visual noise. */}
+      <div className="divide-y divide-line rounded-2xl border border-line bg-card shadow-sm">
+        <section className="p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-goals" /> Goals
           </h3>
@@ -156,7 +160,7 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
           )}
         </section>
 
-        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+        <section className="p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-study" /> Study time
           </h3>
@@ -180,7 +184,7 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
           )}
         </section>
 
-        <section className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+        <section className="p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
             <span className="h-2 w-2 rounded-full bg-workout" /> Workouts
           </h3>
