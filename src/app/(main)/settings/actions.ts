@@ -119,12 +119,6 @@ export async function renameSubject(subjectId: string, formData: FormData) {
   revalidatePath("/study");
 }
 
-export async function setSubjectActive(subjectId: string, active: boolean) {
-  await prisma.subject.update({ where: { id: subjectId }, data: { active } });
-  revalidatePath("/settings");
-  revalidatePath("/study");
-}
-
 export async function deleteSubject(subjectId: string) {
   // A goal auto-tracked from this subject falls back to manual logging
   // rather than blocking the delete; study sessions for it go with it —

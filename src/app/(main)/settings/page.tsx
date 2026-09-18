@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { setSubjectActive } from "./actions";
 import { UpdateNameForm } from "./UpdateNameForm";
 import { RenameSubjectForm } from "./RenameSubjectForm";
 import { PasswordForm } from "./PasswordForm";
@@ -82,8 +81,6 @@ export default async function SettingsPage() {
       }),
       prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true } }),
     ]);
-  const active = subjects.filter((s) => s.active);
-  const archived = subjects.filter((s) => !s.active);
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
   const today = todayISO();
@@ -261,52 +258,21 @@ export default async function SettingsPage() {
           <ClockIcon className="h-4 w-4 text-study" />
           Study subjects
         </h2>
-        <p className="mb-4 text-sm text-ink-muted">
-          Rename or archive the ones you have — archiving keeps its history but takes it off the
-          picker on the Study page.
-        </p>
+        <p className="mb-4 text-sm text-ink-muted">Rename or delete the ones you have.</p>
 
-        {active.length === 0 && archived.length === 0 && (
-          <p className="mb-4 text-sm text-ink-muted">No subjects yet.</p>
-        )}
+        {subjects.length === 0 && <p className="mb-4 text-sm text-ink-muted">No subjects yet.</p>}
 
         <ul className="mb-4 space-y-2">
-          {active.map((subject) => (
+          {subjects.map((subject) => (
             <li key={subject.id} className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subject.color }} />
               <RenameSubjectForm subjectId={subject.id} name={subject.name} />
-              <form action={setSubjectActive.bind(null, subject.id, false)}>
-                <button type="submit" className="text-sm text-ink-muted hover:text-accent">
-                  Archive
-                </button>
-              </form>
               <DeleteSubjectButton subjectId={subject.id} name={subject.name} minutes={minutesBySubject.get(subject.id) ?? 0} />
             </li>
           ))}
         </ul>
 
         <NewSubjectForm />
-
-        {archived.length > 0 && (
-          <div className="mt-6 border-t border-line pt-4">
-            <p className="mb-2 text-xs font-medium text-ink-muted">Archived</p>
-            <ul className="space-y-1.5">
-              {archived.map((subject) => (
-                <li key={subject.id} className="flex items-center justify-between text-sm">
-                  <span className="text-ink-muted">{subject.name}</span>
-                  <div className="flex items-center gap-3">
-                    <form action={setSubjectActive.bind(null, subject.id, true)}>
-                      <button type="submit" className="text-ink-muted hover:text-accent">
-                        Reactivate
-                      </button>
-                    </form>
-                    <DeleteSubjectButton subjectId={subject.id} name={subject.name} minutes={minutesBySubject.get(subject.id) ?? 0} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

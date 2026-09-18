@@ -12,14 +12,13 @@ export function DeleteSubjectButton({ subjectId, name, minutes }: { subjectId: s
 
   return (
     <ConfirmButton
-      triggerTitle="Delete subject"
-      triggerClassName="text-ink-muted hover:text-accent disabled:opacity-50"
+      triggerClassName="text-sm text-ink-muted hover:text-accent disabled:opacity-50"
       title="Delete this subject?"
       message={message}
       confirmLabel="Delete"
       onConfirm={() => deleteSubject(subjectId)}
     >
-      ×
+      Delete
     </ConfirmButton>
   );
 }

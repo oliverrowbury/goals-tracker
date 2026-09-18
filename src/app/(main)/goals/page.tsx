@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } from "@/lib/goals";
-import { setGoalActive } from "./actions";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 import { GoalTodayCheckbox } from "./GoalTodayCheckbox";
 import { GoalExtraInput } from "./GoalExtraInput";
@@ -57,8 +56,6 @@ export default async function GoalsPage() {
   const weekWorkoutSessionCount = weekWorkouts.length;
   const weekWorkoutMinutes = weekWorkouts.reduce((sum, w) => sum + (w.durationMinutes ?? 0), 0);
 
-  const active = goals.filter((g) => g.active);
-  const archived = goals.filter((g) => !g.active);
   const weekDays = Array.from({ length: 7 }, (_, i) => shiftISO(weekStartISO, i));
 
   return (
@@ -77,12 +74,12 @@ export default async function GoalsPage() {
         }
       />
 
-      {active.length === 0 && (
+      {goals.length === 0 && (
         <EmptyState icon={TargetIcon} iconClassName="bg-goals-soft text-goals" message="No goals yet — add one to start tracking." />
       )}
 
       <div className="space-y-3">
-        {active.map((goal) => {
+        {goals.map((goal) => {
           const completedDates = new Set(
             goal.logs.filter((l) => l.completed).map((l) => l.date.toISOString().slice(0, 10)),
           );
@@ -147,11 +144,6 @@ export default async function GoalsPage() {
                   <Link href={`/goals/${goal.id}/edit`} className="text-ink-muted hover:text-goals">
                     Edit
                   </Link>
-                  <form action={setGoalActive.bind(null, goal.id, false)}>
-                    <button type="submit" className="text-ink-muted hover:text-goals">
-                      Archive
-                    </button>
-                  </form>
                   <DeleteGoalButton goalId={goal.id} title={goal.title} />
                 </div>
               </div>
@@ -218,27 +210,6 @@ export default async function GoalsPage() {
           );
         })}
       </div>
-
-      {archived.length > 0 && (
-        <div className="mt-10">
-          <h2 className="mb-3 text-sm font-medium text-ink-muted">Archived</h2>
-          <div className="divide-y divide-line rounded-2xl border border-line bg-card">
-            {archived.map((goal) => (
-              <div key={goal.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                <span className="text-ink-muted">{goal.title}</span>
-                <div className="flex items-center gap-3">
-                  <form action={setGoalActive.bind(null, goal.id, true)}>
-                    <button type="submit" className="text-ink-muted hover:text-goals">
-                      Reactivate
-                    </button>
-                  </form>
-                  <DeleteGoalButton goalId={goal.id} title={goal.title} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -128,12 +128,6 @@ export async function deleteGoal(goalId: string) {
   revalidatePath("/journal");
 }
 
-export async function setGoalActive(goalId: string, active: boolean) {
-  await prisma.goal.update({ where: { id: goalId }, data: { active } });
-  revalidatePath("/goals");
-  revalidatePath("/journal");
-}
-
 export async function toggleGoalCompletion(goalId: string, dateISO: string) {
   if (isFutureISO(dateISO)) return;
   const date = isoToDate(dateISO);
