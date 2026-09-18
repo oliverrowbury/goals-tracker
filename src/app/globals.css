@@ -294,49 +294,45 @@ textarea {
   }
 }
 
-/* Customizes the browser's native cross-document View Transition (see
-   the `view-transition` meta tag in app/layout.tsx) for the login/signup →
-   main app handoff — an actual directional push (the destination page
-   slides in from the right while the login/signup page slides away to the
-   left underneath it, like a forward navigation on iOS) rather than a
-   same-spot crossfade, so it visibly reads as moving *from* one page *to*
-   the other. Applies to every same-origin hard navigation, but in
-   practice that's only ever this boundary (and logout going the other
-   way), since everything inside (main) is client-side routed and never
-   triggers a cross-document transition at all.
-   `overflow: hidden` on the transition root keeps the sliding snapshots
-   from poking out past the viewport edge and causing a scrollbar flash
-   while the animation runs. */
-::view-transition {
-  overflow: hidden;
-}
-/* The browser's default UA stylesheet blends old/new with plus-lighter so
-   a same-spot crossfade doesn't double-expose — that's wrong for a slide,
-   where the two snapshots are solid panels passing each other rather than
-   overlaid translucent layers; left on, overlapping regions would flash
-   lighter as they pass. */
-::view-transition-old(root),
-::view-transition-new(root) {
-  mix-blend-mode: normal;
-}
-::view-transition-old(root) {
-  animation: 480ms cubic-bezier(0.65, 0, 0.35, 1) both vt-old-out;
-}
-::view-transition-new(root) {
-  animation: 480ms cubic-bezier(0.16, 1, 0.3, 1) both vt-new-in;
-}
-@keyframes vt-old-out {
-  to {
-    opacity: 0.4;
-    transform: translateX(-22%) scale(0.96);
-  }
-}
-@keyframes vt-new-in {
+/* The login/signup → app handoff's entrance — the homepage content
+   sliding in from the right, same 480ms/easing as the rest of this
+   sequence (see mood-modal-in below). This used to be done with the
+   browser's native cross-document View Transition API, which looked right
+   in testing but turned out not to actually run on at least one real
+   device — that API depends on browser support (Safari 18.2+/Chrome 126+)
+   and silently no-ops to a plain instant navigation everywhere else, with
+   no way to detect or fall back from here. This version is plain CSS on
+   the real page content, gated by (main)/layout.tsx reading a short-lived
+   cookie /api/login sets on a successful login (see WELCOME_COOKIE in
+   lib/auth.ts) — normal DOM animation, so it runs identically in every
+   browser instead of depending on that API being present. The trade-off:
+   it can't also show the login page sliding away underneath, since that
+   page is already gone by the time this one loads — only a real
+   cross-document transition could bridge both sides of the navigation at
+   once, and that's exactly the part that wasn't reliable. */
+@keyframes page-slide-in {
   from {
-    transform: translateX(100%);
+    opacity: 0;
+    transform: translateX(28px);
   }
   to {
+    opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* The mood check-in modal's pop-in — timed via animation-delay (set
+   inline where it's used) to land right as page-slide-in above finishes,
+   so it reads as "the homepage arrives, then it asks" rather than both
+   happening at once. */
+@keyframes mood-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -366,9 +362,5 @@ textarea {
   * {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
-  }
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
-    animation: none !important;
   }
 }

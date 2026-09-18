@@ -12,6 +12,16 @@ export const AUTH_COOKIE = "gt_auth";
 // page" for this site.
 export const LOGIN_REDIRECT_COOKIE = "gt_login_redirect";
 
+// Set by /api/login on a successful login, read once by (main)/layout.tsx
+// to know this particular page load is the moment someone just arrived —
+// that's what gates the homepage's slide-in entrance and the mood-modal's
+// delayed pop after it (see globals.css's page-slide-in/mood-modal-in).
+// A short maxAge (rather than clearing it explicitly) is the whole
+// mechanism for making this a one-time thing: it naturally can't still be
+// there on any request that isn't the redirect immediately following login.
+export const WELCOME_COOKIE = "gt_welcome";
+export const WELCOME_COOKIE_MAX_AGE_S = 8;
+
 // The one account that gets to see everyone's feedback (see settings/page.tsx)
 // — otherwise each new signup's feedback would sit invisible in their own
 // account, since Feedback rows are scoped by userId like everything else.

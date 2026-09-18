@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { AUTH_COOKIE, LOGIN_REDIRECT_COOKIE } from "@/lib/auth";
+import { AUTH_COOKIE, LOGIN_REDIRECT_COOKIE, WELCOME_COOKIE, WELCOME_COOKIE_MAX_AGE_S } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, generateSessionToken } from "@/lib/password";
 
@@ -56,5 +56,14 @@ export async function POST(request: Request) {
   // prior redirect-from-a-protected-page) correctly lands on "/" instead of
   // replaying wherever an earlier redirect happened to point.
   response.cookies.delete(LOGIN_REDIRECT_COOKIE);
+  // Marks the very next page load as "just arrived from logging in" — see
+  // WELCOME_COOKIE's comment in lib/auth.ts.
+  response.cookies.set(WELCOME_COOKIE, "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: WELCOME_COOKIE_MAX_AGE_S,
+    path: "/",
+  });
   return response;
 }
