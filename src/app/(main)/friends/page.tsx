@@ -4,7 +4,18 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, shiftISO, isoToDate, formatMonthYear } from "@/lib/dates";
 import { levelForXp } from "@/lib/xp";
 import { formatMinutes } from "@/lib/study";
-import { formatDistance, formatPace, formatWeight, computeVolume, groupSetsByExercise, type ExerciseBreakdown } from "@/lib/workout";
+import {
+  formatDistance,
+  formatPace,
+  formatWeight,
+  computeVolume,
+  groupSetsByExercise,
+  annotateExercisePRs,
+  annotateCardioPRs,
+  estimateOneRepMax,
+  type ExerciseBreakdown,
+  type Stat,
+} from "@/lib/workout";
 import { computeStreak } from "@/lib/streaks";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
@@ -27,8 +38,9 @@ type FeedItem = {
   userId: string;
   when: Date;
   title: string;
-  stats: { label: string; value: string }[];
+  stats: Stat[];
   exercises?: ExerciseBreakdown[];
+  subjectColor?: string;
   note?: string | null;
   photoUrl?: string | null;
 };
@@ -140,9 +152,53 @@ export default async function FriendsPage() {
   const streakByPair = new Map<string, number>();
   for (const [key, dates] of datesByPair) streakByPair.set(key, computeStreak(dates, today));
 
+  // PR history for the workouts above — every non-warmup set each feed
+  // workout's owner has ever logged (for the exercise-level 1RM PR) and
+  // every prior cardio session (for the Distance/Pace PR), so a post can
+  // be flagged against the owner's real all-time best, not just what's
+  // visible in this one week of feed.
+  const strengthOwnerIds = Array.from(new Set(feedWorkouts.filter((w) => w.type !== "CARDIO").map((w) => w.userId)));
+  const oneRmHistorySets = strengthOwnerIds.length > 0
+    ? await prisma.workoutSet.findMany({
+        where: { workout: { userId: { in: strengthOwnerIds } }, isWarmup: false },
+        select: { weight: true, reps: true, exerciseId: true, workout: { select: { userId: true, endedAt: true } } },
+      })
+    : [];
+  const oneRmHistory = new Map<string, { endedAt: Date; oneRm: number }[]>();
+  for (const s of oneRmHistorySets) {
+    if (!s.workout.endedAt) continue;
+    const key = `${s.workout.userId}:${s.exerciseId}`;
+    if (!oneRmHistory.has(key)) oneRmHistory.set(key, []);
+    oneRmHistory.get(key)!.push({ endedAt: s.workout.endedAt, oneRm: estimateOneRepMax(s.weight, s.reps) });
+  }
+
+  const cardioOwnerIds = Array.from(new Set(feedWorkouts.filter((w) => w.type === "CARDIO").map((w) => w.userId)));
+  const priorCardioWorkouts = cardioOwnerIds.length > 0
+    ? await prisma.workout.findMany({
+        where: { userId: { in: cardioOwnerIds }, type: "CARDIO", endedAt: { not: null } },
+        select: { userId: true, endedAt: true, distanceKm: true, durationMinutes: true },
+      })
+    : [];
+  const priorCardioByUser = new Map<string, typeof priorCardioWorkouts>();
+  for (const w of priorCardioWorkouts) {
+    if (!priorCardioByUser.has(w.userId)) priorCardioByUser.set(w.userId, []);
+    priorCardioByUser.get(w.userId)!.push(w);
+  }
+
   const feed: FeedItem[] = [
     ...feedWorkouts.map((w) => {
       const isCardio = w.type === "CARDIO";
+      const rawStats = isCardio
+        ? [
+            { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
+            { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
+            { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
+          ]
+        : [
+            { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
+            { label: "Sets", value: String(w.sets.filter((s) => !s.isWarmup).length) },
+            { label: "Volume", value: formatWeight(computeVolume(w.sets), user.weightUnit) },
+          ];
       return {
         id: w.id,
         kind: "workout" as const,
@@ -150,17 +206,13 @@ export default async function FriendsPage() {
         when: w.endedAt!,
         title: w.label,
         stats: isCardio
-          ? [
-              { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
-              { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
-              { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
-            ]
-          : [
-              { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
-              { label: "Sets", value: String(w.sets.filter((s) => !s.isWarmup).length) },
-              { label: "Volume", value: formatWeight(computeVolume(w.sets), user.weightUnit) },
-            ],
-        exercises: isCardio ? undefined : groupSetsByExercise(w.sets),
+          ? annotateCardioPRs(
+              rawStats,
+              { distanceKm: w.distanceKm, durationMinutes: w.durationMinutes },
+              (priorCardioByUser.get(w.userId) ?? []).filter((p) => p.endedAt! < w.endedAt!),
+            )
+          : rawStats,
+        exercises: isCardio ? undefined : annotateExercisePRs(groupSetsByExercise(w.sets), oneRmHistory, w.userId, w.endedAt!),
         note: w.note,
         photoUrl: w.photoUrl,
       };
@@ -174,6 +226,7 @@ export default async function FriendsPage() {
         when: s.endedAt!,
         note: s.note,
         title: s.subject.name,
+        subjectColor: s.subject.color,
         stats: [
           { label: "Time studied", value: formatMinutes(s.durationMinutes ?? 0) },
           ...(streak > 0 ? [{ label: "Streak", value: `${streak} day${streak === 1 ? "" : "s"}` }] : []),
@@ -419,6 +472,7 @@ export default async function FriendsPage() {
                   photoUrl: item.photoUrl,
                   stats: item.stats,
                   exercises: item.exercises,
+                  subjectColor: item.subjectColor,
                   weightUnit: user.weightUnit,
                   likeCount: likeCountMap.get(item.id) ?? 0,
                   likedByMe: likedByMeSet.has(item.id),

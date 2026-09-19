@@ -5,7 +5,18 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, formatMonthYear } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { formatMinutes } from "@/lib/study";
-import { formatDistance, formatPace, formatWeight, computeVolume, groupSetsByExercise, type ExerciseBreakdown } from "@/lib/workout";
+import {
+  formatDistance,
+  formatPace,
+  formatWeight,
+  computeVolume,
+  groupSetsByExercise,
+  annotateExercisePRs,
+  annotateCardioPRs,
+  estimateOneRepMax,
+  type ExerciseBreakdown,
+  type Stat,
+} from "@/lib/workout";
 import { levelForXp } from "@/lib/xp";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
@@ -100,13 +111,38 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const streakBySubject = new Map<string, number>();
   for (const [subjectId, dates] of datesBySubject) streakBySubject.set(subjectId, computeStreak(dates, today));
 
+  // Same PR history the feed and detail page use, scoped to this one owner.
+  const strengthWorkouts = profileWorkouts.filter((w) => w.type !== "CARDIO");
+  const oneRmHistorySets = strengthWorkouts.length > 0
+    ? await prisma.workoutSet.findMany({
+        where: { workout: { userId: target.id }, isWarmup: false },
+        select: { weight: true, reps: true, exerciseId: true, workout: { select: { endedAt: true } } },
+      })
+    : [];
+  const oneRmHistory = new Map<string, { endedAt: Date; oneRm: number }[]>();
+  for (const s of oneRmHistorySets) {
+    if (!s.workout.endedAt) continue;
+    const key = `${target.id}:${s.exerciseId}`;
+    if (!oneRmHistory.has(key)) oneRmHistory.set(key, []);
+    oneRmHistory.get(key)!.push({ endedAt: s.workout.endedAt, oneRm: estimateOneRepMax(s.weight, s.reps) });
+  }
+
+  const cardioWorkouts = profileWorkouts.filter((w) => w.type === "CARDIO");
+  const priorCardioWorkouts = cardioWorkouts.length > 0
+    ? await prisma.workout.findMany({
+        where: { userId: target.id, type: "CARDIO", endedAt: { not: null } },
+        select: { endedAt: true, distanceKm: true, durationMinutes: true },
+      })
+    : [];
+
   type ActivityEntry = {
     id: string;
     kind: "workout" | "study";
     when: Date;
     title: string;
-    stats: { label: string; value: string }[];
+    stats: Stat[];
     exercises?: ExerciseBreakdown[];
+    subjectColor?: string;
     note?: string | null;
     photoUrl?: string | null;
   };
@@ -114,23 +150,30 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const profileActivity: ActivityEntry[] = [
     ...profileWorkouts.map((w) => {
       const isCardio = w.type === "CARDIO";
+      const rawStats = isCardio
+        ? [
+            { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
+            { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
+            { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
+          ]
+        : [
+            { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
+            { label: "Sets", value: String(w.sets.filter((s) => !s.isWarmup).length) },
+            { label: "Volume", value: formatWeight(computeVolume(w.sets), user.weightUnit) },
+          ];
       return {
         id: w.id,
         kind: "workout" as const,
         when: w.endedAt!,
         title: w.label,
         stats: isCardio
-          ? [
-              { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
-              { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
-              { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
-            ]
-          : [
-              { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
-              { label: "Sets", value: String(w.sets.filter((s) => !s.isWarmup).length) },
-              { label: "Volume", value: formatWeight(computeVolume(w.sets), user.weightUnit) },
-            ],
-        exercises: isCardio ? undefined : groupSetsByExercise(w.sets),
+          ? annotateCardioPRs(
+              rawStats,
+              { distanceKm: w.distanceKm, durationMinutes: w.durationMinutes },
+              priorCardioWorkouts.filter((p) => p.endedAt! < w.endedAt!),
+            )
+          : rawStats,
+        exercises: isCardio ? undefined : annotateExercisePRs(groupSetsByExercise(w.sets), oneRmHistory, target.id, w.endedAt!),
         note: w.note,
         photoUrl: w.photoUrl,
       };
@@ -142,6 +185,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         kind: "study" as const,
         when: s.endedAt!,
         title: s.subject.name,
+        subjectColor: s.subject.color,
         note: s.note,
         stats: [
           { label: "Time studied", value: formatMinutes(s.durationMinutes ?? 0) },
@@ -315,6 +359,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
                   photoUrl: item.photoUrl,
                   stats: item.stats,
                   exercises: item.exercises,
+                  subjectColor: item.subjectColor,
                   weightUnit: user.weightUnit,
                   likeCount: likeCountMap.get(item.id) ?? 0,
                   likedByMe: likedByMeSet.has(item.id),

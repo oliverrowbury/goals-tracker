@@ -80,25 +80,86 @@ export function formatPace(distanceKm: number | null, durationMinutes: number | 
   return `${min}:${sec.toString().padStart(2, "0")}/${unit === "MI" ? "mi" : "km"}`;
 }
 
-export type ExerciseBreakdown = { name: string; sets: { weight: number; reps: number; isWarmup: boolean }[] };
+export type ExerciseBreakdown = {
+  exerciseId: string;
+  name: string;
+  sets: { weight: number; reps: number; isWarmup: boolean }[];
+  isPR?: boolean;
+};
 
 // Groups a workout's flat set list into one entry per exercise, in the
 // order each exercise was first logged — shared between the workout log's
 // own expanded history view and the social feed/post-detail cards, so a
-// friend sees the same set-by-set shape you see in your own history.
+// friend sees the same set-by-set shape you see in your own history. Keyed
+// by exerciseId rather than name: built-in library exercises are shared
+// rows across every user, so two people's "Bench Press" sets carry the
+// same id and name is only safe as a display label, never a join key.
 export function groupSetsByExercise(
-  sets: { exercise: { name: string }; weight: number; reps: number; isWarmup: boolean }[],
+  sets: { exerciseId: string; exercise: { name: string }; weight: number; reps: number; isWarmup: boolean }[],
 ): ExerciseBreakdown[] {
   const order: string[] = [];
-  const byExercise = new Map<string, ExerciseBreakdown["sets"]>();
+  const byExercise = new Map<string, { name: string; sets: ExerciseBreakdown["sets"] }>();
   for (const s of sets) {
-    if (!byExercise.has(s.exercise.name)) {
-      byExercise.set(s.exercise.name, []);
-      order.push(s.exercise.name);
+    if (!byExercise.has(s.exerciseId)) {
+      byExercise.set(s.exerciseId, { name: s.exercise.name, sets: [] });
+      order.push(s.exerciseId);
     }
-    byExercise.get(s.exercise.name)!.push({ weight: s.weight, reps: s.reps, isWarmup: s.isWarmup });
+    byExercise.get(s.exerciseId)!.sets.push({ weight: s.weight, reps: s.reps, isWarmup: s.isWarmup });
   }
-  return order.map((name) => ({ name, sets: byExercise.get(name)! }));
+  return order.map((exerciseId) => ({ exerciseId, ...byExercise.get(exerciseId)! }));
+}
+
+// A personal record, Hevy-style: this workout's best estimated 1RM on an
+// exercise beats every prior one you've logged for it. `history` is keyed
+// `${userId}:${exerciseId}` (the same exercise row is shared across every
+// user, so exerciseId alone isn't a safe key) and holds every non-warmup
+// set you've ever logged for it; only entries strictly before `beforeDate`
+// count, so a post always reflects what was actually a record at the time.
+// A first-ever attempt at an exercise (no prior entries) is deliberately
+// not a PR — there's nothing yet to have beaten.
+export function annotateExercisePRs(
+  breakdown: ExerciseBreakdown[],
+  history: Map<string, { endedAt: Date; oneRm: number }[]>,
+  userId: string,
+  beforeDate: Date,
+): ExerciseBreakdown[] {
+  return breakdown.map((ex) => {
+    const workingSets = ex.sets.filter((s) => !s.isWarmup);
+    if (workingSets.length === 0) return ex;
+    const bestThisWorkout = Math.max(...workingSets.map((s) => estimateOneRepMax(s.weight, s.reps)));
+    const entries = history.get(`${userId}:${ex.exerciseId}`) ?? [];
+    const priorBest = entries.reduce((max, e) => (e.endedAt < beforeDate && e.oneRm > max ? e.oneRm : max), 0);
+    return priorBest > 0 && bestThisWorkout > priorBest ? { ...ex, isPR: true } : ex;
+  });
+}
+
+export type Stat = { label: string; value: string; isPR?: boolean };
+
+// Same PR idea for cardio's two headline numbers — flags the Distance
+// and/or Pace stat entries (matched by label, same ad hoc {label,value}
+// shape every stats grid already uses) when this run/ride beats every
+// prior one. Also requires a prior entry to exist, same reasoning as
+// annotateExercisePRs.
+export function annotateCardioPRs(
+  stats: Stat[],
+  thisWorkout: { distanceKm: number | null; durationMinutes: number | null },
+  priorCardio: { distanceKm: number | null; durationMinutes: number | null }[],
+): Stat[] {
+  if (!thisWorkout.distanceKm || !thisWorkout.durationMinutes) return stats;
+  const priorDistances = priorCardio.map((w) => w.distanceKm).filter((d): d is number => !!d && d > 0);
+  const priorPaces = priorCardio
+    .filter((w): w is { distanceKm: number; durationMinutes: number } => !!w.distanceKm && !!w.durationMinutes)
+    .map((w) => w.durationMinutes / w.distanceKm); // minutes per km — lower is faster
+
+  const bestPriorDistance = priorDistances.length > 0 ? Math.max(...priorDistances) : 0;
+  const bestPriorPace = priorPaces.length > 0 ? Math.min(...priorPaces) : Infinity;
+  const thisPace = thisWorkout.durationMinutes / thisWorkout.distanceKm;
+
+  return stats.map((s) => {
+    if (s.label === "Distance" && bestPriorDistance > 0 && thisWorkout.distanceKm! > bestPriorDistance) return { ...s, isPR: true };
+    if (s.label === "Pace" && bestPriorPace < Infinity && thisPace < bestPriorPace) return { ...s, isPR: true };
+    return s;
+  });
 }
 
 // Great-circle distance between two lat/lng points, in km — used to

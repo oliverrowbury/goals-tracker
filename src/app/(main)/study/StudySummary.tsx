@@ -16,10 +16,15 @@ export type JustFinishedSession = {
   durationMinutes: number;
 };
 
-function VisibilityPicker({ sessionId }: { sessionId: string }) {
-  const [visibility, setVisibility] = useState<ActivityVisibility>("FRIENDS");
-  const [isPending, startTransition] = useTransition();
-
+function VisibilityPicker({
+  value,
+  onChange,
+  isPending,
+}: {
+  value: ActivityVisibility;
+  onChange: (v: ActivityVisibility) => void;
+  isPending: boolean;
+}) {
   return (
     <div className="flex items-center justify-center gap-1.5 rounded-full border border-line bg-paper p-1">
       {(["FRIENDS", "PRIVATE"] as const).map((v) => (
@@ -27,12 +32,9 @@ function VisibilityPicker({ sessionId }: { sessionId: string }) {
           key={v}
           type="button"
           disabled={isPending}
-          onClick={() => {
-            setVisibility(v);
-            startTransition(() => setStudySessionVisibility(sessionId, v));
-          }}
+          onClick={() => onChange(v)}
           className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-            visibility === v ? "bg-study text-white" : "text-ink-muted hover:text-study"
+            value === v ? "bg-study text-white" : "text-ink-muted hover:text-study"
           }`}
         >
           {v === "FRIENDS" ? "Share with friends" : "Keep to myself"}
@@ -49,6 +51,27 @@ export function StudySummary({ session, onDone }: { session: JustFinishedSession
   // WorkoutSummary's hero number.
   const animatedMinutes = useCountUp(session.durationMinutes);
 
+  const [visibility, setVisibility] = useState<ActivityVisibility>("FRIENDS");
+  const [caption, setCaption] = useState("");
+  const [captionError, setCaptionError] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  function handleVisibilityChange(v: ActivityVisibility) {
+    setVisibility(v);
+    setCaptionError(false);
+    startTransition(() => setStudySessionVisibility(session.id, v));
+  }
+
+  // See WorkoutSummary's handleDone — same "required only when it's
+  // actually going to friends" rule.
+  function handleDone() {
+    if (visibility === "FRIENDS" && caption.trim() === "") {
+      setCaptionError(true);
+      return;
+    }
+    onDone();
+  }
+
   return (
     <div className="rounded-2xl border border-line bg-card p-6 text-center shadow-sm sm:p-8">
       <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-study-soft text-study">
@@ -59,11 +82,21 @@ export function StudySummary({ session, onDone }: { session: JustFinishedSession
       <p className="mt-4 font-serif text-5xl font-semibold tabular-nums text-ink">{formatMinutes(animatedMinutes)}</p>
 
       <div className="mt-5 border-t border-line pt-5 text-left">
-        <CaptionField initialValue="" onSave={(value) => setStudySessionNote(session.id, value)} focusClassName="focus:border-study" />
+        <CaptionField
+          value={caption}
+          onChange={(v) => {
+            setCaption(v);
+            if (v.trim()) setCaptionError(false);
+          }}
+          onSave={(value) => setStudySessionNote(session.id, value)}
+          focusClassName="focus:border-study"
+          error={captionError ? 'Add a caption before sharing, or switch to "Keep to myself".' : undefined}
+          hint={visibility === "FRIENDS" ? "Required when sharing with friends" : undefined}
+        />
       </div>
 
       <div className="mt-4">
-        <VisibilityPicker sessionId={session.id} />
+        <VisibilityPicker value={visibility} onChange={handleVisibilityChange} isPending={isPending} />
       </div>
 
       <div className="mt-5 flex items-center justify-center gap-3">
@@ -79,7 +112,7 @@ export function StudySummary({ session, onDone }: { session: JustFinishedSession
           }}
           className="flex items-center gap-1.5 rounded-lg border border-line px-4 py-2 text-sm font-medium text-ink-muted hover:border-study hover:text-study"
         />
-        <button type="button" onClick={onDone} className="rounded-lg bg-ink-solid px-5 py-2 text-sm font-medium text-white hover:opacity-90">
+        <button type="button" onClick={handleDone} className="rounded-lg bg-ink-solid px-5 py-2 text-sm font-medium text-white hover:opacity-90">
           Done
         </button>
       </div>

@@ -5,7 +5,17 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { formatMinutes } from "@/lib/study";
-import { formatDistance, formatPace, formatWeight, computeVolume, groupSetsByExercise } from "@/lib/workout";
+import {
+  formatDistance,
+  formatPace,
+  formatWeight,
+  computeVolume,
+  groupSetsByExercise,
+  annotateExercisePRs,
+  annotateCardioPRs,
+  estimateOneRepMax,
+  type ExerciseBreakdown,
+} from "@/lib/workout";
 import { ActivityCard, type ActivityCardItem } from "../../../ActivityCard";
 import { CommentSection } from "../../../CommentSection";
 import type { CommentDTO } from "../../../actions";
@@ -60,7 +70,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
     ]);
 
     const isCardio = workout.type === "CARDIO";
-    const stats = isCardio
+    const rawStats = isCardio
       ? [
           { label: "Time", value: formatMinutes(workout.durationMinutes ?? 0) },
           { label: "Distance", value: workout.distanceKm ? formatDistance(workout.distanceKm, viewer.distanceUnit) : "—" },
@@ -71,6 +81,31 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
           { label: "Sets", value: String(workout.sets.filter((s) => !s.isWarmup).length) },
           { label: "Volume", value: formatWeight(computeVolume(workout.sets), viewer.weightUnit) },
         ];
+
+    // Same PR check the feed and profile activity list use — this owner's
+    // full history, filtered to before this workout, so tapping into an
+    // old post doesn't retroactively show a PR a later workout already beat.
+    let stats = rawStats;
+    let exercises: ExerciseBreakdown[] | undefined = isCardio ? undefined : groupSetsByExercise(workout.sets);
+    if (isCardio) {
+      const priorCardio = await prisma.workout.findMany({
+        where: { userId: workout.userId, type: "CARDIO", endedAt: { lt: workout.endedAt, not: null } },
+        select: { distanceKm: true, durationMinutes: true },
+      });
+      stats = annotateCardioPRs(rawStats, { distanceKm: workout.distanceKm, durationMinutes: workout.durationMinutes }, priorCardio);
+    } else if (exercises && exercises.length > 0) {
+      const priorSets = await prisma.workoutSet.findMany({
+        where: { workout: { userId: workout.userId, endedAt: { lt: workout.endedAt } }, isWarmup: false },
+        select: { weight: true, reps: true, exerciseId: true, workout: { select: { endedAt: true } } },
+      });
+      const history = new Map<string, { endedAt: Date; oneRm: number }[]>();
+      for (const s of priorSets) {
+        const key = `${workout.userId}:${s.exerciseId}`;
+        if (!history.has(key)) history.set(key, []);
+        history.get(key)!.push({ endedAt: s.workout.endedAt!, oneRm: estimateOneRepMax(s.weight, s.reps) });
+      }
+      exercises = annotateExercisePRs(exercises, history, workout.userId, workout.endedAt);
+    }
 
     const cardItem: ActivityCardItem = {
       id,
@@ -84,7 +119,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
       note: workout.note,
       photoUrl: workout.photoUrl,
       stats,
-      exercises: isCardio ? undefined : groupSetsByExercise(workout.sets),
+      exercises,
       weightUnit: viewer.weightUnit,
       likeCount,
       likedByMe: !!likedByMe,
@@ -141,6 +176,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
     ownerAvatarUrl: session.user.avatarUrl,
     when: session.endedAt,
     title: session.subject.name,
+    subjectColor: session.subject.color,
     note: session.note,
     stats: [
       { label: "Time studied", value: formatMinutes(session.durationMinutes ?? 0) },
