@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, relativeLabel } from "@/lib/dates";
+import { computeStreak } from "@/lib/streaks";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace, formatWeight, computeVolume } from "@/lib/workout";
 import { Avatar } from "@/components/Avatar";
@@ -10,6 +11,8 @@ import { ActivityIcon, ClockIcon, MessageIcon } from "@/components/Icons";
 import { LikeButton } from "../../../LikeButton";
 import { CommentSection } from "../../../CommentSection";
 import type { CommentDTO } from "../../../actions";
+
+type ExerciseBreakdown = { name: string; sets: { weight: number; reps: number; isWarmup: boolean }[] };
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +39,8 @@ function PostCard({
   likedByMe,
   currentUserId,
   comments,
+  exercises,
+  weightUnit,
 }: {
   ownerId: string;
   ownerName: string;
@@ -54,6 +59,8 @@ function PostCard({
   likedByMe: boolean;
   currentUserId: string;
   comments: CommentDTO[];
+  exercises?: ExerciseBreakdown[];
+  weightUnit?: "KG" | "LB";
 }) {
   return (
     <div className="mx-auto max-w-md">
@@ -86,7 +93,11 @@ function PostCard({
           <h1 className="mt-4 font-serif text-xl font-semibold text-ink">{title}</h1>
           {note && <p className="mt-1.5 text-sm text-ink">{note}</p>}
 
-          <div className={`mt-4 grid gap-3 border-t border-line pt-4 text-sm ${stats.length === 1 ? "grid-cols-1" : "grid-cols-3"}`}>
+          <div
+            className={`mt-4 grid gap-3 border-t border-line pt-4 text-sm ${
+              stats.length === 1 ? "grid-cols-1" : stats.length === 2 ? "grid-cols-2" : "grid-cols-3"
+            }`}
+          >
             {stats.map((s) => (
               <div key={s.label}>
                 <p className="font-serif text-lg font-semibold text-ink">{s.value}</p>
@@ -94,6 +105,29 @@ function PostCard({
               </div>
             ))}
           </div>
+
+          {/* The actual set-by-set work, not just the aggregate numbers
+              above — the thing that made this workout what it was, and
+              what a friend scrolling past would actually want to see
+              (this is Hevy's whole feed). */}
+          {exercises && exercises.length > 0 && (
+            <div className="mt-4 space-y-3 border-t border-line pt-4 text-left">
+              {exercises.map((ex) => (
+                <div key={ex.name}>
+                  <p className="text-sm font-medium text-ink">{ex.name}</p>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    {ex.sets.map((s, i) => (
+                      <span key={i}>
+                        {i > 0 && ", "}
+                        {formatWeight(s.weight, weightUnit ?? "KG")}×{s.reps}
+                        {s.isWarmup && "w"}
+                      </span>
+                    ))}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mt-4 flex items-center gap-3 border-t border-line pt-4">
             <LikeButton kind={kind} activityId={id} count={likeCount} likedByMe={likedByMe} />
@@ -140,10 +174,12 @@ async function fetchComments(kind: "workout" | "study", id: string): Promise<Com
 
 // The feed's Instagram-style "tap a post" destination — photo first (when
 // there is one) like an Insta post, everything else (who/when/stats/
-// caption/likes) below it. Deliberately exposes no more than the feed
-// itself already does (summary stats, not a full per-set breakdown) —
-// same privacy boundary as friends/page.tsx's feed query, re-checked here
-// rather than trusted from whichever link got us here.
+// caption/likes) below it, plus the full per-exercise set breakdown for a
+// strength workout (see ExerciseBreakdown) and a subject streak for a
+// study session — the actual substance the feed's own summary line can
+// only gesture at. Same privacy boundary as friends/page.tsx's feed
+// query, re-checked here rather than trusted from whichever link got us
+// here.
 export default async function PostDetailPage({ params }: { params: Promise<{ kind: string; id: string }> }) {
   const { kind, id } = await params;
   if (kind !== "workout" && kind !== "study") notFound();
@@ -151,7 +187,10 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
   const viewer = await getCurrentUser();
 
   if (kind === "workout") {
-    const workout = await prisma.workout.findUnique({ where: { id }, include: { user: true, sets: true } });
+    const workout = await prisma.workout.findUnique({
+      where: { id },
+      include: { user: true, sets: { include: { exercise: true } } },
+    });
     if (!workout || !workout.endedAt) notFound();
 
     if (workout.userId !== viewer.id) {
@@ -180,6 +219,19 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
           { label: "Volume", value: formatWeight(computeVolume(workout.sets), viewer.weightUnit) },
         ];
 
+    // Grouped by exercise in first-seen order — same pattern as the
+    // workout log's own expanded-set view (WorkoutTracker's HistoryWorkout).
+    const exerciseOrder: string[] = [];
+    const setsByExercise = new Map<string, ExerciseBreakdown["sets"]>();
+    for (const s of workout.sets) {
+      if (!setsByExercise.has(s.exercise.name)) {
+        setsByExercise.set(s.exercise.name, []);
+        exerciseOrder.push(s.exercise.name);
+      }
+      setsByExercise.get(s.exercise.name)!.push({ weight: s.weight, reps: s.reps, isWarmup: s.isWarmup });
+    }
+    const exercises: ExerciseBreakdown[] = exerciseOrder.map((name) => ({ name, sets: setsByExercise.get(name)! }));
+
     return (
       <PostCard
         ownerId={workout.userId}
@@ -199,6 +251,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
         likedByMe={!!likedByMe}
         currentUserId={viewer.id}
         comments={comments}
+        exercises={isCardio ? undefined : exercises}
+        weightUnit={viewer.weightUnit}
       />
     );
   }
@@ -213,11 +267,23 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
     if (session.visibility !== "FRIENDS" || !session.user.shareStudyStreak || !viewerFollowsOwner) redirect("/friends");
   }
 
-  const [likeCount, likedByMe, comments] = await Promise.all([
+  const [likeCount, likedByMe, comments, subjectSessions] = await Promise.all([
     prisma.cheer.count({ where: { studySessionId: id } }),
     prisma.cheer.findFirst({ where: { fromUserId: viewer.id, studySessionId: id } }),
     fetchComments("study", id),
+    // For the subject's current streak alongside this session's own time —
+    // one bare number ("47m") didn't say anything about whether this was
+    // part of a run or a one-off.
+    prisma.studySession.findMany({
+      where: { userId: session.userId, subjectId: session.subjectId, durationMinutes: { not: null } },
+      select: { startedAt: true },
+    }),
   ]);
+
+  const subjectStreak = computeStreak(
+    new Set(subjectSessions.map((s) => s.startedAt.toISOString().slice(0, 10))),
+    todayISO(),
+  );
 
   return (
     <PostCard
@@ -230,7 +296,12 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
       icon={<ClockIcon className="h-4 w-4" />}
       title={session.subject.name}
       note={session.note}
-      stats={[{ label: "Time studied", value: formatMinutes(session.durationMinutes ?? 0) }]}
+      stats={[
+        { label: "Time studied", value: formatMinutes(session.durationMinutes ?? 0) },
+        ...(subjectStreak > 0
+          ? [{ label: "Streak", value: `${subjectStreak} day${subjectStreak === 1 ? "" : "s"}` }]
+          : []),
+      ]}
       kind="study"
       id={id}
       likeCount={likeCount}
