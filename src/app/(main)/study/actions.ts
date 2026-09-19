@@ -115,6 +115,14 @@ export async function setStudySessionNote(sessionId: string, note: string) {
   revalidatePath("/friends");
 }
 
+// See setWorkoutArchived — same "take this off my profile activity list"
+// toggle for a study session.
+export async function setStudySessionArchived(sessionId: string, archived: boolean) {
+  const user = await getCurrentUser();
+  await prisma.studySession.updateMany({ where: { id: sessionId, userId: user.id }, data: { archived } });
+  revalidatePath("/friends");
+}
+
 export async function deleteStudySession(sessionId: string) {
   const session = await prisma.studySession.findUnique({ where: { id: sessionId } });
   if (!session) return; // already gone — nothing to do

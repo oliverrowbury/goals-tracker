@@ -4,13 +4,17 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, formatMonthYear } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
+import { formatMinutes } from "@/lib/study";
+import { formatDistance, formatPace, formatWeight, computeVolume, groupSetsByExercise, type ExerciseBreakdown } from "@/lib/workout";
 import { levelForXp } from "@/lib/xp";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
 import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, FlameIcon } from "@/components/Icons";
 import { FocusTagPills } from "../../FocusTagPills";
+import { ActivityCard, type ActivityCardItem } from "../../ActivityCard";
 import { requestFollowVoid, removeFollowByTarget } from "../../actions";
+import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +57,130 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   const studyStreak = studyDates && computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today);
   const workoutStreak = workoutDates && computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today);
   const hasAnyActivity = journalStreak != null || studyStreak != null || workoutStreak != null;
+
+  // The person's own post history — not time-limited the way the main
+  // Friends feed is (see friends/page.tsx's FEED_SINCE), so a post that's
+  // aged off that feed after a week still lives here until the owner
+  // archives it. Same privacy gate as the streaks above.
+  const ACTIVITY_LIMIT = 30;
+  const [profileWorkouts, profileStudySessions] = isFollowing
+    ? await Promise.all([
+        target.shareWorkoutStreak
+          ? prisma.workout.findMany({
+              where: { userId: target.id, endedAt: { not: null }, visibility: "FRIENDS", archived: false },
+              orderBy: { endedAt: "desc" },
+              take: ACTIVITY_LIMIT,
+              include: { sets: { include: { exercise: true } } },
+            })
+          : [],
+        target.shareStudyStreak
+          ? prisma.studySession.findMany({
+              where: { userId: target.id, endedAt: { not: null }, visibility: "FRIENDS", archived: false },
+              orderBy: { endedAt: "desc" },
+              take: ACTIVITY_LIMIT,
+              include: { subject: true },
+            })
+          : [],
+      ])
+    : [[], []];
+
+  const subjectIds = Array.from(new Set(profileStudySessions.map((s) => s.subjectId)));
+  const subjectStreakSessions =
+    subjectIds.length > 0
+      ? await prisma.studySession.findMany({
+          where: { userId: target.id, subjectId: { in: subjectIds }, durationMinutes: { not: null } },
+          select: { subjectId: true, startedAt: true },
+        })
+      : [];
+  const datesBySubject = new Map<string, Set<string>>();
+  for (const s of subjectStreakSessions) {
+    if (!datesBySubject.has(s.subjectId)) datesBySubject.set(s.subjectId, new Set());
+    datesBySubject.get(s.subjectId)!.add(s.startedAt.toISOString().slice(0, 10));
+  }
+  const streakBySubject = new Map<string, number>();
+  for (const [subjectId, dates] of datesBySubject) streakBySubject.set(subjectId, computeStreak(dates, today));
+
+  type ActivityEntry = {
+    id: string;
+    kind: "workout" | "study";
+    when: Date;
+    title: string;
+    stats: { label: string; value: string }[];
+    exercises?: ExerciseBreakdown[];
+    note?: string | null;
+    photoUrl?: string | null;
+  };
+
+  const profileActivity: ActivityEntry[] = [
+    ...profileWorkouts.map((w) => {
+      const isCardio = w.type === "CARDIO";
+      return {
+        id: w.id,
+        kind: "workout" as const,
+        when: w.endedAt!,
+        title: w.label,
+        stats: isCardio
+          ? [
+              { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
+              { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
+              { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
+            ]
+          : [
+              { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
+              { label: "Sets", value: String(w.sets.filter((s) => !s.isWarmup).length) },
+              { label: "Volume", value: formatWeight(computeVolume(w.sets), user.weightUnit) },
+            ],
+        exercises: isCardio ? undefined : groupSetsByExercise(w.sets),
+        note: w.note,
+        photoUrl: w.photoUrl,
+      };
+    }),
+    ...profileStudySessions.map((s) => {
+      const streak = streakBySubject.get(s.subjectId) ?? 0;
+      return {
+        id: s.id,
+        kind: "study" as const,
+        when: s.endedAt!,
+        title: s.subject.name,
+        note: s.note,
+        stats: [
+          { label: "Time studied", value: formatMinutes(s.durationMinutes ?? 0) },
+          ...(streak > 0 ? [{ label: "Streak", value: `${streak} day${streak === 1 ? "" : "s"}` }] : []),
+        ],
+      };
+    }),
+  ]
+    .sort((a, b) => b.when.getTime() - a.when.getTime())
+    .slice(0, ACTIVITY_LIMIT);
+
+  const activityWorkoutIds = profileWorkouts.map((w) => w.id);
+  const activityStudySessionIds = profileStudySessions.map((s) => s.id);
+  const [likesGivenByMe, likeCounts, activityComments] =
+    profileActivity.length > 0
+      ? await Promise.all([
+          prisma.cheer.findMany({
+            where: { fromUserId: user.id, OR: [{ workoutId: { in: activityWorkoutIds } }, { studySessionId: { in: activityStudySessionIds } }] },
+          }),
+          prisma.cheer.findMany({
+            where: { OR: [{ workoutId: { in: activityWorkoutIds } }, { studySessionId: { in: activityStudySessionIds } }] },
+          }),
+          prisma.comment.findMany({
+            where: { OR: [{ workoutId: { in: activityWorkoutIds } }, { studySessionId: { in: activityStudySessionIds } }] },
+            select: { workoutId: true, studySessionId: true },
+          }),
+        ])
+      : [[], [], []];
+  const likedByMeSet = new Set(likesGivenByMe.map((c) => c.workoutId ?? c.studySessionId));
+  const likeCountMap = new Map<string, number>();
+  for (const c of likeCounts) {
+    const key = c.workoutId ?? c.studySessionId!;
+    likeCountMap.set(key, (likeCountMap.get(key) ?? 0) + 1);
+  }
+  const commentCountMap = new Map<string, number>();
+  for (const c of activityComments) {
+    const key = c.workoutId ?? c.studySessionId!;
+    commentCountMap.set(key, (commentCountMap.get(key) ?? 0) + 1);
+  }
 
   const { level } = levelForXp(target.xp);
 
@@ -165,6 +293,44 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           </div>
         )}
       </div>
+
+      {isFollowing && hasAnyActivity && (
+        <section className="mt-6">
+          <h2 className="mb-3 text-sm font-medium text-ink-muted">Activity</h2>
+          {profileActivity.length === 0 ? (
+            <EmptyState message={`Nothing from ${target.name} yet.`} />
+          ) : (
+            <ul className="space-y-3">
+              {profileActivity.map((item) => {
+                const cardItem: ActivityCardItem = {
+                  id: item.id,
+                  kind: item.kind,
+                  ownerId: target.id,
+                  ownerName: target.name,
+                  ownerUsername: target.username,
+                  ownerAvatarUrl: target.avatarUrl,
+                  when: item.when,
+                  title: item.title,
+                  note: item.note,
+                  photoUrl: item.photoUrl,
+                  stats: item.stats,
+                  exercises: item.exercises,
+                  weightUnit: user.weightUnit,
+                  likeCount: likeCountMap.get(item.id) ?? 0,
+                  likedByMe: likedByMeSet.has(item.id),
+                  commentCount: commentCountMap.get(item.id) ?? 0,
+                  archived: false,
+                };
+                return (
+                  <li key={`${item.kind}-${item.id}`}>
+                    <ActivityCard item={cardItem} currentUserId={user.id} showOwner={false} />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      )}
 
       <Link href="/friends" className="mt-6 flex items-center justify-center gap-1.5 text-sm text-ink-muted hover:text-calm">
         <UsersIcon className="h-4 w-4" />

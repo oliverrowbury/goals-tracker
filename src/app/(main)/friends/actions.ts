@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { awardBadge } from "@/lib/badges";
+import { setWorkoutArchived } from "../workout/actions";
+import { setStudySessionArchived } from "../study/actions";
 
 async function awardFirstFollowBadge(userId: string) {
   const count = await prisma.follow.count({ where: { followerId: userId, status: "ACCEPTED" } });
@@ -128,6 +130,13 @@ export async function setShareCategory(category: ShareCategory, share: boolean) 
 }
 
 export type ActivityKind = "workout" | "study";
+
+// A single dispatch point so the shared ActivityCard doesn't need to know
+// which model backs each kind — same idea as likeActivity below.
+export async function setActivityArchived(kind: ActivityKind, activityId: string, archived: boolean) {
+  if (kind === "workout") await setWorkoutArchived(activityId, archived);
+  else await setStudySessionArchived(activityId, archived);
+}
 
 // A like on one specific activity in a friend's feed — capped at one per
 // person per activity (the unique constraints on Cheer), not per day.

@@ -332,6 +332,13 @@ model StudySession {
   // opted their whole category in.
   visibility ActivityVisibility @default(FRIENDS)
 
+  // The friend feed only shows the last week (see friends/page.tsx's
+  // FEED_SINCE), but a post still sits on the owner's own profile activity
+  // list indefinitely after that — this lets the owner hide one from that
+  // list too, on demand, without deleting it. Same idea as Instagram's
+  // archive: reversible, just not visible.
+  archived Boolean @default(false)
+
   // Every query here filters by userId, usually combined with a startedAt
   // range (week/day views) — without this, those become sequential scans
   // once a user's session history grows past what a personal app starts
@@ -382,6 +389,9 @@ model Workout {
   // Optional photo attached on the post-finish summary screen — same
   // Supabase Storage bucket/pattern as JournalEntry.photoUrl.
   photoUrl String?
+  // See StudySession.archived — same "hide from my own profile activity
+  // list on demand" escape hatch.
+  archived Boolean @default(false)
 
   sets WorkoutSet[]
 

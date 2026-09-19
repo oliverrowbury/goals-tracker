@@ -80,6 +80,27 @@ export function formatPace(distanceKm: number | null, durationMinutes: number | 
   return `${min}:${sec.toString().padStart(2, "0")}/${unit === "MI" ? "mi" : "km"}`;
 }
 
+export type ExerciseBreakdown = { name: string; sets: { weight: number; reps: number; isWarmup: boolean }[] };
+
+// Groups a workout's flat set list into one entry per exercise, in the
+// order each exercise was first logged — shared between the workout log's
+// own expanded history view and the social feed/post-detail cards, so a
+// friend sees the same set-by-set shape you see in your own history.
+export function groupSetsByExercise(
+  sets: { exercise: { name: string }; weight: number; reps: number; isWarmup: boolean }[],
+): ExerciseBreakdown[] {
+  const order: string[] = [];
+  const byExercise = new Map<string, ExerciseBreakdown["sets"]>();
+  for (const s of sets) {
+    if (!byExercise.has(s.exercise.name)) {
+      byExercise.set(s.exercise.name, []);
+      order.push(s.exercise.name);
+    }
+    byExercise.get(s.exercise.name)!.push({ weight: s.weight, reps: s.reps, isWarmup: s.isWarmup });
+  }
+  return order.map((name) => ({ name, sets: byExercise.get(name)! }));
+}
+
 // Great-circle distance between two lat/lng points, in km — used to
 // accumulate a live distance from GPS fixes during a cardio session (see
 // useGpsDistance in WorkoutTracker).

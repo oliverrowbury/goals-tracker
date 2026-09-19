@@ -264,6 +264,15 @@ export async function setWorkoutNote(workoutId: string, note: string) {
   revalidatePath("/friends");
 }
 
+// The owner's "take this off my profile activity list" toggle — see
+// Workout.archived in schema.prisma. Reversible, doesn't touch likes/
+// comments/the underlying data, just visibility.
+export async function setWorkoutArchived(workoutId: string, archived: boolean) {
+  const user = await getCurrentUser();
+  await prisma.workout.updateMany({ where: { id: workoutId, userId: user.id }, data: { archived } });
+  revalidatePath("/friends");
+}
+
 export async function uploadWorkoutPhoto(workoutId: string, formData: FormData): Promise<{ error: string } | null> {
   const user = await getCurrentUser();
   const file = formData.get("photo");
