@@ -270,6 +270,15 @@ export async function deleteAccount(_prev: SettingsActionState, formData: FormDa
     prisma.cheer.deleteMany({
       where: { OR: [{ fromUserId: user.id }, { toUserId: user.id }, { workoutId: { in: workoutIds } }] },
     }),
+    // Comment.authorId and Message.senderId/recipientId are real (RESTRICT)
+    // foreign keys, unlike Cheer/Comment's workoutId/studySessionId columns
+    // — without deleting these first, prisma.user.delete below fails outright
+    // for anyone who's ever commented or messaged.
+    prisma.comment.deleteMany({ where: { authorId: user.id } }),
+    prisma.message.deleteMany({ where: { OR: [{ senderId: user.id }, { recipientId: user.id }] } }),
+    // Same RESTRICT-foreign-key reasoning as Comment/Message above.
+    prisma.block.deleteMany({ where: { OR: [{ blockerId: user.id }, { blockedId: user.id }] } }),
+    prisma.report.deleteMany({ where: { OR: [{ reporterId: user.id }, { targetUserId: user.id }] } }),
     prisma.follow.deleteMany({ where: { OR: [{ followerId: user.id }, { followingId: user.id }] } }),
     prisma.userBadge.deleteMany({ where: { userId: user.id } }),
     prisma.pushSubscription.deleteMany({ where: { userId: user.id } }),

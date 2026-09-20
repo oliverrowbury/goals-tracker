@@ -91,6 +91,51 @@ export async function sendNewMessageEmail(to: string, name: string, fromName: st
   });
 }
 
+export async function sendPasswordResetEmail(to: string, name: string, resetUrl: string): Promise<void> {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  await sendEmail({
+    to,
+    subject: "Reset your Proudly password",
+    html: layout(`
+      <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
+        Someone asked to reset the password on your Proudly account. If that was you, pick a new one here —
+        this link works for one hour:
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${resetUrl}" style="display:inline-block;background-color:#c1592f;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
+          Reset your password
+        </a>
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+        If you didn't ask for this, you can ignore this email — your password won't change.
+      </p>
+    `),
+  });
+}
+
+export async function sendVerificationEmail(to: string, name: string, verifyUrl: string): Promise<void> {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  await sendEmail({
+    to,
+    subject: "Verify your email for Proudly",
+    html: layout(`
+      <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
+        One last step — confirm this is your email address:
+      </p>
+      <p style="margin:0 0 24px;">
+        <a href="${verifyUrl}" style="display:inline-block;background-color:#c1592f;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
+          Verify email
+        </a>
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+        If you didn't create a Proudly account, you can ignore this email.
+      </p>
+    `),
+  });
+}
+
 export async function sendPasswordChangedEmail(to: string, name: string): Promise<void> {
   const firstName = name.trim().split(/\s+/)[0] || name;
   await sendEmail({

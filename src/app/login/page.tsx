@@ -43,7 +43,16 @@ export default async function LoginPage({
         <div className="animate-[fade-up_0.6s_cubic-bezier(0.16,1,0.3,1)_both] [animation-delay:1s]">
           <p className="mb-6 text-sm text-ink-muted">Sign in to continue.</p>
 
-          {error && (
+          {error === "locked" && (
+            <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
+              Too many wrong attempts — this account is locked for 15 minutes. Use{" "}
+              <Link href="/forgot-password" className="font-medium underline">
+                forgot password
+              </Link>{" "}
+              if you need in sooner.
+            </p>
+          )}
+          {error && error !== "locked" && (
             <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
               Wrong email or password — try again.
             </p>
@@ -62,9 +71,14 @@ export default async function LoginPage({
             className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
           />
 
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="password">
-            Password
-          </label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-sm font-medium text-ink" htmlFor="password">
+              Password
+            </label>
+            <Link href="/forgot-password" className="text-xs font-medium text-accent hover:underline">
+              Forgot password?
+            </Link>
+          </div>
           <div className="mb-4">
             <PasswordInput
               id="password"

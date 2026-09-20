@@ -2,12 +2,14 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { AUTH_COOKIE } from "@/lib/auth";
+import { AUTH_COOKIE, baseUrl } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, generateSessionToken } from "@/lib/password";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmail, sendVerificationEmail } from "@/lib/email";
 import { USERNAME_RE } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
+
+const VERIFY_TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 export type SignupState = {
   fieldErrors: {
@@ -69,13 +71,18 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
 
   const passwordHash = await hashPassword(password);
   const sessionToken = generateSessionToken();
-  await prisma.user.create({ data: { name, username, email, passwordHash, sessionToken } });
+  const verifyToken = generateSessionToken();
+  const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+  await prisma.user.create({
+    data: { name, username, email, passwordHash, sessionToken, verifyToken, verifyTokenExpiresAt },
+  });
 
   // Awaited (not fire-and-forget) — on a serverless host the function can
   // be frozen as soon as the response goes out, which for a redirect is
   // right after this action returns, so a dangling un-awaited send can get
   // cut off before it actually reaches Resend.
   await sendWelcomeEmail(email, name);
+  await sendVerificationEmail(email, name, `${await baseUrl()}/api/verify-email?token=${verifyToken}`);
 
   const cookieStore = await cookies();
   cookieStore.set(AUTH_COOKIE, sessionToken, {

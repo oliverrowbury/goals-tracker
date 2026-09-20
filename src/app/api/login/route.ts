@@ -13,6 +13,13 @@ function safeRedirectPath(path: string | undefined): string {
   return path && path.startsWith("/") && !path.startsWith("//") ? path : "/";
 }
 
+// Brute-force guard — scrypt plus the timing-safe comparison below already
+// make each individual guess slow and un-distinguishable by timing, but
+// nothing previously stopped an unlimited number of them. Locked for 15
+// minutes after 8 wrong passwords in a row; a correct one resets the count.
+const MAX_FAILED_ATTEMPTS = 8;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
 export async function POST(request: Request) {
   const form = await request.formData();
   const email = String(form.get("email") ?? "")
@@ -25,6 +32,12 @@ export async function POST(request: Request) {
 
   const user = email ? await prisma.user.findUnique({ where: { email } }) : null;
 
+  if (user?.lockedUntil && user.lockedUntil > new Date()) {
+    const url = new URL("/login", request.url);
+    url.searchParams.set("error", "locked");
+    return NextResponse.redirect(url, { status: 303 });
+  }
+
   // Always run verifyPassword, even for an email that doesn't exist or an
   // account with no password set — comparing against a dummy hash of the
   // right shape keeps the response time the same either way, so a wrong
@@ -34,6 +47,16 @@ export async function POST(request: Request) {
   const valid = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
 
   if (!user || !valid) {
+    if (user) {
+      const failedLoginAttempts = user.failedLoginAttempts + 1;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts,
+          lockedUntil: failedLoginAttempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null,
+        },
+      });
+    }
     // The redirect-target cookie is left as-is (not cleared) so a retry
     // after a typo still lands back where the user was trying to go.
     const url = new URL("/login", request.url);
@@ -42,7 +65,10 @@ export async function POST(request: Request) {
   }
 
   const token = generateSessionToken();
-  await prisma.user.update({ where: { id: user.id }, data: { sessionToken: token } });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { sessionToken: token, failedLoginAttempts: 0, lockedUntil: null },
+  });
 
   const response = NextResponse.redirect(new URL(from, request.url), { status: 303 });
   response.cookies.set(AUTH_COOKIE, token, {

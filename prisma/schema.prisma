@@ -123,6 +123,25 @@ model User {
   passwordHash String
   sessionToken String? @unique
 
+  // "Forgot password" flow — set when a reset is requested, cleared once
+  // used or once a new one is requested. One-hour expiry, checked in
+  // settings/actions.ts's resetPassword.
+  resetToken           String?   @unique
+  resetTokenExpiresAt  DateTime?
+
+  // Set at signup, sent again on request — a null value means "not
+  // verified yet," never enforced retroactively against existing accounts
+  // (see hasCompletedProfile-style soft gating, not a hard block).
+  emailVerifiedAt      DateTime?
+  verifyToken          String?   @unique
+  verifyTokenExpiresAt DateTime?
+
+  // Login brute-force guard — incremented on a wrong password, reset on a
+  // correct one. Locked out (see api/login/route.ts) once this crosses the
+  // threshold, until lockedUntil passes.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
   // Display/input preference for the Workout tracker — everything is
   // still stored canonically in kg/km regardless of this, converted at
   // the UI's edges (see src/lib/workout.ts).
@@ -192,6 +211,10 @@ model User {
   messagesSent     Message[] @relation("MessageFrom")
   messagesReceived Message[] @relation("MessageTo")
   comments         Comment[]
+  blocksMade       Block[]   @relation("BlockerOf")
+  blockedBy        Block[]   @relation("BlockedBy")
+  reportsFiled     Report[]  @relation("ReportsFiled")
+  reportsReceived  Report[]  @relation("ReportsReceived")
 }
 
 model PushSubscription {
@@ -591,6 +614,61 @@ model Message {
   @@index([senderId, recipientId, createdAt])
   @@index([recipientId, senderId, createdAt])
   @@index([recipientId, readAt])
+}
+
+// One-directional, same shape as Follow — blocking someone doesn't require
+// their agreement, unlike following them. Checked wherever Follow/Message/
+// Comment actions run (lib/friends.ts's isBlocked), and used to hide the
+// blocked user's activity from your own feed queries.
+model Block {
+  id String @id @default(uuid())
+
+  blockerId String
+  blocker   User   @relation("BlockerOf", fields: [blockerId], references: [id])
+  blockedId String
+  blocked   User   @relation("BlockedBy", fields: [blockedId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+enum ReportTargetType {
+  USER
+  COMMENT
+  WORKOUT
+  STUDY_SESSION
+  MESSAGE
+}
+
+// A flagged user/comment/post/message for the owner (you) to review —
+// deliberately no in-app moderation queue UI beyond /admin/reports (gated
+// by ADMIN_EMAIL, same pattern as OwnerBadge), since report volume on a
+// friends-scale app doesn't justify more than that yet.
+model Report {
+  id String @id @default(uuid())
+
+  reporterId String
+  reporter   User   @relation("ReportsFiled", fields: [reporterId], references: [id])
+
+  // Who the report is ultimately about — always set, even when targetType
+  // is a piece of content, so "everything reported about this person" is
+  // one query regardless of what kind of thing it was.
+  targetUserId String
+  targetUser   User   @relation("ReportsReceived", fields: [targetUserId], references: [id])
+
+  targetType ReportTargetType
+  // The specific comment/workout/studySession/message id, when targetType
+  // isn't USER — deliberately a plain string (no @relation), same
+  // reasoning as Comment/Cheer's own workoutId/studySessionId: a report
+  // about content that's since been deleted should still be reviewable.
+  targetId String?
+
+  reason    String
+  createdAt DateTime @default(now())
+
+  @@index([targetUserId])
 }
 
 // A curated, fixed set of milestones rather than an open-ended point
