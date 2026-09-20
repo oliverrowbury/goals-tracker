@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.19.3",
+    "@sentry/nextjs": "^10.75.0",
     "@supabase/supabase-js": "^2.116.0",
     "@vercel/analytics": "^2.0.1",
     "leaflet": "^1.9.4",
@@ -22,7 +23,11 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "resend": "^6.28.0",
+    "sharp": "^0.35.4",
     "web-push": "^3.6.7"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
