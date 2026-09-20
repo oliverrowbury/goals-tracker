@@ -24,6 +24,8 @@ import { OwnerBadge } from "@/components/OwnerBadge";
 import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, FlameIcon } from "@/components/Icons";
 import { FocusTagPills } from "../../FocusTagPills";
 import { ActivityCard, type ActivityCardItem } from "../../ActivityCard";
+import { BlockButton } from "../../BlockButton";
+import { ReportButton } from "../../ReportButton";
 import { requestFollowVoid, removeFollowByTarget } from "../../actions";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -37,15 +39,17 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   const isSelf = target.id === user.id;
 
-  const [outgoing, followerCount, followingCount] = await Promise.all([
+  const [outgoing, followerCount, followingCount, myBlockOfThem, theirBlockOfMe] = await Promise.all([
     isSelf
       ? null
       : prisma.follow.findUnique({ where: { followerId_followingId: { followerId: user.id, followingId: target.id } } }),
     prisma.follow.count({ where: { followingId: target.id, status: "ACCEPTED" } }),
     prisma.follow.count({ where: { followerId: target.id, status: "ACCEPTED" } }),
+    isSelf ? null : prisma.block.findUnique({ where: { blockerId_blockedId: { blockerId: user.id, blockedId: target.id } } }),
+    isSelf ? null : prisma.block.findUnique({ where: { blockerId_blockedId: { blockerId: target.id, blockedId: user.id } } }),
   ]);
 
-  const isFollowing = outgoing?.status === "ACCEPTED";
+  const isFollowing = outgoing?.status === "ACCEPTED" && !theirBlockOfMe;
   const today = todayISO();
 
   // Only computed once there's an ACCEPTED follow — same privacy boundary
@@ -282,6 +286,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <div className="mt-4 border-t border-line pt-4">
           {isSelf ? (
             <p className="text-center text-sm text-ink-muted">This is your own profile — share your link instead.</p>
+          ) : theirBlockOfMe ? (
+            <p className="text-center text-sm text-ink-muted">This profile isn&apos;t available.</p>
+          ) : myBlockOfThem ? (
+            <div className="text-center">
+              <p className="mb-2 text-sm text-ink-muted">You&apos;ve blocked this account.</p>
+              <BlockButton targetUserId={target.id} targetName={target.name} blocked />
+            </div>
           ) : isFollowing ? (
             <form action={removeFollowByTarget.bind(null, target.id)} className="text-center">
               <p className="mb-2 text-sm text-calm">You&apos;re following {target.name}.</p>
@@ -304,6 +315,13 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </form>
           )}
         </div>
+
+        {!isSelf && !theirBlockOfMe && !myBlockOfThem && (
+          <div className="mt-4 flex items-center justify-center gap-4 border-t border-line pt-4">
+            <BlockButton targetUserId={target.id} targetName={target.name} blocked={false} />
+            <ReportButton targetType="USER" targetUserId={target.id} />
+          </div>
+        )}
 
         {isFollowing && (
           <div className="mt-4 border-t border-line pt-4">

@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { isMutualFollow } from "@/lib/friends";
+import { isMutualFollow, isBlocked } from "@/lib/friends";
 import { sendNewMessageEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 
 const MAX_MESSAGE_LENGTH = 2000;
+const MESSAGE_RATE_LIMIT = 20;
+const MESSAGE_RATE_WINDOW_MS = 60_000;
 
 export type SendMessageState = { error?: string } | null;
 
@@ -23,11 +25,17 @@ export async function sendMessage(recipientId: string, formData: FormData): Prom
   if (!body) return { error: "Type something first." };
   if (body.length > MAX_MESSAGE_LENGTH) return { error: `Keep it under ${MAX_MESSAGE_LENGTH} characters.` };
 
-  const [recipient, mutual] = await Promise.all([
+  const recentCount = await prisma.message.count({
+    where: { senderId: user.id, createdAt: { gt: new Date(Date.now() - MESSAGE_RATE_WINDOW_MS) } },
+  });
+  if (recentCount >= MESSAGE_RATE_LIMIT) return { error: "Slow down — too many messages in a row. Try again in a minute." };
+
+  const [recipient, mutual, blocked] = await Promise.all([
     prisma.user.findUnique({ where: { id: recipientId }, select: { id: true, name: true, email: true, username: true } }),
     isMutualFollow(user.id, recipientId),
+    isBlocked(user.id, recipientId),
   ]);
-  if (!recipient || !mutual) return { error: "You can only message mutual friends." };
+  if (!recipient || !mutual || blocked) return { error: "You can only message mutual friends." };
 
   // Only notify on the *first* unread message in this thread, not every
   // one — otherwise an active back-and-forth would spam email/push.

@@ -83,6 +83,19 @@ export default async function SettingsPage() {
     ]);
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
+  // Same "admin sees everyone's" reasoning as feedback above — a Report is
+  // useless sitting invisible in the reporter's own account.
+  const reports = isAdmin
+    ? await prisma.report.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        include: {
+          reporter: { select: { name: true, username: true } },
+          targetUser: { select: { name: true, username: true } },
+        },
+      })
+    : [];
+
   const today = todayISO();
   const usernameCooldownDaysLeft = user.usernameChangedAt
     ? Math.max(0, 7 - daysBetween(user.usernameChangedAt.toISOString().slice(0, 10), today))
@@ -316,6 +329,27 @@ export default async function SettingsPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="mt-5 border-t border-line pt-5">
+              <p className="mb-2 text-xs font-medium text-ink-muted">Reports ({reports.length})</p>
+              {reports.length === 0 ? (
+                <p className="text-sm text-ink-muted">Nothing reported.</p>
+              ) : (
+                <ul className="-mx-6 divide-y divide-line border-t border-line">
+                  {reports.map((r) => (
+                    <li key={r.id} className="px-6 py-2.5 text-sm">
+                      <p className="text-ink">{r.reason}</p>
+                      <p className="mt-1 text-xs text-ink-muted">
+                        {r.reporter.name} (@{r.reporter.username}) reported {r.targetUser.name} (@{r.targetUser.username}) ·{" "}
+                        {r.targetType.replace("_", " ").toLowerCase()} · {formatLong(r.createdAt.toISOString().slice(0, 10))}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>

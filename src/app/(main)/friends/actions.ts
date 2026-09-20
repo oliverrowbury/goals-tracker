@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { awardBadge } from "@/lib/badges";
+import { isBlocked } from "@/lib/friends";
 import { setWorkoutArchived } from "../workout/actions";
 import { setStudySessionArchived } from "../study/actions";
 
@@ -63,6 +64,7 @@ export async function requestFollow(targetUserId: string): Promise<FollowState> 
 
   const other = await prisma.user.findUnique({ where: { id: targetUserId } });
   if (!other) return { error: "That account doesn't exist" };
+  if (await isBlocked(user.id, other.id)) return { error: "You can't follow this account" };
 
   const existing = await prisma.follow.findUnique({
     where: { followerId_followingId: { followerId: user.id, followingId: other.id } },
@@ -113,6 +115,56 @@ export async function removeFollowByTarget(targetUserId: string) {
   const user = await getCurrentUser();
   await prisma.follow.deleteMany({ where: { followerId: user.id, followingId: targetUserId } });
   revalidatePath("/friends");
+}
+
+// Blocking someone also drops any Follow row between you, either
+// direction — that alone is what keeps a blocked person's activity out of
+// your feed and yours out of theirs, since both feeds are already built
+// from "who I follow" (see friends/page.tsx); no separate feed-side
+// filter needed. isBlocked (checked in requestFollow, sendMessage, and
+// canCommentOn) is what stops a new Follow/message/comment afterward.
+export async function blockUser(targetUserId: string) {
+  const user = await getCurrentUser();
+  if (targetUserId === user.id) return;
+
+  await prisma.$transaction([
+    prisma.follow.deleteMany({
+      where: { OR: [{ followerId: user.id, followingId: targetUserId }, { followerId: targetUserId, followingId: user.id }] },
+    }),
+    prisma.block.upsert({
+      where: { blockerId_blockedId: { blockerId: user.id, blockedId: targetUserId } },
+      create: { blockerId: user.id, blockedId: targetUserId },
+      update: {},
+    }),
+  ]);
+  revalidatePath("/friends");
+}
+
+export async function unblockUser(targetUserId: string) {
+  const user = await getCurrentUser();
+  await prisma.block.deleteMany({ where: { blockerId: user.id, blockedId: targetUserId } });
+  revalidatePath("/friends");
+}
+
+const MAX_REPORT_REASON_LENGTH = 500;
+
+// No in-app moderation queue — see /admin/reports (ADMIN_EMAIL-gated, same
+// pattern as OwnerBadge) for where these actually get read.
+export async function submitReport(
+  targetType: "USER" | "COMMENT" | "WORKOUT" | "STUDY_SESSION" | "MESSAGE",
+  targetUserId: string,
+  targetId: string | null,
+  reason: string,
+): Promise<{ error?: string; success?: string }> {
+  const user = await getCurrentUser();
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) return { error: "Say a little about what's wrong." };
+  if (trimmedReason.length > MAX_REPORT_REASON_LENGTH) return { error: `Keep it under ${MAX_REPORT_REASON_LENGTH} characters.` };
+
+  await prisma.report.create({
+    data: { reporterId: user.id, targetUserId, targetType, targetId, reason: trimmedReason },
+  });
+  return { success: "Thanks — we'll take a look." };
 }
 
 export type ShareCategory = "journal" | "study" | "workout";
@@ -195,11 +247,12 @@ async function canCommentOn(userId: string, kind: ActivityKind, activityId: stri
   if (!activity) return null;
   if (activity.userId === userId) return { ownerId: activity.userId };
 
-  const [follow, ownerUser] = await Promise.all([
+  const [follow, ownerUser, blocked] = await Promise.all([
     prisma.follow.findFirst({ where: { followerId: userId, followingId: activity.userId, status: "ACCEPTED" } }),
     prisma.user.findUnique({ where: { id: activity.userId }, select: { shareWorkoutStreak: true, shareStudyStreak: true } }),
+    isBlocked(userId, activity.userId),
   ]);
-  if (!follow || !ownerUser || activity.visibility !== "FRIENDS") return null;
+  if (!follow || !ownerUser || blocked || activity.visibility !== "FRIENDS") return null;
   if (kind === "workout" && !ownerUser.shareWorkoutStreak) return null;
   if (kind === "study" && !ownerUser.shareStudyStreak) return null;
   return { ownerId: activity.userId };
@@ -215,11 +268,19 @@ export type CommentDTO = {
   createdAt: string;
 };
 
+const COMMENT_RATE_LIMIT = 10;
+const COMMENT_RATE_WINDOW_MS = 60_000;
+
 export async function addComment(kind: ActivityKind, activityId: string, formData: FormData): Promise<{ error?: string }> {
   const user = await getCurrentUser();
   const body = String(formData.get("body") ?? "").trim();
   if (!body) return { error: "Type something first." };
   if (body.length > MAX_COMMENT_LENGTH) return { error: `Keep it under ${MAX_COMMENT_LENGTH} characters.` };
+
+  const recentCount = await prisma.comment.count({
+    where: { authorId: user.id, createdAt: { gt: new Date(Date.now() - COMMENT_RATE_WINDOW_MS) } },
+  });
+  if (recentCount >= COMMENT_RATE_LIMIT) return { error: "Slow down — too many comments in a row. Try again in a minute." };
 
   const access = await canCommentOn(user.id, kind, activityId);
   if (!access) return { error: "You can't comment on this." };

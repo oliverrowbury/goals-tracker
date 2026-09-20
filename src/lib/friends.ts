@@ -49,3 +49,13 @@ export async function isMutualFollow(aId: string, bId: string): Promise<boolean>
   ]);
   return !!aFollowsB && !!bFollowsA;
 }
+
+// Blocking is one-directional but checked both ways everywhere it matters
+// (following, messaging, commenting) — if either person has blocked the
+// other, neither side gets through, same as most social apps.
+export async function isBlocked(aId: string, bId: string): Promise<boolean> {
+  const block = await prisma.block.findFirst({
+    where: { OR: [{ blockerId: aId, blockedId: bId }, { blockerId: bId, blockedId: aId }] },
+  });
+  return !!block;
+}

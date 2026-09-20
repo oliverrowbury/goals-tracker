@@ -4,6 +4,7 @@ import { ActivityIcon, ClockIcon, MessageIcon, EyeOffIcon, EyeIcon, TrophyIcon }
 import { todayISO, relativeLabel } from "@/lib/dates";
 import { formatWeight, type ExerciseBreakdown, type Stat } from "@/lib/workout";
 import { LikeButton } from "./LikeButton";
+import { ReportButton } from "./ReportButton";
 import { setActivityArchived, type ActivityKind } from "./actions";
 
 export type ActivityCardItem = {
@@ -184,6 +185,15 @@ export function ActivityCard({
               {item.archived ? "Unarchive" : "Archive"}
             </button>
           </form>
+        )}
+        {!isOwner && (
+          <div className="ml-auto">
+            <ReportButton
+              targetType={item.kind === "workout" ? "WORKOUT" : "STUDY_SESSION"}
+              targetUserId={item.ownerId}
+              targetId={item.id}
+            />
+          </div>
         )}
       </div>
 
