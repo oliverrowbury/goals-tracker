@@ -192,6 +192,11 @@ model User {
   // now() whenever /friends (where likes are visible) is opened. Null means
   // "never viewed" for a genuinely new account, not "see everything ever."
   likesSeenAt DateTime?
+  // Same idea as likesSeenAt, but for comments on my posts — reset to
+  // now() whenever the notification bell is opened (see (main)/actions.ts's
+  // getNotifications), not by visiting any particular page, since comments
+  // (unlike likes) have no other page that already implies "I've seen these."
+  commentsSeenAt DateTime?
 
   journalEntries    JournalEntry[]
   goals             Goal[]

@@ -179,3 +179,19 @@ export function relativeLabel(date: Date, today: string): string {
   if (dateISO === shiftISO(today, -1)) return "Yesterday";
   return weekdayShortDayMonth(dateISO);
 }
+
+// "2m" / "3h" / "5d" / "13 Sept" — a terser cousin of relativeLabel for
+// tight spaces (a comment row, a notification row) where "2 hours ago"
+// doesn't fit. Takes an ISO timestamp string rather than a Date since
+// every caller so far already has one on hand (createdAt.toISOString()).
+export function shortTimeAgo(iso: string): string {
+  const d = new Date(iso);
+  const mins = Math.floor((Date.now() - d.getTime()) / 60_000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}

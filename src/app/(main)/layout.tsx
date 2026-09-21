@@ -5,6 +5,7 @@ import { todayISO, isoToDate } from "@/lib/dates";
 import { WELCOME_COOKIE } from "@/lib/auth";
 import { MoodCheckInModal } from "./MoodCheckInModal";
 import { VerifyEmailBanner } from "./VerifyEmailBanner";
+import { NotificationBell } from "./NotificationBell";
 import { Sidebar } from "@/components/Sidebar";
 import { levelForXp } from "@/lib/xp";
 import { AchievementWatcher } from "./AchievementWatcher";
@@ -17,20 +18,39 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   // Read (not cleared) — see WELCOME_COOKIE's comment in lib/auth.ts for
   // why its own short maxAge is what makes this safely one-time.
   const justLoggedIn = !!(await cookies()).get(WELCOME_COOKIE)?.value;
-  const [todayEntry, badges, unreadMessageCount, pendingFollowRequestCount, unseenLikesCount] = await Promise.all([
-    prisma.journalEntry.findUnique({
-      where: { userId_date: { userId: user.id, date: isoToDate(today) } },
-      select: { mood: true },
-    }),
-    prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true, earnedAt: true } }),
-    prisma.message.count({ where: { recipientId: user.id, readAt: null } }),
-    prisma.follow.count({ where: { followingId: user.id, status: "PENDING" } }),
-    prisma.cheer.count({ where: { toUserId: user.id, createdAt: { gt: user.likesSeenAt ?? new Date(0) } } }),
-  ]);
+  const [todayEntry, badges, unreadMessageCount, pendingFollowRequestCount, unseenLikesCount, myWorkoutIds, myStudySessionIds] =
+    await Promise.all([
+      prisma.journalEntry.findUnique({
+        where: { userId_date: { userId: user.id, date: isoToDate(today) } },
+        select: { mood: true },
+      }),
+      prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true, earnedAt: true } }),
+      prisma.message.count({ where: { recipientId: user.id, readAt: null } }),
+      prisma.follow.count({ where: { followingId: user.id, status: "PENDING" } }),
+      prisma.cheer.count({ where: { toUserId: user.id, createdAt: { gt: user.likesSeenAt ?? new Date(0) } } }),
+      // Comment has no direct "post owner" column (see schema.prisma's own
+      // note on why), so "comments on my posts" needs my own post ids
+      // first — fetched here so the count query below can run off them.
+      prisma.workout.findMany({ where: { userId: user.id }, select: { id: true } }),
+      prisma.studySession.findMany({ where: { userId: user.id }, select: { id: true } }),
+    ]);
+  const workoutIds = myWorkoutIds.map((w) => w.id);
+  const studySessionIds = myStudySessionIds.map((s) => s.id);
+  const unseenCommentsCount =
+    workoutIds.length > 0 || studySessionIds.length > 0
+      ? await prisma.comment.count({
+          where: {
+            authorId: { not: user.id },
+            createdAt: { gt: user.commentsSeenAt ?? new Date(0) },
+            OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }],
+          },
+        })
+      : 0;
   const { level } = levelForXp(user.xp);
 
   return (
     <div className="flex min-h-screen">
+      <NotificationBell initialCount={pendingFollowRequestCount + unseenLikesCount + unseenCommentsCount} />
       {todayEntry?.mood == null && <MoodCheckInModal dateISO={today} delayed={justLoggedIn} />}
       <AchievementWatcher
         badges={badges.map((b) => ({ badge: b.badge, earnedAtMs: b.earnedAt.getTime() }))}

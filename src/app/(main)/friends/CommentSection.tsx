@@ -2,20 +2,8 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Avatar } from "@/components/Avatar";
+import { shortTimeAgo } from "@/lib/dates";
 import { addComment, deleteComment, type ActivityKind, type CommentDTO } from "./actions";
-
-function timeLabel(iso: string) {
-  const d = new Date(iso);
-  const diffMs = Date.now() - d.getTime();
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
 
 export function CommentSection({
   kind,
@@ -87,7 +75,7 @@ export function CommentSection({
                     <span className="font-medium">{c.authorName}</span> <span className="whitespace-pre-wrap break-words">{c.body}</span>
                   </p>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-ink-muted">
-                    <span>{timeLabel(c.createdAt)}</span>
+                    <span>{shortTimeAgo(c.createdAt)}</span>
                     {canDelete && !optimistic && (
                       <button
                         type="button"
