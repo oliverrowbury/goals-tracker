@@ -8,13 +8,17 @@ import { shortTimeAgo } from "@/lib/dates";
 import { getNotifications, type FollowRequestNotification, type ActivityNotification } from "./actions";
 import { acceptFollowRequest, removeFollow } from "./friends/actions";
 
-// Top-right, on every main page, Instagram-style — a bell with a count
-// badge that opens a dropdown of individual notifications rather than
-// just the aggregate counts the Friends/Messages nav badges already show
-// (those stay as they are; this is an additional, more detailed view of
-// the same underlying events). Data is fetched lazily on open (see
-// getNotifications), not on every page load, since most page loads never
-// open it.
+// Instagram-style — a bell with a count badge that opens a dropdown of
+// individual notifications rather than just the aggregate counts the
+// Friends/Messages nav badges already show (those stay as they are; this
+// is an additional, more detailed view of the same underlying events).
+// Data is fetched lazily on open (see getNotifications), not on every page
+// load, since most page loads never open it. Purely self-positioning
+// (relative, for its own dropdown to anchor to) — where it sits on screen
+// is the caller's job (see Sidebar's mobile top bar slot and layout.tsx's
+// desktop toolbar row), deliberately not a `fixed` viewport overlay, which
+// used to sit on top of whatever a page had in its own top-right corner
+// (most pages' own "← back" link included).
 export function NotificationBell({ initialCount }: { initialCount: number }) {
   const [open, setOpen] = useState(false);
   const [count, setCount] = useState(initialCount);
@@ -44,7 +48,7 @@ export function NotificationBell({ initialCount }: { initialCount: number }) {
   const pendingRequests = (loaded?.followRequests ?? []).filter((r) => !actedOn.has(r.followId));
 
   return (
-    <div className="fixed right-4 top-3 z-40 sm:right-6 sm:top-4">
+    <div className="relative">
       <button
         type="button"
         onClick={() => (open ? setOpen(false) : handleOpen())}

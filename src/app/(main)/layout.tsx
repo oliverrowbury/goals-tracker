@@ -47,10 +47,10 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         })
       : 0;
   const { level } = levelForXp(user.xp);
+  const notificationCount = pendingFollowRequestCount + unseenLikesCount + unseenCommentsCount;
 
   return (
     <div className="flex min-h-screen">
-      <NotificationBell initialCount={pendingFollowRequestCount + unseenLikesCount + unseenCommentsCount} />
       {todayEntry?.mood == null && <MoodCheckInModal dateISO={today} delayed={justLoggedIn} />}
       <AchievementWatcher
         badges={badges.map((b) => ({ badge: b.badge, earnedAtMs: b.earnedAt.getTime() }))}
@@ -60,6 +60,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
         level={level}
         unreadMessageCount={unreadMessageCount}
         friendsNotificationCount={pendingFollowRequestCount + unseenLikesCount}
+        notificationBell={<NotificationBell initialCount={notificationCount} />}
       />
       {/* pt-14 clears the fixed mobile top bar Sidebar renders below sm —
           it's out of normal flow, so this is the only thing that would
@@ -69,6 +70,14 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           the run of the animation, so only the content pane slides, not
           the nav chrome around it. */}
       <div className="min-w-0 flex-1 pt-14 sm:pt-0">
+        {/* Desktop-only equivalent of the bell's mobile top-bar slot — sits
+            in normal flow (not fixed), so it pushes the page below it down
+            instead of floating over whatever that page puts in its own
+            top-right corner (most pages' own "← back" link included, which
+            a fixed-position bell here used to sit right on top of). */}
+        <div className="hidden justify-end border-b border-line bg-card px-6 py-2.5 sm:flex">
+          <NotificationBell initialCount={notificationCount} />
+        </div>
         <main
           className={`mx-auto w-full max-w-3xl px-4 py-10 ${
             justLoggedIn ? "animate-[page-slide-in_480ms_cubic-bezier(0.16,1,0.3,1)_both]" : ""

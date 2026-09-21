@@ -5,18 +5,30 @@ import type { User } from "@/generated/prisma/client";
 
 export const CURRENT_USER_HEADER = "x-proudly-current-user";
 
+// ISO 8601 with milliseconds — exactly what JSON.stringify produces for a
+// Date (it calls toISOString() internally), so this is a safe, specific
+// enough match to tell "this was a Date" apart from an ordinary string
+// field without a hardcoded list of field names to keep in sync.
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
 // JSON round-trips Date fields as strings — restored here so callers get
-// the exact same shape prisma.user.findUnique would have returned. The
+// the exact same shape prisma.user.findUnique would have returned. Walks
+// every field rather than naming each Date column individually — the
+// previous version named only three (createdAt/usernameChangedAt/birthday)
+// and silently left every Date column added after it as a plain string on
+// the forwarded-header fast path (the common case for every request, see
+// getCurrentUser below), which is exactly the kind of bug that's invisible
+// until something actually compares or calls a method on the value. The
 // header itself is base64 (see proxy.ts for why — header values must be
 // plain ASCII, which free-text profile fields aren't guaranteed to be).
 function parseForwardedUser(raw: string): User {
   const parsed = JSON.parse(Buffer.from(raw, "base64").toString("utf-8"));
-  return {
-    ...parsed,
-    createdAt: new Date(parsed.createdAt),
-    usernameChangedAt: parsed.usernameChangedAt ? new Date(parsed.usernameChangedAt) : null,
-    birthday: parsed.birthday ? new Date(parsed.birthday) : null,
-  };
+  for (const key of Object.keys(parsed)) {
+    if (typeof parsed[key] === "string" && ISO_DATETIME_RE.test(parsed[key])) {
+      parsed[key] = new Date(parsed[key]);
+    }
+  }
+  return parsed;
 }
 
 // Resolves the signed-in account from the session cookie — every table is

@@ -49,10 +49,16 @@ export function Sidebar({
   level,
   unreadMessageCount = 0,
   friendsNotificationCount = 0,
+  notificationBell,
 }: {
   level: number;
   unreadMessageCount?: number;
   friendsNotificationCount?: number;
+  // Rendered in the mobile top bar's right slot (previously an empty
+  // spacer reserved only to keep the wordmark centered) — the desktop
+  // equivalent lives in (main)/layout.tsx's own toolbar row instead, since
+  // there's no persistent top bar here to slot it into on wider screens.
+  notificationBell?: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -132,7 +138,7 @@ export function Sidebar({
         <Link href="/" className="text-lg text-ink">
           <Wordmark />
         </Link>
-        <span className="w-9" aria-hidden="true" />
+        {notificationBell ?? <span className="w-9" aria-hidden="true" />}
       </div>
 
       {/* Mobile drawer — a full vertical list rather than a horizontal bar
