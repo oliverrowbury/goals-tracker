@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { SearchIcon } from "@/components/Icons";
 import { searchUsers, requestFollow, removeFollowByTarget, type FriendSearchResult } from "./actions";
 
 export function AddFriendSearch() {
@@ -40,13 +41,16 @@ export function AddFriendSearch() {
 
   return (
     <div>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => handleChange(e.target.value)}
-        placeholder="Search by username"
-        className="w-full rounded-lg border border-line bg-card px-3 py-2 text-sm text-ink focus:border-calm focus:outline-none"
-      />
+      <div className="relative">
+        <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Find someone by username"
+          className="w-full rounded-full border border-line bg-card py-2.5 pl-10 pr-3.5 text-sm text-ink focus:border-calm focus:outline-none"
+        />
+      </div>
 
       {results.length > 0 && (
         <ul className="mt-2 divide-y divide-line rounded-lg border border-line">

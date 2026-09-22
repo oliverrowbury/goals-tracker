@@ -22,11 +22,10 @@ import { OwnerBadge } from "@/components/OwnerBadge";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, TargetIcon } from "@/components/Icons";
 import { AddFriendSearch } from "./AddFriendSearch";
-import { ShareActivityToggle } from "./ShareActivityToggle";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { FocusTagPills } from "./FocusTagPills";
 import { ActivityCard, type ActivityCardItem } from "./ActivityCard";
-import { requestFollowVoid, acceptFollowRequest, removeFollow } from "./actions";
+import { acceptFollowRequest, removeFollow } from "./actions";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -66,18 +65,16 @@ export default async function FriendsPage() {
   // off once a serverless function's response finishes.
   await prisma.user.update({ where: { id: user.id }, data: { likesSeenAt: new Date() } });
 
-  const [following, followers, incomingRequests, outgoingRequests, journalCount, studySessionCount, workoutCount, goalsDoneCount] =
+  const [following, followerCount, incomingRequests, outgoingRequests, journalCount, studySessionCount, workoutCount, goalsDoneCount] =
     await Promise.all([
       prisma.follow.findMany({
         where: { followerId: user.id, status: "ACCEPTED" },
         include: { following: { select: PROFILE_SELECT } },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.follow.findMany({
-        where: { followingId: user.id, status: "ACCEPTED" },
-        include: { follower: { select: { id: true, name: true, username: true, avatarUrl: true } } },
-        orderBy: { createdAt: "desc" },
-      }),
+      // Just the count now — the full list (with Follow-back buttons) moved
+      // to /friends/[username]/followers, reached via the count link below.
+      prisma.follow.count({ where: { followingId: user.id, status: "ACCEPTED" } }),
       prisma.follow.findMany({
         where: { followingId: user.id, status: "PENDING" },
         include: { follower: { select: { id: true, name: true, username: true } } },
@@ -95,12 +92,6 @@ export default async function FriendsPage() {
     ]);
 
   const followingList = following.map((f) => f.following);
-  const followingIdSet = new Set(followingList.map((f) => f.id));
-  // Someone I already have a pending or accepted row toward, from either
-  // side — used to hide the "Follow back" button once a request is already
-  // in flight rather than letting it be sent twice.
-  const outgoingTargetIdSet = new Set(outgoingRequests.map((f) => f.following.id));
-
   const followedById = new Map(followingList.map((f) => [f.id, f]));
   const shareWorkoutIds = followingList.filter((o) => o.shareWorkoutStreak).map((o) => o.id);
   const shareStudyIds = followingList.filter((o) => o.shareStudyStreak).map((o) => o.id);
@@ -269,6 +260,13 @@ export default async function FriendsPage() {
     <div>
       <PageHeader icon={UsersIcon} iconClassName="text-calm" title="Friends" />
 
+      <div className="mb-6">
+        <AddFriendSearch />
+        <p className="mt-2 text-center text-xs">
+          <CopyLinkButton path={`/friends/add/${user.username}`} />
+        </p>
+      </div>
+
       <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
         <div className="flex items-start gap-4">
           <Avatar name={user.name} avatarUrl={user.avatarUrl} size={64} />
@@ -300,7 +298,7 @@ export default async function FriendsPage() {
             <span className="text-ink-muted">following</span>
           </Link>
           <Link href={`/friends/${user.username}/followers`} className="hover:opacity-70">
-            <span className="font-serif text-base font-semibold text-ink">{followers.length}</span>{" "}
+            <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
             <span className="text-ink-muted">followers</span>
           </Link>
         </div>
@@ -341,30 +339,6 @@ export default async function FriendsPage() {
             Edit your profile →
           </Link>
         </p>
-      </section>
-
-      <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Follow someone</h2>
-        <p className="mb-4 text-sm text-ink-muted">
-          They have to accept before you see anything of theirs — and them accepting doesn&apos;t mean they follow you
-          back.
-        </p>
-        <AddFriendSearch />
-        <div className="mt-4">
-          <CopyLinkButton path={`/friends/add/${user.username}`} />
-        </div>
-        <div className="mt-6 border-t border-line pt-4">
-          <ShareActivityToggle
-            initial={{
-              journal: user.shareJournalStreak,
-              study: user.shareStudyStreak,
-              workout: user.shareWorkoutStreak,
-            }}
-          />
-          <p className="mt-1.5 text-xs text-ink-muted">
-            Your journal is never visible to anyone, followers included — these only ever cover streaks, never content.
-          </p>
-        </div>
       </section>
 
       {incomingRequests.length > 0 && (
@@ -411,37 +385,6 @@ export default async function FriendsPage() {
                     Cancel
                   </button>
                 </form>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {followers.length > 0 && (
-        <section className="mb-6 rounded-2xl border border-line bg-card p-6 shadow-sm">
-          <h2 className="mb-3 font-serif text-lg font-semibold text-ink">
-            {followers.length} follower{followers.length === 1 ? "" : "s"}
-          </h2>
-          <ul className="space-y-2.5">
-            {followers.map(({ follower: f }) => (
-              <li key={f.id} className="flex items-center justify-between gap-3 text-sm">
-                <Link href={`/friends/add/${f.username}`} className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
-                  <Avatar name={f.name} avatarUrl={f.avatarUrl} size={32} />
-                  <span className="min-w-0 truncate text-ink">
-                    <span className="font-medium">{f.name}</span> <span className="text-ink-muted">@{f.username}</span>
-                  </span>
-                </Link>
-                {followingIdSet.has(f.id) ? (
-                  <span className="shrink-0 text-xs text-ink-muted">Following</span>
-                ) : outgoingTargetIdSet.has(f.id) ? (
-                  <span className="shrink-0 text-xs text-ink-muted">Requested</span>
-                ) : (
-                  <form action={requestFollowVoid.bind(null, f.id)}>
-                    <button type="submit" className="shrink-0 rounded-lg bg-calm px-3 py-1 text-xs font-medium text-white hover:opacity-90">
-                      Follow back
-                    </button>
-                  </form>
-                )}
               </li>
             ))}
           </ul>

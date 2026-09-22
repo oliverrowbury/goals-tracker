@@ -15,6 +15,7 @@ import { DeleteSubjectButton } from "./DeleteSubjectButton";
 import { AvatarUpload } from "./AvatarUpload";
 import { ProfileForm } from "./ProfileForm";
 import { DeleteAccountForm } from "./DeleteAccountForm";
+import { ShareActivityToggle } from "../friends/ShareActivityToggle";
 import {
   GearIcon,
   ClockIcon,
@@ -26,6 +27,7 @@ import {
   JournalIcon,
   TargetIcon,
   MoonIcon,
+  UsersIcon,
 } from "@/components/Icons";
 import { formatLong, todayISO, shiftISO, daysBetween } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
@@ -264,6 +266,23 @@ export default async function SettingsPage() {
         </h2>
         <p className="mb-4 text-sm text-ink-muted">Reminders for individual goals, sent as a browser push.</p>
         <NotificationsForm />
+      </section>
+
+      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <UsersIcon className="h-4 w-4 text-calm" />
+          Sharing
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">
+          Your journal is never visible to anyone, followers included — these only ever cover streaks, never content.
+        </p>
+        <ShareActivityToggle
+          initial={{
+            journal: user.shareJournalStreak,
+            study: user.shareStudyStreak,
+            workout: user.shareWorkoutStreak,
+          }}
+        />
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

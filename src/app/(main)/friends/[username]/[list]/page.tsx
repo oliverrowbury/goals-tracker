@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, FlameIcon } from "@/components/Icons";
 import { UnfollowButton } from "../../UnfollowButton";
+import { requestFollowVoid } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,28 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ us
         )
       : new Set<string>();
 
+  // Only meaningful on your OWN followers list — "Follow back" is about
+  // whether *you* (the viewer) already follow each person, which only
+  // lines up with "follow back" semantics when you're looking at your own
+  // followers, not someone else's.
+  const [followingIdSet, outgoingTargetIdSet] =
+    isSelf && list === "followers" && people.length > 0
+      ? await Promise.all([
+          prisma.follow
+            .findMany({
+              where: { followerId: viewer.id, status: "ACCEPTED", followingId: { in: people.map((p) => p.id) } },
+              select: { followingId: true },
+            })
+            .then((rows) => new Set(rows.map((r) => r.followingId))),
+          prisma.follow
+            .findMany({
+              where: { followerId: viewer.id, status: "PENDING", followingId: { in: people.map((p) => p.id) } },
+              select: { followingId: true },
+            })
+            .then((rows) => new Set(rows.map((r) => r.followingId))),
+        ])
+      : [new Set<string>(), new Set<string>()];
+
   const today = todayISO();
   const activityByUserId =
     list === "following"
@@ -114,14 +137,26 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ us
       ) : list === "followers" ? (
         <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
           {people.map((p) => (
-            <li key={p.id}>
-              <Link href={`/friends/add/${p.username}`} className="flex items-center gap-3 p-4 hover:bg-paper">
+            <li key={p.id} className="flex items-center justify-between gap-3 p-4">
+              <Link href={`/friends/add/${p.username}`} className="flex min-w-0 items-center gap-3 hover:opacity-80">
                 <Avatar name={p.name} avatarUrl={p.avatarUrl} size={36} />
                 <div className="min-w-0">
                   <p className="truncate font-medium text-ink">{p.name}</p>
                   <p className="truncate text-sm text-ink-muted">@{p.username}</p>
                 </div>
               </Link>
+              {isSelf &&
+                (followingIdSet.has(p.id) ? (
+                  <span className="shrink-0 text-xs text-ink-muted">Following</span>
+                ) : outgoingTargetIdSet.has(p.id) ? (
+                  <span className="shrink-0 text-xs text-ink-muted">Requested</span>
+                ) : (
+                  <form action={requestFollowVoid.bind(null, p.id)}>
+                    <button type="submit" className="shrink-0 rounded-lg bg-calm px-3 py-1 text-xs font-medium text-white hover:opacity-90">
+                      Follow back
+                    </button>
+                  </form>
+                ))}
             </li>
           ))}
         </ul>
