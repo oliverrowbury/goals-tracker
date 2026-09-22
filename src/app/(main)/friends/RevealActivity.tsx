@@ -12,12 +12,20 @@ import { ChevronDownIcon } from "@/components/Icons";
 // the card once revealed, only once (not toggled back off, since collapsing
 // after fetching it server-side already has no cost to hide again — see
 // onClick below, which does keep it toggleable either way).
-export function RevealActivity({ cardContent, activity }: { cardContent: ReactNode; activity: ReactNode }) {
+export function RevealActivity({
+  cardContent,
+  activity,
+  cardClassName = "",
+}: {
+  cardContent: ReactNode;
+  activity: ReactNode;
+  cardClassName?: string;
+}) {
   const [show, setShow] = useState(false);
 
   return (
     <>
-      <div className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+      <div className={`rounded-2xl border border-line bg-card p-6 shadow-sm ${cardClassName}`}>
         {cardContent}
         <div className="mt-4 flex justify-end border-t border-line pt-4">
           <button
