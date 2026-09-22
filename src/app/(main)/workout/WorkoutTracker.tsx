@@ -13,6 +13,8 @@ import {
   finishCardioWorkout,
   deleteWorkout,
   createExercise,
+  setWorkoutVisibility,
+  setWorkoutArchived,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import {
@@ -31,7 +33,17 @@ import {
 } from "@/lib/workout";
 import { useClockOffsetMs } from "@/lib/time";
 import { todayISO, shiftISO, weekdayShortDayMonth } from "@/lib/dates";
-import { TrashIcon, DumbbellIcon, ActivityIcon, ChevronDownIcon } from "@/components/Icons";
+import {
+  TrashIcon,
+  DumbbellIcon,
+  ActivityIcon,
+  ChevronDownIcon,
+  MoreVerticalIcon,
+  PencilIcon,
+  ArchiveIcon,
+  EyeIcon,
+  EyeOffIcon,
+} from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
 import { ShareButton } from "@/components/ShareButton";
@@ -40,6 +52,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Select } from "@/components/Select";
 import { WorkoutSummary, type JustFinishedWorkout } from "./WorkoutSummary";
 import { EXERCISE_REFERENCE_IMAGE } from "@/lib/exerciseReference";
+import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 type Exercise = { id: string; name: string; category: string };
 type SetRow = { id: string; exerciseId: string; setNumber: number; weight: number; reps: number; isWarmup: boolean };
@@ -64,6 +77,8 @@ type HistoryWorkout = {
   distanceKm: number | null;
   route: RoutePoint[] | null;
   photoUrl: string | null;
+  visibility: ActivityVisibility;
+  archived: boolean;
   sets: HistorySet[];
 };
 
@@ -1085,6 +1100,103 @@ function EditableSetRow({ set, index, weightUnit }: { set: HistorySet; index: nu
   );
 }
 
+// Instagram-style "..." menu for a logged workout — replaces a row of
+// permanently-visible text buttons (Edit / Done editing, a bare × for
+// delete) with one icon that opens Edit, the friends/private visibility
+// toggle (previously only settable once, on the just-finished summary
+// screen — this is the only way to change it afterward), Archive, and
+// Delete.
+function WorkoutCardMenu({
+  workoutId,
+  visibility,
+  archived,
+  onEdit,
+}: {
+  workoutId: string;
+  visibility: ActivityVisibility;
+  archived: boolean;
+  onEdit: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="More options"
+        className="rounded-lg p-1.5 -m-1 text-ink-muted hover:text-ink"
+      >
+        <MoreVerticalIcon className="h-4.5 w-4.5" />
+      </button>
+
+      {open && (
+        <>
+          <button type="button" aria-label="Close menu" className="fixed inset-0 z-40 cursor-default" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden rounded-xl border border-line bg-card py-1 shadow-lg">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onEdit();
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-ink hover:bg-line/50"
+            >
+              <PencilIcon className="h-4 w-4 text-ink-muted" />
+              Edit
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setOpen(false);
+                startTransition(() => setWorkoutVisibility(workoutId, visibility === "FRIENDS" ? "PRIVATE" : "FRIENDS"));
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-ink hover:bg-line/50 disabled:opacity-50"
+            >
+              {visibility === "FRIENDS" ? (
+                <EyeOffIcon className="h-4 w-4 text-ink-muted" />
+              ) : (
+                <EyeIcon className="h-4 w-4 text-ink-muted" />
+              )}
+              {visibility === "FRIENDS" ? "Keep to myself" : "Share with friends"}
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setOpen(false);
+                startTransition(() => setWorkoutArchived(workoutId, !archived));
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-ink hover:bg-line/50 disabled:opacity-50"
+            >
+              <ArchiveIcon className="h-4 w-4 text-ink-muted" />
+              {archived ? "Unarchive" : "Archive"}
+            </button>
+            <div className="my-1 border-t border-line" />
+            {/* Not closed on click like the items above — it opens
+                ConfirmButton's own modal rather than firing immediately, and
+                closing this dropdown here would unmount ConfirmButton (and
+                the modal along with it) before it ever got to render. It's
+                left to close via the outside-click overlay above instead. */}
+            <ConfirmButton
+              triggerClassName="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-accent hover:bg-accent-soft disabled:opacity-50"
+              title="Delete this workout?"
+              message="This can't be undone."
+              confirmLabel="Delete"
+              onConfirm={() => deleteWorkout(workoutId)}
+            >
+              <TrashIcon className="h-4 w-4" />
+              Delete
+            </ConfirmButton>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function WorkoutLogCard({
   workout,
   weightUnit,
@@ -1145,7 +1257,17 @@ function WorkoutLogCard({
             ) : (
               <p className="font-medium text-ink">{workout.label}</p>
             )}
-            <p className="shrink-0 text-xs text-ink-muted">{dayLabel(workout.dateISO)}</p>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {workout.visibility === "PRIVATE" && (
+                <span title="Only visible to you">
+                  <EyeOffIcon className="h-3.5 w-3.5 text-ink-muted" />
+                </span>
+              )}
+              {workout.archived && (
+                <span className="rounded-full bg-line px-1.5 py-0.5 text-[10px] font-medium text-ink-muted">Archived</span>
+              )}
+              <p className="text-xs text-ink-muted">{dayLabel(workout.dateISO)}</p>
+            </div>
           </div>
           <p className="mt-0.5 text-ink-muted">
             {isCardio ? (
@@ -1174,16 +1296,6 @@ function WorkoutLogCard({
                 <ChevronDownIcon className={`h-3 w-3 transition-transform ${expanded ? "rotate-180" : ""}`} />
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                if (!expanded) onToggleExpand();
-                setEditing((v) => !v);
-              }}
-              className="py-1 text-xs font-medium text-workout hover:underline"
-            >
-              {editing ? "Done editing" : "Edit"}
-            </button>
             <ShareButton
               accentVar="--workout"
               fileName="workout.png"
@@ -1279,13 +1391,22 @@ function WorkoutLogCard({
                   />
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={savingDetails}
-                className="rounded-lg bg-workout px-3.5 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-              >
-                {savingDetails ? "Saving…" : "Save changes"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={savingDetails}
+                  className="rounded-lg bg-workout px-3.5 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {savingDetails ? "Saving…" : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing(false)}
+                  className="rounded-lg px-3.5 py-1.5 text-sm font-medium text-ink-muted hover:text-ink"
+                >
+                  Cancel
+                </button>
+              </div>
 
               {!isCardio && exerciseOrder.length > 0 && (
                 <div className="space-y-3 border-t border-line pt-3">
@@ -1344,11 +1465,15 @@ function WorkoutLogCard({
             />
           )}
         </div>
-        <form action={deleteWorkout.bind(null, workout.id)}>
-          <button type="submit" title="Remove this workout" className="rounded-lg p-2.5 -m-2.5 text-ink-muted hover:text-accent">
-            ×
-          </button>
-        </form>
+        <WorkoutCardMenu
+          workoutId={workout.id}
+          visibility={workout.visibility}
+          archived={workout.archived}
+          onEdit={() => {
+            if (!expanded) onToggleExpand();
+            setEditing(true);
+          }}
+        />
       </div>
     </li>
   );

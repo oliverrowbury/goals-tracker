@@ -353,3 +353,42 @@ export function EyeOffIcon({ className }: IconProps) {
   );
 }
 
+export function MoreVerticalIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="5.5" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+      <circle cx="12" cy="18.5" r="1.6" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function PencilIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M4 20l.9-4 11-11a2 2 0 0 1 2.8 0l1.3 1.3a2 2 0 0 1 0 2.8l-11 11-4 .9Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M14 6.5 17.5 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ArchiveIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <rect x="3.5" y="4" width="17" height="4.2" rx="1" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path
+        d="M4.8 8.2V18a1.5 1.5 0 0 0 1.5 1.5h11.4A1.5 1.5 0 0 0 19.2 18V8.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M10 12.3h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+

@@ -164,6 +164,14 @@ export function weekdayShort(iso: string): string {
   return WEEKDAY_SHORT[isoToDate(iso).getUTCDay()];
 }
 
+// "13 Sept" — no weekday, for chart axis labels spanning more than a
+// month (weekday alone would repeat every 7 points; the day-of-month
+// MoodChart uses on its own is ambiguous once the range crosses a month).
+export function shortDayMonth(iso: string): string {
+  const d = isoToDate(iso);
+  return `${d.getUTCDate()} ${MONTH_SHORT[d.getUTCMonth()]}`;
+}
+
 // "Just now" / "2 hours ago" / "Yesterday" / "Sun 13 Sept" — the friend
 // feed's post timestamp, with same-day hour-granularity like Strava/Hevy's
 // feed instead of only "Today". Shared by the feed list and each post's
