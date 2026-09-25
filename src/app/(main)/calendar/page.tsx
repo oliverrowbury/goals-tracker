@@ -7,6 +7,7 @@ import { moodFace } from "@/lib/mood";
 import { PageHeader } from "@/components/PageHeader";
 import { NavPill } from "@/components/NavPill";
 
+export const metadata = { title: "Calendar" };
 export const dynamic = "force-dynamic";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { updateGoal } from "../../actions";
 import { GoalForm } from "../../GoalForm";
 
+export const metadata = { title: "Edit goal" };
+
 export default async function EditGoalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const goal = await prisma.goal.findUnique({ where: { id } });

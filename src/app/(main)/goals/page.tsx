@@ -16,6 +16,7 @@ const HISTORY_DAYS = 14;
 // per-request state (no searchParams/cookies here) and would prerender it
 // once at build time — freezing whatever goals existed at deploy time
 // instead of showing live data on every visit.
+export const metadata = { title: "Goals" };
 export const dynamic = "force-dynamic";
 
 export default async function GoalsPage() {

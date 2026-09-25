@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 
-export const metadata = { title: "Privacy Policy — Proudly" };
+export const metadata = { title: "Privacy Policy" };
 
 export default function PrivacyPage() {
   return (

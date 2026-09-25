@@ -15,6 +15,8 @@ import { deleteStudySession } from "../study/actions";
 import { PageHeader } from "@/components/PageHeader";
 import { NavPill } from "@/components/NavPill";
 
+export const metadata = { title: "Journal" };
+
 // How many years back to look for "on this day" flashbacks.
 const FLASHBACK_YEARS = 8;
 

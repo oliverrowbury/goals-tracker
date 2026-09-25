@@ -3,6 +3,8 @@ import { getCurrentUser, hasCompletedProfile } from "@/lib/user";
 import { Wordmark } from "@/components/Wordmark";
 import { OnboardingForm } from "./OnboardingForm";
 
+export const metadata = { title: "Set up your profile" };
+
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
   // Already done — nothing here for a completed profile to look at, and

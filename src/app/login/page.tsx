@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 import { PasswordInput } from "@/components/PasswordInput";
 
+export const metadata = { title: "Log in" };
+
 export default async function LoginPage({
   searchParams,
 }: {

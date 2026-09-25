@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { createDeadline } from "../actions";
 import { DeadlineForm } from "../DeadlineForm";
 
+export const metadata = { title: "New deadline" };
 export const dynamic = "force-dynamic";
 
 export default async function NewDeadlinePage({

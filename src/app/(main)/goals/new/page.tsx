@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/user";
 import { createGoal } from "../actions";
 import { GoalForm } from "../GoalForm";
 
+export const metadata = { title: "New goal" };
 export const dynamic = "force-dynamic";
 
 export default async function NewGoalPage() {

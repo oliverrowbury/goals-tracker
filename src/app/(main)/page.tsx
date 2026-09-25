@@ -11,6 +11,7 @@ import { PromptOfDayCard } from "./PromptOfDayCard";
 import { WeeklyRecap, getWeeklyRecapData } from "./WeeklyRecap";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 
+export const metadata = { title: "Home" };
 export const dynamic = "force-dynamic";
 
 function greeting(): string {

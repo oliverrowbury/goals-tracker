@@ -1,6 +1,8 @@
 import { BreathingCircle } from "./BreathingCircle";
 import { BackButton } from "./BackButton";
 
+export const metadata = { title: "Breathe" };
+
 export default function BreathePage() {
   return (
     <div>

@@ -37,6 +37,7 @@ import { ADMIN_EMAIL } from "@/lib/auth";
 import { fromKg, fromCm } from "@/lib/workout";
 import { PageHeader } from "@/components/PageHeader";
 
+export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {

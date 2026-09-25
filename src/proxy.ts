@@ -56,11 +56,13 @@ export const config = {
   // definition), the legal pages (readable without an account, like any
   // privacy policy/terms page), Next.js internals, the service worker, the
   // cron route (called by Vercel Cron, no session cookie — checks
-  // CRON_SECRET itself), and the manifest/icon routes a browser fetches on
-  // its own before any cookie exchange happens (Add to Home Screen, tab
-  // favicon) — gating those behind login just makes them silently fail
-  // instead of 401ing visibly.
+  // CRON_SECRET itself), and the manifest/icon/robots/sitemap/OG-image
+  // routes a browser or crawler fetches on its own before any cookie
+  // exchange happens (Add to Home Screen, tab favicon, a link preview) —
+  // gating those behind login would silently turn every one of them into a
+  // redirect to /login instead of the actual file (a broken social preview
+  // being the most visible way that'd show up).
   matcher: [
-    "/((?!login|signup|forgot-password|reset-password|api/verify-email|privacy|terms|api/login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon).*)",
+    "/((?!login|signup|forgot-password|reset-password|api/verify-email|privacy|terms|api/login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|opengraph-image|robots.txt|sitemap.xml).*)",
   ],
 };

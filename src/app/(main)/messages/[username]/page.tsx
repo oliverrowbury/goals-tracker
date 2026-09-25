@@ -10,6 +10,12 @@ import { PageHeader } from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
+  const other = await prisma.user.findUnique({ where: { username }, select: { name: true } });
+  return { title: other ? other.name : "Messages" };
+}
+
 export default async function ThreadPage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
   const user = await getCurrentUser();

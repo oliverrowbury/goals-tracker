@@ -5,6 +5,8 @@ import { updateDeadline } from "../../actions";
 import { DeadlineForm } from "../../DeadlineForm";
 import { dateToISO } from "@/lib/dates";
 
+export const metadata = { title: "Edit deadline" };
+
 export default async function EditDeadlinePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const deadline = await prisma.deadline.findUnique({ where: { id } });

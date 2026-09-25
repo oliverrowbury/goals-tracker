@@ -9,6 +9,7 @@ import { RecentSessions } from "./RecentSessions";
 import { ClockIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
 
+export const metadata = { title: "Study" };
 export const dynamic = "force-dynamic";
 
 function totalsBySubject(sessions: { subjectId: string; durationMinutes: number | null }[]) {

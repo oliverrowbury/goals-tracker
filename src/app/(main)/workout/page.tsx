@@ -8,6 +8,7 @@ import { estimateOneRepMax } from "@/lib/workout";
 import { DumbbellIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
 
+export const metadata = { title: "Workout" };
 export const dynamic = "force-dynamic";
 
 // How far back to look when building "last time you did this exercise"

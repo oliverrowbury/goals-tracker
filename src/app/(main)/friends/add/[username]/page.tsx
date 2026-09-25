@@ -33,6 +33,12 @@ import { EmptyState } from "@/components/EmptyState";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = await params;
+  const target = await prisma.user.findUnique({ where: { username: username.toLowerCase() }, select: { name: true } });
+  return { title: target ? target.name : "Profile" };
+}
+
 type ActivityEntry = {
   id: string;
   kind: "workout" | "study";

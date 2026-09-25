@@ -14,6 +14,11 @@ import { requestFollowVoid } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata({ params }: { params: Promise<{ username: string; list: string }> }) {
+  const { list } = await params;
+  return { title: list === "following" ? "Following" : "Followers" };
+}
+
 const PROFILE_SELECT = {
   id: true,
   name: true,

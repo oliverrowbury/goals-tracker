@@ -20,6 +20,7 @@ import { ActivityCard, type ActivityCardItem } from "../../../ActivityCard";
 import { CommentSection } from "../../../CommentSection";
 import type { CommentDTO } from "../../../actions";
 
+export const metadata = { title: "Post" };
 export const dynamic = "force-dynamic";
 
 async function fetchComments(kind: "workout" | "study", id: string): Promise<CommentDTO[]> {

@@ -8,6 +8,7 @@ import { DeleteDeadlineButton } from "./DeleteDeadlineButton";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 
+export const metadata = { title: "Deadlines" };
 export const dynamic = "force-dynamic";
 
 function countdownLabel(dueISO: string, today: string): { text: string; urgent: boolean } {

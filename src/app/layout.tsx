@@ -19,9 +19,30 @@ const fraunces = Fraunces({
   weight: ["500", "600"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://goals-tracker-y6se.vercel.app";
+const SITE_DESCRIPTION = "A daily journal for what you're proud of, with goals, study, and workout tracking alongside it.";
+
 export const metadata: Metadata = {
-  title: "Proudly",
-  description: "A daily journal for what you're proud of, with goals, study, and workout tracking alongside it.",
+  metadataBase: new URL(SITE_URL),
+  // Every page below sets its own short title (e.g. "Journal") and picks
+  // this up automatically — only pages that need the bare "Proudly" (the
+  // login/marketing-ish ones) omit their own title entirely.
+  title: {
+    default: "Proudly",
+    template: "%s — Proudly",
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: "Proudly",
+    description: SITE_DESCRIPTION,
+    siteName: "Proudly",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Proudly",
+    description: SITE_DESCRIPTION,
+  },
   // Add to Home Screen → its own standalone window/icon, not a bookmarked
   // tab — see app/manifest.ts and the note on WorkoutTracker's GPS tracking
   // about why that matters for a session staying alive.

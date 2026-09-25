@@ -1,5 +1,7 @@
 import { SignupForm } from "./SignupForm";
 
+export const metadata = { title: "Sign up" };
+
 export default function SignupPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">

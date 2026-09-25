@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Wordmark } from "@/components/Wordmark";
 
-export const metadata = { title: "Terms of Service — Proudly" };
+export const metadata = { title: "Terms of Service" };
 
 export default function TermsPage() {
   return (
