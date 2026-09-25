@@ -718,3 +718,18 @@ model UserBadge {
 
   @@unique([userId, badge])
 }
+
+// A stopgap for exactly one problem: server-side errors get redacted
+// before they ever reach the browser in production (Next.js strips the
+// real message, keeping only an opaque digest), and this deployment has
+// no working access to Vercel's own runtime logs to see the original
+// either — see instrumentation.ts's onRequestError, the only writer.
+// Temporary; delete this model (and that write) once real log access
+// exists or Sentry's configured.
+model ErrorLog {
+  id        String   @id @default(uuid())
+  message   String
+  stack     String?
+  path      String?
+  createdAt DateTime @default(now())
+}

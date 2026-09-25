@@ -18,7 +18,27 @@ export async function register() {
 }
 
 export async function onRequestError(...args: Parameters<typeof import("@sentry/nextjs").captureRequestError>) {
-  if (!process.env.SENTRY_DSN) return;
-  const Sentry = await import("@sentry/nextjs");
-  Sentry.captureRequestError(...args);
+  if (process.env.SENTRY_DSN) {
+    const Sentry = await import("@sentry/nextjs");
+    Sentry.captureRequestError(...args);
+  }
+
+  // Stopgap while there's no other way to see what a production error
+  // actually was (see ErrorLog's own comment in schema.prisma) — this is
+  // the one place Next.js hands over the real error server-side, before
+  // it gets redacted down to just a digest for the browser. Best-effort:
+  // never let a logging failure make the original error worse.
+  try {
+    const [error, request] = args;
+    const { prisma } = await import("@/lib/prisma");
+    await prisma.errorLog.create({
+      data: {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? (error.stack ?? null) : null,
+        path: request?.path ?? null,
+      },
+    });
+  } catch {
+    // If even logging the error fails, there's nothing more to do here.
+  }
 }
