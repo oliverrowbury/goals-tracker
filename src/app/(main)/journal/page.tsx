@@ -4,12 +4,14 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, monthRangeContaining, dateToISO, isFutureISO } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
+import { promptForDate } from "@/lib/prompts";
 import { JournalEditor } from "./JournalEditor";
 import { GoalsForDay, type DayGoal } from "./GoalsForDay";
 import { MoodPicker } from "./MoodPicker";
 import { MoodChart } from "./MoodChart";
 import { PhotoUpload } from "./PhotoUpload";
 import { Flashbacks } from "./Flashbacks";
+import { PromptOfDayCard } from "../PromptOfDayCard";
 import { JournalIcon } from "@/components/Icons";
 import { deleteStudySession } from "../study/actions";
 import { PageHeader } from "@/components/PageHeader";
@@ -162,6 +164,13 @@ export default async function JournalPage({
             {isPast && <NavPill href={`/journal?date=${nextISO}`}>Next →</NavPill>}
           </div>
         }
+      />
+
+      <PromptOfDayCard
+        dateISO={dateISO}
+        prompt={promptForDate(dateISO)}
+        initialResponse={entry?.promptResponse ?? ""}
+        isToday={isToday}
       />
 
       <Flashbacks flashbacks={flashbacks} />

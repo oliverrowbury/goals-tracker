@@ -7,10 +7,15 @@ export function PromptOfDayCard({
   dateISO,
   prompt,
   initialResponse,
+  isToday = true,
 }: {
   dateISO: string;
   prompt: string;
   initialResponse: string;
+  // The home page only ever shows today's — the journal page reuses this
+  // same card to look back at any past day's, where "Prompt of the Day"
+  // would misleadingly imply it's today's.
+  isToday?: boolean;
 }) {
   const [response, setResponse] = useState(initialResponse);
   const [isPending, startTransition] = useTransition();
@@ -25,7 +30,9 @@ export function PromptOfDayCard({
 
   return (
     <div className="relative mb-8 overflow-hidden rounded-2xl border border-line bg-card p-7 shadow-sm sm:p-8">
-      <p className="text-xs font-medium uppercase tracking-[0.14em] text-accent">Proudly Prompt of the Day</p>
+      <p className="text-xs font-medium uppercase tracking-[0.14em] text-accent">
+        {isToday ? "Proudly Prompt of the Day" : "That Day's Prompt"}
+      </p>
       <p className="mt-2 max-w-xl font-serif text-xl font-semibold leading-snug text-ink sm:text-2xl">{prompt}</p>
       <textarea
         value={response}
