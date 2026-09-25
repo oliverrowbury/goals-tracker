@@ -1011,24 +1011,28 @@ export function WorkoutTracker({
         </div>
       )}
 
-      <div>
-        <h2 className="mb-2 text-sm font-medium text-ink-muted">This week</h2>
+      {/* Same rounded-2xl/p-5/shadow-sm card + mb-3 header the app's other
+          single-stat summary blocks use (MoodChart, ExerciseProgress,
+          Study's own StudyStats/WeeklyStudyChart) — this used to be a bare
+          label over a separately-bordered box, with its own hand-rolled
+          empty state instead of the plain muted-text one those other
+          summary cards use when there's nothing to show yet. */}
+      <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
+        <h2 className="mb-3 text-sm font-medium text-ink-muted">This week</h2>
         {weekSummary.sessions === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line px-6 py-8 text-center">
-            <p className="text-sm text-ink-muted">No workouts logged yet this week.</p>
-          </div>
+          <p className="text-sm text-ink-muted">No workouts logged yet this week.</p>
         ) : (
-          <div className="rounded-2xl border border-line bg-card px-4 py-3 text-sm text-ink-muted">
+          <p className="text-sm text-ink-muted">
             {weekSummary.sessions} session{weekSummary.sessions === 1 ? "" : "s"} · {formatMinutes(weekSummary.minutes)}
             {weekSummary.strengthCount > 0 && ` · ${weekSummary.strengthCount} strength`}
             {weekSummary.cardioCount > 0 &&
               ` · ${weekSummary.cardioCount} cardio (${formatDistance(weekSummary.cardioKm, distanceUnit)})`}
-          </div>
+          </p>
         )}
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-medium text-ink-muted">Log</h2>
+        <h2 className="mb-3 text-sm font-medium text-ink-muted">Log</h2>
         {history.length > 0 ? (
           <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
             {history.map((w) => (

@@ -34,7 +34,7 @@ export function StudyStats({
 
   return (
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-medium text-ink-muted">
           <ChartIcon className="h-4 w-4 text-study" />
           Time by subject

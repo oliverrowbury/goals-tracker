@@ -25,7 +25,7 @@ export function RecentSessions({ subjects, sessions }: { subjects: Subject[]; se
 
   return (
     <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
-      <h2 className="mb-1 text-sm font-medium text-ink-muted">Recent sessions</h2>
+      <h2 className="mb-3 text-sm font-medium text-ink-muted">Recent sessions</h2>
       <ul className="-mx-5 divide-y divide-line">
         {sessions.map((session) => {
           const subject = subjectById.get(session.subjectId);
