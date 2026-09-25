@@ -43,7 +43,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ usernam
       ],
     },
     orderBy: { createdAt: "asc" },
-    select: { id: true, senderId: true, body: true, createdAt: true },
+    select: { id: true, senderId: true, body: true, createdAt: true, readAt: true },
   });
 
   return (
@@ -71,7 +71,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ usernam
         otherUserId={other.id}
         otherName={other.name}
         otherAvatarUrl={other.avatarUrl}
-        initialMessages={messages.map((m) => ({ ...m, createdAt: m.createdAt.toISOString() }))}
+        initialMessages={messages.map((m) => ({
+          ...m,
+          createdAt: m.createdAt.toISOString(),
+          readAt: m.readAt?.toISOString() ?? null,
+        }))}
       />
     </div>
   );

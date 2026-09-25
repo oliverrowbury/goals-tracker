@@ -197,6 +197,14 @@ model User {
   // getNotifications), not by visiting any particular page, since comments
   // (unlike likes) have no other page that already implies "I've seen these."
   commentsSeenAt DateTime?
+  // Ephemeral "I'm typing a message to this person right now" signal for
+  // the typing-bubble indicator — set on each keystroke (throttled) and
+  // cleared on send/blur/unmount, see messages/actions.ts's setTyping.
+  // typingAt lets a reader treat a stale value (tab closed mid-message,
+  // so never explicitly cleared) as "not typing" once it's a few seconds
+  // old, rather than needing a cron job to clean these up.
+  typingWithUserId String?
+  typingAt         DateTime?
 
   journalEntries    JournalEntry[]
   goals             Goal[]
