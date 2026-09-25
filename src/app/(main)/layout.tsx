@@ -4,7 +4,6 @@ import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate } from "@/lib/dates";
 import { WELCOME_COOKIE } from "@/lib/auth";
 import { MoodCheckInModal } from "./MoodCheckInModal";
-import { VerifyEmailBanner } from "./VerifyEmailBanner";
 import { NotificationBell } from "./NotificationBell";
 import { Sidebar } from "@/components/Sidebar";
 import { levelForXp } from "@/lib/xp";
@@ -83,7 +82,13 @@ export default async function MainLayout({ children }: { children: React.ReactNo
             justLoggedIn ? "animate-[page-slide-in_480ms_cubic-bezier(0.16,1,0.3,1)_both]" : ""
           }`}
         >
-          {!user.emailVerifiedAt && <VerifyEmailBanner />}
+          {/* The "verify your email" nag is paused for now — Resend's
+              sandbox sender can't actually deliver that email to anyone but
+              the account owner yet (needs a verified domain, tracked
+              separately), so nagging every visit to check an inbox that
+              was never going to get anything is just noise. Verification
+              itself (VerifyEmailBanner, resendVerificationEmail,
+              api/verify-email) is untouched — this only stops surfacing it. */}
           {children}
         </main>
       </div>

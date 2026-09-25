@@ -113,9 +113,16 @@ export function MessageThread({
   useEffect(() => {
     const interval = setInterval(async () => {
       if (document.visibilityState !== "visible") return;
-      const lastReal = [...messagesRef.current].reverse().find((m) => !isOptimistic(m.id));
-      const fresh = await getNewMessages(otherUserId, lastReal?.id ?? null);
-      if (fresh.length > 0) mergeFresh(fresh);
+      try {
+        const lastReal = [...messagesRef.current].reverse().find((m) => !isOptimistic(m.id));
+        const fresh = await getNewMessages(otherUserId, lastReal?.id ?? null);
+        if (fresh.length > 0) mergeFresh(fresh);
+      } catch (err) {
+        // A failed poll shouldn't spam the console every 4s or take the
+        // thread down — initialMessages already rendered, and the next
+        // tick just tries again.
+        console.error("Failed to poll for new messages:", err);
+      }
     }, POLL_MS);
     return () => clearInterval(interval);
   }, [otherUserId]);
@@ -136,16 +143,27 @@ export function MessageThread({
     const fd = new FormData();
     fd.set("body", trimmed);
     startTransition(async () => {
-      const result = await sendMessage(otherUserId, fd);
-      if (result?.error) {
-        setError(result.error);
+      // A thrown error here (network blip, an unhandled server-side
+      // exception) would otherwise vanish — a transition's async callback
+      // isn't caught by the nearest error boundary the way a render throw
+      // is, so without this the optimistic bubble would just sit there
+      // forever with no explanation.
+      try {
+        const result = await sendMessage(otherUserId, fd);
+        if (result?.error) {
+          setError(result.error);
+          setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
+          return;
+        }
+        // Replace the optimistic placeholder with the authoritative row (and
+        // pick up anything the other person sent in the meantime too).
+        const fresh = await getNewMessages(otherUserId, lastReal?.id ?? null);
+        mergeFresh(fresh);
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        setError("Something went wrong sending that — try again.");
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
-        return;
       }
-      // Replace the optimistic placeholder with the authoritative row (and
-      // pick up anything the other person sent in the meantime too).
-      const fresh = await getNewMessages(otherUserId, lastReal?.id ?? null);
-      mergeFresh(fresh);
     });
   }
 

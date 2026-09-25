@@ -44,7 +44,16 @@ export async function sendMessage(recipientId: string, formData: FormData): Prom
     select: { id: true },
   });
 
-  await prisma.message.create({ data: { senderId: user.id, recipientId, body } });
+  // The actual DB write is the one step here that must not silently fail —
+  // everything after it (email/push) already can't crash the send. Wrapped
+  // so a real failure comes back as visible text in the composer instead of
+  // an unhandled rejection with nothing to go on.
+  try {
+    await prisma.message.create({ data: { senderId: user.id, recipientId, body } });
+  } catch (err) {
+    console.error("Failed to save message:", err);
+    return { error: `Message didn't send: ${err instanceof Error ? err.message : "unknown error"}` };
+  }
 
   if (!hadUnread) {
     // Awaited (not fire-and-forget) — see signup/actions.ts's note on why:
