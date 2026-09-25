@@ -74,13 +74,21 @@ export async function sendMessage(recipientId: string, formData: FormData): Prom
   return null;
 }
 
+// Called directly from the thread page's own render (not a client-triggered
+// form/transition) — revalidatePath is only valid inside an actual Server
+// Action invocation or a Route Handler, and throws ("used revalidatePath ...
+// inside a Server Component render") when called mid-render like this does.
+// That's exactly what this was doing, every single time anyone opened a
+// chat — which is almost certainly the real "messages don't work" bug this
+// whole time. Safe to just drop: both this page and /messages itself are
+// force-dynamic, so they already refetch fresh on every navigation with
+// nothing cached to invalidate.
 export async function markThreadRead(otherUserId: string): Promise<void> {
   const user = await getCurrentUser();
   await prisma.message.updateMany({
     where: { senderId: otherUserId, recipientId: user.id, readAt: null },
     data: { readAt: new Date() },
   });
-  revalidatePath("/messages");
 }
 
 export type MessageDTO = { id: string; senderId: string; body: string; createdAt: string };
