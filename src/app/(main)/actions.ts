@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { generateSessionToken } from "@/lib/password";
 import { sendVerificationEmail } from "@/lib/email";
+import { daysAgo } from "@/lib/dates";
 
 const VERIFY_TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
@@ -22,6 +23,14 @@ export async function resendVerificationEmail() {
 
   await sendVerificationEmail(user.email, user.name, `${await baseUrl()}/api/verify-email?token=${verifyToken}`);
 }
+
+// Anything older just drops out of the bell/badges entirely (not deleted —
+// the underlying like/comment/follow-request still exists and still shows
+// up wherever that data actually lives, e.g. old follow requests on
+// /friends) — a 3-day-old "so-and-so liked your post" sitting unread
+// forever is more clutter than signal at this point. Matches
+// (main)/layout.tsx's own NOTIFICATION_WINDOW_DAYS for the badge counts.
+const NOTIFICATION_WINDOW_DAYS = 3;
 
 export type NotificationPerson = { name: string; username: string; avatarUrl: string | null };
 
@@ -52,16 +61,17 @@ export type ActivityNotification = {
 // comment in schema.prisma for why comments need their own cursor).
 export async function getNotifications(): Promise<{ followRequests: FollowRequestNotification[]; activity: ActivityNotification[] }> {
   const user = await getCurrentUser();
+  const windowStart = daysAgo(NOTIFICATION_WINDOW_DAYS);
 
   const [incoming, cheers, myWorkouts, myStudySessions] = await Promise.all([
     prisma.follow.findMany({
-      where: { followingId: user.id, status: "PENDING" },
+      where: { followingId: user.id, status: "PENDING", createdAt: { gte: windowStart } },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: { follower: { select: { name: true, username: true, avatarUrl: true } } },
     }),
     prisma.cheer.findMany({
-      where: { toUserId: user.id },
+      where: { toUserId: user.id, createdAt: { gte: windowStart } },
       orderBy: { createdAt: "desc" },
       take: 15,
       include: { fromUser: { select: { name: true, username: true, avatarUrl: true } } },
@@ -78,6 +88,7 @@ export async function getNotifications(): Promise<{ followRequests: FollowReques
       ? await prisma.comment.findMany({
           where: {
             authorId: { not: user.id },
+            createdAt: { gte: windowStart },
             OR: [{ workoutId: { in: myWorkoutIds } }, { studySessionId: { in: myStudySessionIds } }],
           },
           orderBy: { createdAt: "desc" },

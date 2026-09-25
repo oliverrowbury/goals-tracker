@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, isoToDate } from "@/lib/dates";
+import { todayISO, isoToDate, daysAgo } from "@/lib/dates";
 import { WELCOME_COOKIE } from "@/lib/auth";
 import { MoodCheckInModal } from "./MoodCheckInModal";
 import { NotificationBell } from "./NotificationBell";
@@ -11,12 +11,21 @@ import { AchievementWatcher } from "./AchievementWatcher";
 
 export const dynamic = "force-dynamic";
 
+// Matches getNotifications' own window in (main)/actions.ts — the bell's
+// badge count and the list it opens into have to agree, or the badge would
+// show a number for items the dropdown itself no longer displays.
+const NOTIFICATION_WINDOW_DAYS = 3;
+
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const today = todayISO();
   // Read (not cleared) — see WELCOME_COOKIE's comment in lib/auth.ts for
   // why its own short maxAge is what makes this safely one-time.
   const justLoggedIn = !!(await cookies()).get(WELCOME_COOKIE)?.value;
+  const notificationWindowStart = daysAgo(NOTIFICATION_WINDOW_DAYS);
+  const likesSeenCutoff = user.likesSeenAt && user.likesSeenAt > notificationWindowStart ? user.likesSeenAt : notificationWindowStart;
+  const commentsSeenCutoff =
+    user.commentsSeenAt && user.commentsSeenAt > notificationWindowStart ? user.commentsSeenAt : notificationWindowStart;
   const [todayEntry, badges, unreadMessageCount, pendingFollowRequestCount, unseenLikesCount, myWorkoutIds, myStudySessionIds] =
     await Promise.all([
       prisma.journalEntry.findUnique({
@@ -25,8 +34,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       }),
       prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true, earnedAt: true } }),
       prisma.message.count({ where: { recipientId: user.id, readAt: null } }),
-      prisma.follow.count({ where: { followingId: user.id, status: "PENDING" } }),
-      prisma.cheer.count({ where: { toUserId: user.id, createdAt: { gt: user.likesSeenAt ?? new Date(0) } } }),
+      prisma.follow.count({ where: { followingId: user.id, status: "PENDING", createdAt: { gte: notificationWindowStart } } }),
+      prisma.cheer.count({ where: { toUserId: user.id, createdAt: { gt: likesSeenCutoff } } }),
       // Comment has no direct "post owner" column (see schema.prisma's own
       // note on why), so "comments on my posts" needs my own post ids
       // first — fetched here so the count query below can run off them.
@@ -40,7 +49,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       ? await prisma.comment.count({
           where: {
             authorId: { not: user.id },
-            createdAt: { gt: user.commentsSeenAt ?? new Date(0) },
+            createdAt: { gt: commentsSeenCutoff },
             OR: [{ workoutId: { in: workoutIds } }, { studySessionId: { in: studySessionIds } }],
           },
         })

@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
-import { ActivityIcon, ClockIcon, MessageIcon, EyeOffIcon, EyeIcon, TrophyIcon } from "@/components/Icons";
+import { ActivityIcon, ClockIcon, TrophyIcon } from "@/components/Icons";
 import { todayISO, relativeLabel } from "@/lib/dates";
 import { formatWeight, type ExerciseBreakdown, type Stat } from "@/lib/workout";
-import { LikeButton } from "./LikeButton";
-import { ReportButton } from "./ReportButton";
-import { setActivityArchived, type ActivityKind } from "./actions";
+import { PostFooter } from "./PostFooter";
+import { type ActivityKind } from "./actions";
 
 export type ActivityCardItem = {
   id: string;
@@ -152,50 +151,19 @@ export function ActivityCard({
         )}
       </div>
 
-      {item.photoUrl && (
-        linkToDetail ? (
-          <Link href={detailHref} className="block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.photoUrl} alt="" className="aspect-square w-full object-cover" />
-          </Link>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={item.photoUrl} alt="" className="aspect-square w-full object-cover" />
-        )
-      )}
-
-      <div className="flex items-center gap-3 border-t border-line px-4 py-3">
-        <LikeButton kind={item.kind} activityId={item.id} count={item.likeCount} likedByMe={item.likedByMe} />
-        <Link
-          href={`${linkToDetail ? detailHref : ""}#comments`}
-          className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted hover:border-calm hover:text-calm"
-        >
-          <MessageIcon className="h-4 w-4" />
-          {item.commentCount > 0 && <span className="tabular-nums">{item.commentCount}</span>}
-        </Link>
-
-        {isOwner && (
-          <form action={setActivityArchived.bind(null, item.kind, item.id, !item.archived)} className="ml-auto">
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 text-xs font-medium text-ink-muted hover:text-accent"
-              title={item.archived ? "Show this on your profile activity list again" : "Hide this from your profile activity list"}
-            >
-              {item.archived ? <EyeIcon className="h-4 w-4" /> : <EyeOffIcon className="h-4 w-4" />}
-              {item.archived ? "Unarchive" : "Archive"}
-            </button>
-          </form>
-        )}
-        {!isOwner && (
-          <div className="ml-auto">
-            <ReportButton
-              targetType={item.kind === "workout" ? "WORKOUT" : "STUDY_SESSION"}
-              targetUserId={item.ownerId}
-              targetId={item.id}
-            />
-          </div>
-        )}
-      </div>
+      <PostFooter
+        kind={item.kind}
+        activityId={item.id}
+        photoUrl={item.photoUrl}
+        detailHref={detailHref}
+        linkToDetail={linkToDetail}
+        initialLikeCount={item.likeCount}
+        initialLikedByMe={item.likedByMe}
+        commentCount={item.commentCount}
+        isOwner={isOwner}
+        archived={item.archived}
+        ownerId={item.ownerId}
+      />
 
       {children && (
         <div id="comments" className="scroll-mt-6 px-4 pb-4">

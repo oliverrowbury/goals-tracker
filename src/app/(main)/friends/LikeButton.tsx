@@ -1,40 +1,34 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { HeartIcon } from "@/components/Icons";
-import { likeActivity, type ActivityKind } from "./actions";
 
+// Purely presentational now — PostPhoto (the double-tap-to-like target)
+// and this button both need to act on the same liked/count state, so that
+// state lives one level up in PostFooter and gets passed down to both
+// instead of each managing its own copy.
 export function LikeButton({
-  kind,
-  activityId,
+  liked,
   count,
-  likedByMe,
+  disabled,
+  onToggle,
 }: {
-  kind: ActivityKind;
-  activityId: string;
+  liked: boolean;
   count: number;
-  likedByMe: boolean;
+  disabled?: boolean;
+  onToggle: () => void;
 }) {
-  const [liked, setLiked] = useState(likedByMe);
-  const [localCount, setLocalCount] = useState(count);
-  const [isPending, startTransition] = useTransition();
-
   return (
     <button
       type="button"
-      disabled={liked || isPending}
-      onClick={() => {
-        setLiked(true); // optimistic
-        setLocalCount((c) => c + 1);
-        startTransition(() => likeActivity(kind, activityId));
-      }}
-      title={liked ? "You liked this" : "Like"}
+      disabled={disabled}
+      onClick={onToggle}
+      title={liked ? "Unlike" : "Like"}
       className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
         liked ? "border-calm bg-calm-soft text-calm" : "border-line text-ink-muted hover:border-calm hover:text-calm"
-      } disabled:cursor-default`}
+      } disabled:cursor-default disabled:opacity-70`}
     >
       <HeartIcon className="h-4 w-4" filled={liked} />
-      {localCount > 0 && <span className="tabular-nums">{localCount}</span>}
+      {count > 0 && <span className="tabular-nums">{count}</span>}
     </button>
   );
 }

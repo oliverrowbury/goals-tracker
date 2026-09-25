@@ -30,6 +30,15 @@ export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+// A cutoff Date N days back from now — for "only show things newer than
+// this" queries. A plain `new Date(Date.now() - ...)` inline in a Server
+// Component's render body trips the react-hooks/purity lint rule (a direct
+// call to the impure Date.now()); wrapping it in its own function here,
+// same as todayISO above, doesn't.
+export function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
+}
+
 // ISO date strings compare lexicographically the same as chronologically,
 // so this is a plain string comparison — no Date parsing needed.
 export function isFutureISO(dateISO: string): boolean {

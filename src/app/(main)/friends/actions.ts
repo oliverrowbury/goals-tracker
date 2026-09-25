@@ -232,6 +232,19 @@ export async function likeActivity(kind: ActivityKind, activityId: string) {
   revalidatePath("/friends");
 }
 
+// Tapping an already-liked heart again removes it — Instagram's own
+// toggle behaviour, rather than a like being a one-way action.
+export async function unlikeActivity(kind: ActivityKind, activityId: string) {
+  const user = await getCurrentUser();
+  await prisma.cheer.deleteMany({
+    where: {
+      fromUserId: user.id,
+      ...(kind === "workout" ? { workoutId: activityId } : { studySessionId: activityId }),
+    },
+  });
+  revalidatePath("/friends");
+}
+
 const MAX_COMMENT_LENGTH = 500;
 
 // Same privacy boundary as the post-detail page's own access check
