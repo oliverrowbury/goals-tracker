@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
@@ -87,6 +87,36 @@ export function Sidebar({
   notificationBell?: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
+  const edgeToggleRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // The edge handle's `left` used to be a hardcoded guess (the sidebar's
+  // own width) — measuring the aside's actual rendered right edge instead
+  // means it's correct regardless of anything that could make the real
+  // width differ from that guess (browser zoom, an unexpected layout at
+  // some particular viewport width, etc.), and ResizeObserver picks up
+  // the width change when collapsing/expanding without needing to also
+  // duplicate that logic here.
+  useEffect(() => {
+    const asideEl = asideRef.current;
+    if (!asideEl) return;
+
+    function updatePosition() {
+      const left = `${asideEl!.getBoundingClientRect().right}px`;
+      for (const btn of edgeToggleRefs.current) {
+        if (btn) btn.style.left = left;
+      }
+    }
+
+    updatePosition();
+    const observer = new ResizeObserver(updatePosition);
+    observer.observe(asideEl);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, []);
   const pathname = usePathname();
 
   // Orange (the app's one accent color) rather than each link's own
@@ -211,7 +241,10 @@ export function Sidebar({
           shrink this to icon-only width when collapsed — see the
           "sidebar-collapsed" rules there and SIDEBAR_INIT_SCRIPT in the
           root layout for how that class gets applied before paint. */}
-      <aside className="app-sidebar hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto">
+      <aside
+        ref={asideRef}
+        className="app-sidebar hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto"
+      >
         <div className="sidebar-header mb-5 flex items-center px-1">
           <Link href="/" className="sidebar-logo-full text-xl text-ink">
             <Wordmark />
@@ -228,23 +261,31 @@ export function Sidebar({
           (its own sm:overflow-y-auto would clip anything positioned
           outside its box) and fixed rather than absolute (so it isn't
           affected by the flex row's stretch/height games either) —
-          straddles the border between sidebar and page, half over each,
-          at a `left` matching whichever width the sidebar currently is
-          (see the sidebar-collapsed override in globals.css). */}
+          straddles the border between sidebar and page, half over each.
+          `left` is set imperatively from the effect above, measured off
+          the aside's own real edge — not a guessed width — so it's
+          right regardless of anything that could make the actual
+          rendered width differ from that guess. */}
       <button
+        ref={(el) => {
+          edgeToggleRefs.current[0] = el;
+        }}
         type="button"
         onClick={() => toggleSidebarCollapsed()}
         title="Collapse sidebar"
-        className="sidebar-edge-toggle chevron-collapse fixed top-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-ink-muted shadow-sm hover:border-accent hover:text-accent sm:flex"
+        className="chevron-collapse fixed top-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-ink-muted shadow-sm hover:border-accent hover:text-accent sm:flex"
         style={{ left: "14rem" }}
       >
         <ChevronDownIcon className="h-3.5 w-3.5 rotate-90" />
       </button>
       <button
+        ref={(el) => {
+          edgeToggleRefs.current[1] = el;
+        }}
         type="button"
         onClick={() => toggleSidebarCollapsed()}
         title="Expand sidebar"
-        className="sidebar-edge-toggle chevron-expand fixed top-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-ink-muted shadow-sm hover:border-accent hover:text-accent"
+        className="chevron-expand fixed top-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-ink-muted shadow-sm hover:border-accent hover:text-accent"
         style={{ left: "14rem" }}
       >
         <ChevronDownIcon className="h-3.5 w-3.5 -rotate-90" />

@@ -440,19 +440,16 @@ html.sidebar-collapsed .app-sidebar .account-row {
   flex-direction: column;
   gap: 0.5rem;
 }
-/* The collapse/expand handle floats fixed to the viewport (see Sidebar.tsx
-   for why it isn't a child of .app-sidebar), so its horizontal position
-   has to track the sidebar's own width here independently — it's not a
-   descendant these other rules can reach. Wrapped in the same min-width
-   Tailwind's own `sm:` prefix uses: the expand button has no sm:flex of
-   its own (it's meant to stay invisible everywhere until collapsed), so
-   without this guard, collapsing on desktop and then opening the app on
-   a phone with that same preference saved would float it over the
-   mobile UI, which has no persistent sidebar for it to expand. */
+/* The collapse/expand handle's `left` is set imperatively (see Sidebar.tsx's
+   ResizeObserver effect), measured off the sidebar's real edge rather than
+   guessed here — only which of the pair is visible is still pure CSS.
+   Wrapped in the same min-width Tailwind's own `sm:` prefix uses: the
+   expand button has no sm:flex of its own (it's meant to stay invisible
+   everywhere until collapsed), so without this guard, collapsing on
+   desktop and then opening the app on a phone with that same preference
+   saved would float it over the mobile UI, which has no persistent
+   sidebar for it to expand. */
 @media (min-width: 640px) {
-  html.sidebar-collapsed .sidebar-edge-toggle {
-    left: 4.5rem;
-  }
   html.sidebar-collapsed .chevron-collapse {
     display: none;
   }
