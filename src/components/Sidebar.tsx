@@ -22,21 +22,26 @@ import {
   ChevronDownIcon,
 } from "@/components/Icons";
 
-// The collapsed sidebar's logo — just the ascending-bars mark from
-// Wordmark, without the "Proudly" text (which won't fit, and isn't the
-// part that still needs to read at icon width). Kept local rather than
-// added to Wordmark itself, since nowhere else needs an icon-only variant.
-const BAR_HEIGHTS_EM = [0.4, 0.7, 1, 1.35];
+// The collapsed sidebar's logo — the ascending-bars mark from Wordmark,
+// without the "Proudly" text (which won't fit at icon width), given the
+// same rounded-badge treatment as every other icon-in-a-soft-square in
+// this app (PageHeader, WorkoutSummary's icon, etc.) rather than just
+// floating bare bars in the corner — an actual app-icon mark, not a raw
+// chart glyph. Kept local rather than added to Wordmark itself, since
+// nowhere else needs an icon-only variant.
+const BAR_HEIGHTS_PX = [6, 10, 14, 18];
 function SidebarLogoIcon() {
   return (
-    <span className="inline-flex items-end gap-[0.1em] text-lg" aria-hidden="true">
-      {BAR_HEIGHTS_EM.map((h, i) => (
-        <span
-          key={i}
-          className="block w-[0.16em] origin-bottom rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong"
-          style={{ height: `${h}em` }}
-        />
-      ))}
+    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft" aria-hidden="true">
+      <span className="inline-flex items-end gap-[3px]">
+        {BAR_HEIGHTS_PX.map((h, i) => (
+          <span
+            key={i}
+            className="block w-[3px] origin-bottom rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong"
+            style={{ height: `${h}px` }}
+          />
+        ))}
+      </span>
     </span>
   );
 }

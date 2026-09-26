@@ -425,6 +425,7 @@ html.sidebar-collapsed .app-sidebar .sidebar-account-label {
   display: none;
 }
 html.sidebar-collapsed .app-sidebar .sidebar-header {
+  flex-direction: column;
   justify-content: center;
   gap: 0.5rem;
 }
