@@ -22,7 +22,7 @@ import { levelForXp } from "@/lib/xp";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
-import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, FlameIcon } from "@/components/Icons";
+import { JournalIcon, ClockIcon, DumbbellIcon, FlameIcon } from "@/components/Icons";
 import { FocusTagPills } from "../../FocusTagPills";
 import { ActivityCard, type ActivityCardItem } from "../../ActivityCard";
 import { BlockButton } from "../../BlockButton";
@@ -421,6 +421,10 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
   return (
     <div className="mx-auto max-w-sm">
+      <Link href="/friends" className="mb-4 inline-block text-sm text-ink-muted hover:text-calm">
+        ← Back to friends
+      </Link>
+
       {isSelf ? (
         <RevealActivity cardContent={cardContent} activity={activitySection} />
       ) : (
@@ -429,11 +433,6 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           {activitySection}
         </>
       )}
-
-      <Link href="/friends" className="mt-6 flex items-center justify-center gap-1.5 text-sm text-ink-muted hover:text-calm">
-        <UsersIcon className="h-4 w-4" />
-        Back to friends
-      </Link>
     </div>
   );
 }
