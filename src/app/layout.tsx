@@ -68,6 +68,18 @@ try {
 } catch {}
 `;
 
+// Same "before paint" reasoning as THEME_INIT_SCRIPT above — the desktop
+// sidebar's collapsed/expanded width is a layout change, not just a color,
+// so flashing the wrong one for a frame would be more jarring than dark
+// mode's flash ever was.
+const SIDEBAR_INIT_SCRIPT = `
+try {
+  if (localStorage.getItem("sidebarCollapsed") === "1") {
+    document.documentElement.classList.add("sidebar-collapsed");
+  }
+} catch {}
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -77,6 +89,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-paper text-ink" suppressHydrationWarning>
         {children}

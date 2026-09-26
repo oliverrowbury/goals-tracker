@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { toggleSidebarCollapsed } from "@/lib/sidebarCollapsed";
 import {
   JournalIcon,
   TargetIcon,
@@ -18,7 +19,27 @@ import {
   SignOutIcon,
   MenuIcon,
   CloseIcon,
+  ChevronDownIcon,
 } from "@/components/Icons";
+
+// The collapsed sidebar's logo — just the ascending-bars mark from
+// Wordmark, without the "Proudly" text (which won't fit, and isn't the
+// part that still needs to read at icon width). Kept local rather than
+// added to Wordmark itself, since nowhere else needs an icon-only variant.
+const BAR_HEIGHTS_EM = [0.4, 0.7, 1, 1.35];
+function SidebarLogoIcon() {
+  return (
+    <span className="inline-flex items-end gap-[0.1em] text-lg" aria-hidden="true">
+      {BAR_HEIGHTS_EM.map((h, i) => (
+        <span
+          key={i}
+          className="block w-[0.16em] origin-bottom rounded-t-[1px] bg-gradient-to-t from-accent to-accent-strong"
+          style={{ height: `${h}em` }}
+        />
+      ))}
+    </span>
+  );
+}
 
 const LINKS = [
   { href: "/journal", label: "Journal", Icon: JournalIcon, color: "accent" },
@@ -80,13 +101,14 @@ export function Sidebar({
           <Link
             key={href}
             href={href}
+            title={label}
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
               active ? ACTIVE_CLASSES[color] : "text-ink-muted hover:bg-line/60 hover:text-ink"
             }`}
           >
             <Icon className="h-5 w-5 shrink-0" />
-            {label}
+            <span className="sidebar-label">{label}</span>
             {badgeCount > 0 && (
               <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-medium text-white">
                 {badgeCount}
@@ -99,11 +121,12 @@ export function Sidebar({
   );
 
   const accountRow = (
-    <div className="flex items-center justify-between border-t border-line pt-3">
+    <div className="account-row flex items-center justify-between border-t border-line pt-3">
       <Link
         href="/settings"
         onClick={() => setMobileOpen(false)}
-        className="rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent hover:opacity-80"
+        title={`Level ${level}`}
+        className="sidebar-account-label rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent hover:opacity-80"
       >
         Lv {level}
       </Link>
@@ -179,11 +202,35 @@ export function Sidebar({
           default align-items: stretch) — without this, the account row
           at the bottom only stayed on-screen on a page short enough to
           fit in one view (Calendar), and got pushed below the fold on
-          anything longer. */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto">
-        <Link href="/" className="mb-5 px-1 text-xl text-ink">
-          <Wordmark />
-        </Link>
+          anything longer. `app-sidebar` is the hook globals.css uses to
+          shrink this to icon-only width when collapsed — see the
+          "sidebar-collapsed" rules there and SIDEBAR_INIT_SCRIPT in the
+          root layout for how that class gets applied before paint. */}
+      <aside className="app-sidebar hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto">
+        <div className="sidebar-header mb-5 flex items-center justify-between px-1">
+          <Link href="/" className="sidebar-logo-full text-xl text-ink">
+            <Wordmark />
+          </Link>
+          <Link href="/" className="sidebar-logo-icon hidden text-ink" aria-label="Proudly">
+            <SidebarLogoIcon />
+          </Link>
+          <button
+            type="button"
+            onClick={() => toggleSidebarCollapsed()}
+            title="Collapse sidebar"
+            className="chevron-collapse flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-line/60 hover:text-ink"
+          >
+            <ChevronDownIcon className="h-4 w-4 rotate-90" />
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleSidebarCollapsed()}
+            title="Expand sidebar"
+            className="chevron-expand hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-line/60 hover:text-ink"
+          >
+            <ChevronDownIcon className="h-4 w-4 -rotate-90" />
+          </button>
+        </div>
         {links}
         <div className="mt-4">{accountRow}</div>
       </aside>

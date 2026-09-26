@@ -406,6 +406,49 @@ textarea {
   }
 }
 
+/* Desktop sidebar collapsed to icon-only width — toggled via a class on
+   <html> (see sidebarCollapsed.ts and SIDEBAR_INIT_SCRIPT in the root
+   layout), same "before paint" approach the .dark class already uses so
+   there's no flash of the wrong width. Every visual change here is pure
+   CSS with no React re-render involved, so nothing to flash even on the
+   very first frame either. Selectors need to out-specificity the plain
+   Tailwind utility classes already on these elements (a bare class
+   selector each), which two combined selectors reliably do without
+   needing !important. */
+html.sidebar-collapsed .app-sidebar {
+  width: 4.5rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+html.sidebar-collapsed .app-sidebar .sidebar-label,
+html.sidebar-collapsed .app-sidebar .sidebar-account-label {
+  display: none;
+}
+html.sidebar-collapsed .app-sidebar .sidebar-header {
+  justify-content: center;
+  gap: 0.5rem;
+}
+html.sidebar-collapsed .app-sidebar .sidebar-logo-full,
+html.sidebar-collapsed .app-sidebar .chevron-collapse {
+  display: none;
+}
+html.sidebar-collapsed .app-sidebar .sidebar-logo-icon,
+html.sidebar-collapsed .app-sidebar .chevron-expand {
+  display: flex;
+}
+html.sidebar-collapsed .app-sidebar nav a {
+  justify-content: center;
+}
+html.sidebar-collapsed .app-sidebar .account-row {
+  flex-direction: column;
+  gap: 0.5rem;
+}
+/* The whole point of collapsing the sidebar — give the actual page more
+   room instead of just leaving the freed-up space empty. */
+html.sidebar-collapsed .app-main {
+  max-width: 64rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: 0.01ms !important;

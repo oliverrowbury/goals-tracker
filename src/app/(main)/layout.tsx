@@ -87,7 +87,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
           <NotificationBell initialCount={notificationCount} />
         </div>
         <main
-          className={`mx-auto w-full max-w-3xl px-4 py-10 ${
+          className={`app-main mx-auto w-full max-w-3xl px-4 py-10 transition-[max-width] duration-300 ${
             justLoggedIn ? "animate-[page-slide-in_480ms_cubic-bezier(0.16,1,0.3,1)_both]" : ""
           }`}
         >
