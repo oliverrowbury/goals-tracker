@@ -212,29 +212,29 @@ export function Sidebar({
           "sidebar-collapsed" rules there and SIDEBAR_INIT_SCRIPT in the
           root layout for how that class gets applied before paint. */}
       <aside className="app-sidebar hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto">
-        <div className="sidebar-header mb-5 flex items-center justify-between px-1">
+        <div className="sidebar-header mb-5 flex items-center gap-2 px-1">
+          <button
+            type="button"
+            onClick={() => toggleSidebarCollapsed()}
+            title="Collapse sidebar"
+            className="chevron-collapse flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line text-ink-muted hover:border-accent hover:text-accent"
+          >
+            <ChevronDownIcon className="h-3.5 w-3.5 rotate-90" />
+          </button>
+          <button
+            type="button"
+            onClick={() => toggleSidebarCollapsed()}
+            title="Expand sidebar"
+            className="chevron-expand hidden h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line text-ink-muted hover:border-accent hover:text-accent"
+          >
+            <ChevronDownIcon className="h-3.5 w-3.5 -rotate-90" />
+          </button>
           <Link href="/" className="sidebar-logo-full text-xl text-ink">
             <Wordmark />
           </Link>
           <Link href="/" className="sidebar-logo-icon hidden text-ink" aria-label="Proudly">
             <SidebarLogoIcon />
           </Link>
-          <button
-            type="button"
-            onClick={() => toggleSidebarCollapsed()}
-            title="Collapse sidebar"
-            className="chevron-collapse flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-line/60 hover:text-ink"
-          >
-            <ChevronDownIcon className="h-4 w-4 rotate-90" />
-          </button>
-          <button
-            type="button"
-            onClick={() => toggleSidebarCollapsed()}
-            title="Expand sidebar"
-            className="chevron-expand hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-line/60 hover:text-ink"
-          >
-            <ChevronDownIcon className="h-4 w-4 -rotate-90" />
-          </button>
         </div>
         {links}
         <div className="mt-4">{accountRow}</div>
