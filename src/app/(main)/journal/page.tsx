@@ -2,16 +2,13 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, monthRangeContaining, dateToISO, isFutureISO } from "@/lib/dates";
-import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
+import { weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
-import { promptForDate } from "@/lib/prompts";
 import { JournalEditor } from "./JournalEditor";
-import { GoalsForDay, type DayGoal } from "./GoalsForDay";
 import { MoodPicker } from "./MoodPicker";
 import { MoodChart } from "./MoodChart";
 import { PhotoUpload } from "./PhotoUpload";
 import { Flashbacks } from "./Flashbacks";
-import { PromptOfDayCard } from "../PromptOfDayCard";
 import { JournalIcon } from "@/components/Icons";
 import { deleteStudySession } from "../study/actions";
 import { PageHeader } from "@/components/PageHeader";
@@ -48,23 +45,14 @@ export default async function JournalPage({
     return dateToISO(d);
   }).filter((d) => monthISOOf(d).slice(5) === dateISO.slice(5, 7)); // guard against Feb 29 rolling into March
 
-  const [entry, allGoals, weekStudySessions, weekWorkouts, subjects, monthEntries, flashbackEntries] = await Promise.all([
+  const [entry, weekStudySessions, subjects, monthEntries, flashbackEntries] = await Promise.all([
     prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(dateISO) } } }),
-    prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
       where: {
         userId: user.id,
         endedAt: { not: null },
         startedAt: { gte: new Date(`${weekStartISO}T00:00:00.000Z`), lte: new Date(`${weekEndISO}T23:59:59.999Z`) },
       },
-    }),
-    prisma.workout.findMany({
-      where: {
-        userId: user.id,
-        endedAt: { not: null },
-        date: { gte: new Date(`${weekStartISO}T00:00:00.000Z`), lte: new Date(`${weekEndISO}T23:59:59.999Z`) },
-      },
-      select: { durationMinutes: true },
     }),
     prisma.subject.findMany({ where: { userId: user.id } }),
     prisma.journalEntry.findMany({
@@ -92,58 +80,7 @@ export default async function JournalPage({
 
   const subjectById = new Map(subjects.map((s) => [s.id, s]));
 
-  const weekMinutesBySubject = new Map<string, number>();
-  for (const session of weekStudySessions) {
-    weekMinutesBySubject.set(
-      session.subjectId,
-      (weekMinutesBySubject.get(session.subjectId) ?? 0) + (session.durationMinutes ?? 0),
-    );
-  }
-
   const todaysStudySessions = weekStudySessions.filter((s) => s.startedAt.toISOString().slice(0, 10) === dateISO);
-
-  const weekWorkoutSessionCount = weekWorkouts.length;
-  const weekWorkoutMinutes = weekWorkouts.reduce((sum, w) => sum + (w.durationMinutes ?? 0), 0);
-
-  const dayGoals: DayGoal[] = allGoals
-    .filter((goal) => isGoalDueOn(goal, dateISO))
-    .map((goal) => {
-      const todayLog = goal.logs.find((l) => l.date.toISOString().slice(0, 10) === dateISO);
-      // Auto-tracked from Study (subjectId) or Workouts (workoutMetric) — but
-      // still allows a manual top-up below (see setGoalLogValue), in case the
-      // auto-tracked source missed something (forgot to use the timer, etc).
-      const isAutoTracked = goal.frequencyType === "WEEKLY_TARGET" && !!(goal.subjectId || goal.workoutMetric);
-
-      let weekTotal: number | null = null;
-      if (goal.frequencyType === "WEEKLY_TARGET") {
-        const autoPart = goal.subjectId
-          ? (weekMinutesBySubject.get(goal.subjectId) ?? 0)
-          : goal.workoutMetric === "SESSIONS"
-            ? weekWorkoutSessionCount
-            : goal.workoutMetric === "MINUTES"
-              ? weekWorkoutMinutes
-              : 0;
-        const manualPart = goal.logs
-          .filter((l) => {
-            const d = l.date.toISOString().slice(0, 10);
-            return d >= weekStartISO && d <= weekEndISO;
-          })
-          .reduce((sum, l) => sum + (l.value ?? 0), 0);
-        weekTotal = autoPart + manualPart;
-      }
-
-      return {
-        id: goal.id,
-        title: goal.title,
-        frequencyType: goal.frequencyType,
-        unit: goal.unit,
-        targetValue: goal.targetValue,
-        completed: todayLog?.completed ?? false,
-        value: todayLog?.value ?? null,
-        weekTotal,
-        isAutoTracked,
-      };
-    });
 
   const prevISO = shiftISO(dateISO, -1);
   const nextISO = shiftISO(dateISO, 1);
@@ -166,21 +103,9 @@ export default async function JournalPage({
         }
       />
 
-      <PromptOfDayCard
-        dateISO={dateISO}
-        prompt={promptForDate(dateISO)}
-        initialResponse={entry?.promptResponse ?? ""}
-        isToday={isToday}
-      />
-
       <Flashbacks flashbacks={flashbacks} />
 
       <MoodPicker dateISO={dateISO} initialMood={entry?.mood ?? null} />
-
-      <div className="mb-8">
-        <h2 className="mb-2 text-sm font-medium text-ink-muted">Goals</h2>
-        <GoalsForDay dateISO={dateISO} goals={dayGoals} />
-      </div>
 
       {todaysStudySessions.length > 0 && (
         <div className="mb-8">

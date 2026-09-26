@@ -51,10 +51,14 @@ export function ActivityCard({
   linkToDetail?: boolean;
   children?: React.ReactNode;
 }) {
-  const badgeClass = item.subjectColor ? "text-white" : item.kind === "workout" ? "bg-workout-soft text-workout" : "bg-study-soft text-study";
-  const badgeStyle = item.subjectColor ? { backgroundColor: item.subjectColor } : undefined;
-  const spineClass = item.subjectColor ? "border-l-4" : item.kind === "workout" ? "border-l-4 border-l-workout" : "border-l-4 border-l-study";
-  const spineStyle = item.subjectColor ? { borderLeftColor: item.subjectColor } : undefined;
+  // One flat colour per kind (the app's existing workout/study accents) no
+  // matter the subject — a feed of mixed subjects and workouts used to show
+  // as many different badge/border colours as someone has subjects, which
+  // read as noise rather than information. The subject still gets its own
+  // hint of colour, just as a small dot next to the title (same convention
+  // Journal's "Studied" list and the Study timer already use), not a whole
+  // badge or a colored border around the entire card.
+  const badgeClass = item.kind === "workout" ? "bg-workout-soft text-workout" : "bg-study-soft text-study";
   const detailHref = `/friends/post/${item.kind}/${item.id}`;
   const isOwner = item.ownerId === currentUserId;
   const hasPR = item.stats.some((s) => s.isPR) || (item.exercises?.some((ex) => ex.isPR) ?? false);
@@ -62,6 +66,7 @@ export function ActivityCard({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-2">
+        {item.subjectColor && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.subjectColor }} />}
         <h3 className="font-serif text-lg font-semibold text-ink">{item.title}</h3>
         {hasPR && (
           <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-strong">
@@ -113,7 +118,7 @@ export function ActivityCard({
   );
 
   return (
-    <div className={`overflow-hidden rounded-2xl border border-line bg-card shadow-sm ${spineClass}`} style={spineStyle}>
+    <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
       <div className="p-4">
         {showOwner && (
           <div className="mb-3 flex items-center gap-3">
@@ -128,7 +133,7 @@ export function ActivityCard({
                 @{item.ownerUsername} · {relativeLabel(item.when, todayISO())}
               </p>
             </div>
-            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${badgeClass}`} style={badgeStyle}>
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
               {item.kind === "workout" ? <ActivityIcon className="h-4 w-4" /> : <ClockIcon className="h-4 w-4" />}
             </span>
           </div>
@@ -136,7 +141,7 @@ export function ActivityCard({
         {!showOwner && (
           <div className="mb-2 flex items-center justify-between gap-3">
             <p className="text-xs text-ink-muted">{relativeLabel(item.when, todayISO())}</p>
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${badgeClass}`} style={badgeStyle}>
+            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${badgeClass}`}>
               {item.kind === "workout" ? <ActivityIcon className="h-3.5 w-3.5" /> : <ClockIcon className="h-3.5 w-3.5" />}
             </span>
           </div>

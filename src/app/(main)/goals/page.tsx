@@ -10,8 +10,6 @@ import { TargetIcon, FlameIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 
-const HISTORY_DAYS = 14;
-
 // Without this, Next.js has no reason to think this page depends on
 // per-request state (no searchParams/cookies here) and would prerender it
 // once at build time — freezing whatever goals existed at deploy time
@@ -106,8 +104,6 @@ export default async function GoalsPage() {
           const weekTotal = goal.frequencyType === "WEEKLY_TARGET" ? autoPart + manualPart : null;
           const todayExtra = goal.logs.find((l) => l.date.toISOString().slice(0, 10) === today)?.value ?? null;
 
-          const historyDays = Array.from({ length: HISTORY_DAYS }, (_, i) => shiftISO(today, -(HISTORY_DAYS - 1 - i)));
-
           // Days due this week vs. how many are completed — the same
           // "filled bar" treatment WEEKLY_TARGET goals get below, so every
           // goal type has a progress indicator, not just a streak.
@@ -151,9 +147,9 @@ export default async function GoalsPage() {
 
               {goal.frequencyType === "WEEKLY_TARGET" && weekTotal !== null && (
                 <div className="mt-3">
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-goals to-accent shadow-[0_0_8px_var(--color-goals)] transition-all duration-500 ease-out"
+                      className="h-full rounded-full bg-goals transition-all duration-500 ease-out"
                       style={{ width: `${Math.min(100, ((weekTotal / (goal.targetValue || 1)) * 100))}%` }}
                     />
                   </div>
@@ -172,39 +168,15 @@ export default async function GoalsPage() {
 
               {goal.frequencyType !== "WEEKLY_TARGET" && weekDueTotal > 0 && (
                 <div className="mt-3">
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)]">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-goals to-accent shadow-[0_0_8px_var(--color-goals)] transition-all duration-500 ease-out"
+                      className="h-full rounded-full bg-goals transition-all duration-500 ease-out"
                       style={{ width: `${(weekDoneTotal / weekDueTotal) * 100}%` }}
                     />
                   </div>
                   <p className="mt-1.5 text-xs text-ink-muted">
                     {weekDoneTotal}/{weekDueTotal} day{weekDueTotal === 1 ? "" : "s"} this week
                   </p>
-                </div>
-              )}
-
-              {goal.frequencyType !== "WEEKLY_TARGET" && (
-                <div className="mt-2 flex gap-1">
-                  {historyDays.map((day) => {
-                    const due = isGoalDueOn(goal, day);
-                    const done = completedDates.has(day);
-                    return (
-                      <div
-                        key={day}
-                        title={day}
-                        className={`h-4 w-4 rounded-sm ${
-                          !due
-                            ? "bg-line/40"
-                            : done
-                              ? "bg-goals"
-                              : day < today
-                                ? "bg-goals-soft"
-                                : "border border-dashed border-line"
-                        }`}
-                      />
-                    );
-                  })}
                 </div>
               )}
             </div>

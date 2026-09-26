@@ -43,6 +43,7 @@ import {
   ArchiveIcon,
   EyeIcon,
   EyeOffIcon,
+  CheckIcon,
 } from "@/components/Icons";
 import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
@@ -561,6 +562,16 @@ function ExerciseReference({ name }: { name: string }) {
   );
 }
 
+// A logged set's row in the Hevy-style table below — a fixed 4-column grid
+// (set/previous/weight/reps) so every row, including the still-being-typed
+// one at the bottom, lines up under the same header.
+const SET_ROW_GRID = "grid grid-cols-[28px_1fr_1fr_1fr] items-center gap-2";
+
+function previousLabel(prev: { weight: number; reps: number; isWarmup: boolean } | undefined, weightUnit: WeightUnit): string {
+  if (!prev) return "—";
+  return `${formatWeight(prev.weight, weightUnit)}×${prev.reps}${prev.isWarmup ? " w" : ""}`;
+}
+
 function ExerciseSection({
   workoutId,
   exercise,
@@ -582,7 +593,7 @@ function ExerciseSection({
 
   // Seed the form from wherever a sensible default comes from: the set just
   // logged this session, or failing that the last time this exercise was
-  // worked at all — so re-doing familiar work means tapping "Add set"
+  // worked at all — so re-doing familiar work means tapping the checkmark
   // rather than retyping the same numbers you used last week.
   const seedSet = sets.length > 0 ? sets[sets.length - 1] : lastPerformed?.sets[lastPerformed.sets.length - 1];
   const [weight, setWeight] = useState(() => (seedSet ? String(parseFloat(fromKg(seedSet.weight, weightUnit).toFixed(1))) : ""));
@@ -614,14 +625,7 @@ function ExerciseSection({
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-medium text-ink">{exercise.name}</p>
-          {lastPerformed && (
-            <p className="mt-0.5 text-xs text-ink-muted">
-              Last time ({dayLabel(lastPerformed.dateISO)}):{" "}
-              {lastPerformed.sets
-                .map((s) => `${formatWeight(s.weight, weightUnit)}×${s.reps}${s.isWarmup ? " (w)" : ""}`)
-                .join(", ")}
-            </p>
-          )}
+          {lastPerformed && <p className="mt-0.5 text-xs text-ink-muted">Last done {dayLabel(lastPerformed.dateISO)}</p>}
           <ExerciseReference name={exercise.name} />
         </div>
         {sets.length === 0 && (
@@ -631,53 +635,69 @@ function ExerciseSection({
         )}
       </div>
 
-      {sets.length > 0 && (
-        <ul className="mt-3 space-y-1.5">
-          {sets.map((set) => (
-            <li key={set.id} className="flex items-center gap-2.5 rounded-lg bg-paper px-2.5 py-1.5 text-sm text-ink">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-workout-soft text-xs font-medium text-workout">
-                {set.setNumber}
-              </span>
-              <span className="font-medium tabular-nums">
-                {formatWeight(set.weight, weightUnit)} × {set.reps}
-              </span>
-              {set.isWarmup && <span className="text-xs text-ink-muted">warm-up</span>}
-              <form action={removeSet.bind(null, set.id)} className="ml-auto">
-                <button type="submit" className="rounded-lg p-2 -m-2 text-ink-muted hover:text-accent">
-                  ×
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="mt-3 space-y-1">
+        <div className={`${SET_ROW_GRID} px-1.5 text-[10px] font-medium uppercase tracking-wide text-ink-muted`}>
+          <span>Set</span>
+          <span>Previous</span>
+          <span className="text-center">{weightUnit === "LB" ? "lb" : "kg"}</span>
+          <span className="text-center">Reps</span>
+        </div>
 
-      <form onSubmit={handleSubmit} className="mt-3 flex flex-wrap items-end gap-2.5">
-        <div>
-          <label className="mb-1 block text-xs text-ink-muted">Weight ({weightUnit === "LB" ? "lb" : "kg"})</label>
-          <NumberStepper value={weight} onChange={setWeight} step={weightStep} min={0} allowAnyValue />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-ink-muted">Reps</label>
-          <NumberStepper value={reps} onChange={setReps} step={1} min={1} />
-        </div>
-        <label className="mb-2.5 flex items-center gap-1.5 text-xs text-ink-muted">
-          <input
-            type="checkbox"
-            checked={isWarmup}
-            onChange={(e) => setIsWarmup(e.target.checked)}
-            className="h-3.5 w-3.5 rounded border-line accent-workout"
-          />
-          Warm-up
-        </label>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-lg bg-workout px-4 py-2.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
-        >
-          Add set
-        </button>
-      </form>
+        {sets.map((set, i) => (
+          <div key={set.id} className="flex items-center gap-1.5 rounded-lg bg-paper px-1.5 py-1.5 text-sm">
+            <div className={`flex-1 ${SET_ROW_GRID}`}>
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                  set.isWarmup ? "bg-line text-ink-muted" : "bg-workout-soft text-workout"
+                }`}
+              >
+                {set.isWarmup ? "W" : set.setNumber}
+              </span>
+              <span className="truncate text-xs text-ink-muted">{previousLabel(lastPerformed?.sets[i], weightUnit)}</span>
+              <span className="text-center font-medium tabular-nums text-ink">{formatWeight(set.weight, weightUnit)}</span>
+              <span className="text-center font-medium tabular-nums text-ink">{set.reps}</span>
+            </div>
+            <form action={removeSet.bind(null, set.id)}>
+              <button type="submit" className="flex h-7 w-7 items-center justify-center rounded-full text-ink-muted hover:text-accent">
+                ×
+              </button>
+            </form>
+          </div>
+        ))}
+
+        <form onSubmit={handleSubmit} className="flex items-center gap-1.5 rounded-lg border border-dashed border-line px-1.5 py-1.5">
+          <div className={`flex-1 ${SET_ROW_GRID}`}>
+            {/* sets.length + 1 matches addSet's own `count + 1` numbering
+                server-side (every existing row counts, warm-ups included)
+                — filtering warm-ups out here would show a number this set
+                won't actually be saved with. */}
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-line text-xs font-medium text-ink-muted">
+              {isWarmup ? "W" : sets.length + 1}
+            </span>
+            <span className="truncate text-xs text-ink-muted">{previousLabel(lastPerformed?.sets[sets.length], weightUnit)}</span>
+            <NumberStepper value={weight} onChange={setWeight} step={weightStep} min={0} allowAnyValue />
+            <NumberStepper value={reps} onChange={setReps} step={1} min={1} />
+          </div>
+          <button
+            type="submit"
+            disabled={isPending}
+            title="Log this set"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-workout text-white hover:opacity-90 disabled:opacity-50"
+          >
+            <CheckIcon className="h-4 w-4" />
+          </button>
+        </form>
+      </div>
+
+      <label className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted">
+        <input
+          type="checkbox"
+          checked={isWarmup}
+          onChange={(e) => setIsWarmup(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-line accent-workout"
+        />
+        Next set is a warm-up
+      </label>
     </div>
   );
 }

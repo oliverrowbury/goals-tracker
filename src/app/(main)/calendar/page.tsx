@@ -133,7 +133,7 @@ export default async function CalendarPage({
           return (
             <Link
               key={dayISO}
-              href={`/journal?date=${dayISO}`}
+              href={`/calendar/${dayISO}`}
               className={`flex aspect-square flex-col items-center gap-1 rounded-xl border pt-2 text-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md ${
                 inMonth ? "border-line bg-card" : "border-transparent text-ink-muted/50"
               } ${isToday ? "ring-2 ring-accent ring-offset-1 ring-offset-paper" : ""}`}

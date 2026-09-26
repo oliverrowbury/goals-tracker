@@ -5,7 +5,6 @@ import { todayISO, shiftISO, monthRangeContaining, yearRangeContaining } from "@
 import { StudyTimer } from "./StudyTimer";
 import { StudyStats } from "./StudyStats";
 import { WeeklyStudyChart } from "./WeeklyStudyChart";
-import { RecentSessions } from "./RecentSessions";
 import { ClockIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -155,18 +154,6 @@ export default async function StudyPage() {
             month: withOpenSession(totalsBySubject(monthSessions), openSession, month.startISO, month.endISO),
             year: withOpenSession(totalsBySubject(yearSessions), openSession, year.startISO, year.endISO),
           }}
-        />
-      </div>
-
-      <div className="mt-8">
-        <RecentSessions
-          subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
-          sessions={weekSessions.slice(0, 10).map((s) => ({
-            id: s.id,
-            subjectId: s.subjectId,
-            durationMinutes: s.durationMinutes,
-            startedAt: s.startedAt.toISOString(),
-          }))}
         />
       </div>
     </div>

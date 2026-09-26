@@ -6,7 +6,8 @@ import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { JournalIcon, TargetIcon, ClockIcon, AlarmIcon } from "@/components/Icons";
 import { promptForDate } from "@/lib/prompts";
-import { daysBetween, dateToISO } from "@/lib/dates";
+import { daysBetween, dateToISO, daysAgo } from "@/lib/dates";
+import { moodFace } from "@/lib/mood";
 import { PromptOfDayCard } from "./PromptOfDayCard";
 import { WeeklyRecap, getWeeklyRecapData } from "./WeeklyRecap";
 import { OnboardingChecklist } from "./OnboardingChecklist";
@@ -31,28 +32,36 @@ export default async function HomePage({
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
 
-  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount, recapData] = await Promise.all([
-    prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(today) } } }),
-    prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
-    prisma.studySession.findMany({
-      where: {
-        userId: user.id,
-        endedAt: { not: null },
-        startedAt: { gte: new Date(`${startISO}T00:00:00.000Z`), lte: new Date(`${endISO}T23:59:59.999Z`) },
-      },
-    }),
-    prisma.deadline.findFirst({
-      where: { userId: user.id, completed: false },
-      orderBy: { dueDate: "asc" },
-    }),
-    prisma.subject.count({ where: { userId: user.id } }),
-    prisma.workout.count({ where: { userId: user.id, endedAt: { not: null } } }),
-    prisma.journalEntry.count({ where: { userId: user.id, bodyText: { not: "" } } }),
-    // Fetched here (not inside <WeeklyRecap>) so it runs in this same
-    // parallel batch instead of only starting once this function returns —
-    // nested async Server Components otherwise fetch in strict sequence.
-    getWeeklyRecapData(user.id, week ?? today),
-  ]);
+  const MOOD_WINDOW_DAYS = 30;
+  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount, recapData, recentMoods] =
+    await Promise.all([
+      prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(today) } } }),
+      prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
+      prisma.studySession.findMany({
+        where: {
+          userId: user.id,
+          endedAt: { not: null },
+          startedAt: { gte: new Date(`${startISO}T00:00:00.000Z`), lte: new Date(`${endISO}T23:59:59.999Z`) },
+        },
+      }),
+      prisma.deadline.findFirst({
+        where: { userId: user.id, completed: false },
+        orderBy: { dueDate: "asc" },
+      }),
+      prisma.subject.count({ where: { userId: user.id } }),
+      prisma.workout.count({ where: { userId: user.id, endedAt: { not: null } } }),
+      prisma.journalEntry.count({ where: { userId: user.id, bodyText: { not: "" } } }),
+      // Fetched here (not inside <WeeklyRecap>) so it runs in this same
+      // parallel batch instead of only starting once this function returns —
+      // nested async Server Components otherwise fetch in strict sequence.
+      getWeeklyRecapData(user.id, week ?? today),
+      prisma.journalEntry.findMany({
+        where: { userId: user.id, mood: { not: null }, date: { gte: daysAgo(MOOD_WINDOW_DAYS) } },
+        select: { mood: true },
+      }),
+    ]);
+
+  const averageMood = recentMoods.length > 0 ? recentMoods.reduce((sum, e) => sum + (e.mood ?? 0), 0) / recentMoods.length : null;
 
   const dueToday = goals.filter((g) => isGoalDueOn(g, today) && g.frequencyType !== "WEEKLY_TARGET");
   const doneToday = dueToday.filter((g) => g.logs.some((l) => l.date.toISOString().slice(0, 10) === today && l.completed));
@@ -154,6 +163,21 @@ export default async function HomePage({
       </div>
 
       <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} />
+
+      {averageMood != null && (
+        <Link
+          href="/journal"
+          className="mt-6 flex items-center gap-3 rounded-2xl border border-line bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
+        >
+          <span className="text-2xl leading-none">{moodFace(Math.round(averageMood))}</span>
+          <span>
+            <span className="block text-sm font-medium text-ink-muted">Average mood</span>
+            <span className="block font-serif text-lg font-semibold text-ink">
+              {averageMood.toFixed(1)} / 5 <span className="font-sans text-sm font-normal text-ink-muted">over the last 30 days</span>
+            </span>
+          </span>
+        </Link>
+      )}
     </div>
   );
 }
