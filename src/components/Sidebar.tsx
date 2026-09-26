@@ -212,23 +212,7 @@ export function Sidebar({
           "sidebar-collapsed" rules there and SIDEBAR_INIT_SCRIPT in the
           root layout for how that class gets applied before paint. */}
       <aside className="app-sidebar hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto">
-        <div className="sidebar-header mb-5 flex items-center gap-2 px-1">
-          <button
-            type="button"
-            onClick={() => toggleSidebarCollapsed()}
-            title="Collapse sidebar"
-            className="chevron-collapse flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line text-ink-muted hover:border-accent hover:text-accent"
-          >
-            <ChevronDownIcon className="h-3.5 w-3.5 rotate-90" />
-          </button>
-          <button
-            type="button"
-            onClick={() => toggleSidebarCollapsed()}
-            title="Expand sidebar"
-            className="chevron-expand hidden h-7 w-7 shrink-0 items-center justify-center rounded-md border border-line text-ink-muted hover:border-accent hover:text-accent"
-          >
-            <ChevronDownIcon className="h-3.5 w-3.5 -rotate-90" />
-          </button>
+        <div className="sidebar-header mb-5 flex items-center px-1">
           <Link href="/" className="sidebar-logo-full text-xl text-ink">
             <Wordmark />
           </Link>
@@ -239,6 +223,32 @@ export function Sidebar({
         {links}
         <div className="mt-4">{accountRow}</div>
       </aside>
+
+      {/* The collapse/expand handle — deliberately NOT a child of <aside>
+          (its own sm:overflow-y-auto would clip anything positioned
+          outside its box) and fixed rather than absolute (so it isn't
+          affected by the flex row's stretch/height games either) —
+          straddles the border between sidebar and page, half over each,
+          at a `left` matching whichever width the sidebar currently is
+          (see the sidebar-collapsed override in globals.css). */}
+      <button
+        type="button"
+        onClick={() => toggleSidebarCollapsed()}
+        title="Collapse sidebar"
+        className="sidebar-edge-toggle chevron-collapse fixed top-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-ink-muted shadow-sm hover:border-accent hover:text-accent sm:flex"
+        style={{ left: "14rem" }}
+      >
+        <ChevronDownIcon className="h-3.5 w-3.5 rotate-90" />
+      </button>
+      <button
+        type="button"
+        onClick={() => toggleSidebarCollapsed()}
+        title="Expand sidebar"
+        className="sidebar-edge-toggle chevron-expand fixed top-1/2 z-20 hidden h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-card text-ink-muted shadow-sm hover:border-accent hover:text-accent"
+        style={{ left: "14rem" }}
+      >
+        <ChevronDownIcon className="h-3.5 w-3.5 -rotate-90" />
+      </button>
     </>
   );
 }

@@ -425,16 +425,12 @@ html.sidebar-collapsed .app-sidebar .sidebar-account-label {
   display: none;
 }
 html.sidebar-collapsed .app-sidebar .sidebar-header {
-  flex-direction: column;
   justify-content: center;
-  gap: 0.5rem;
 }
-html.sidebar-collapsed .app-sidebar .sidebar-logo-full,
-html.sidebar-collapsed .app-sidebar .chevron-collapse {
+html.sidebar-collapsed .app-sidebar .sidebar-logo-full {
   display: none;
 }
-html.sidebar-collapsed .app-sidebar .sidebar-logo-icon,
-html.sidebar-collapsed .app-sidebar .chevron-expand {
+html.sidebar-collapsed .app-sidebar .sidebar-logo-icon {
   display: flex;
 }
 html.sidebar-collapsed .app-sidebar nav a {
@@ -443,6 +439,26 @@ html.sidebar-collapsed .app-sidebar nav a {
 html.sidebar-collapsed .app-sidebar .account-row {
   flex-direction: column;
   gap: 0.5rem;
+}
+/* The collapse/expand handle floats fixed to the viewport (see Sidebar.tsx
+   for why it isn't a child of .app-sidebar), so its horizontal position
+   has to track the sidebar's own width here independently — it's not a
+   descendant these other rules can reach. Wrapped in the same min-width
+   Tailwind's own `sm:` prefix uses: the expand button has no sm:flex of
+   its own (it's meant to stay invisible everywhere until collapsed), so
+   without this guard, collapsing on desktop and then opening the app on
+   a phone with that same preference saved would float it over the
+   mobile UI, which has no persistent sidebar for it to expand. */
+@media (min-width: 640px) {
+  html.sidebar-collapsed .sidebar-edge-toggle {
+    left: 4.5rem;
+  }
+  html.sidebar-collapsed .chevron-collapse {
+    display: none;
+  }
+  html.sidebar-collapsed .chevron-expand {
+    display: flex;
+  }
 }
 /* The whole point of collapsing the sidebar — give the actual page more
    room instead of just leaving the freed-up space empty. */
