@@ -173,8 +173,14 @@ export function Sidebar({
       )}
 
       {/* Desktop — persistent, always visible, no scrolling or drawer
-          needed since a vertical list has room for every section. */}
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:flex">
+          needed since a vertical list has room for every section.
+          sticky + h-screen + self-start pins it to the actual viewport
+          instead of stretching to match main's height (the flex row's
+          default align-items: stretch) — without this, the account row
+          at the bottom only stayed on-screen on a page short enough to
+          fit in one view (Calendar), and got pushed below the fold on
+          anything longer. */}
+      <aside className="hidden w-56 shrink-0 flex-col border-r border-line bg-card p-4 sm:sticky sm:top-0 sm:flex sm:h-screen sm:self-start sm:overflow-y-auto">
         <Link href="/" className="mb-5 px-1 text-xl text-ink">
           <Wordmark />
         </Link>
