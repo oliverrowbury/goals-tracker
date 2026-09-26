@@ -56,18 +56,18 @@ export default async function LoginPage({
           )}
           {error && error !== "locked" && (
             <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-              Wrong email or password — try again.
+              Wrong email/username or password — try again.
             </p>
           )}
 
-          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="email">
-            Email
+          <label className="mb-1 block text-sm font-medium text-ink" htmlFor="identifier">
+            Email or username
           </label>
           <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="identifier"
+            name="identifier"
+            type="text"
+            autoComplete="username"
             autoFocus
             required
             className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"

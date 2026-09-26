@@ -136,6 +136,28 @@ export async function sendVerificationEmail(to: string, name: string, verifyUrl:
   });
 }
 
+// Sent to the OLD address (not the new one) — same reasoning as
+// sendPasswordChangedEmail: if this wasn't you, the address that just got
+// changed away from is the one place someone can still be reached to
+// notice and react.
+export async function sendEmailChangedEmail(to: string, name: string, newEmail: string): Promise<void> {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  await sendEmail({
+    to,
+    subject: "Your Proudly email was changed",
+    html: layout(`
+      <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#2b2420;">
+        This is a confirmation that your Proudly account's email was just changed to <strong>${newEmail}</strong>.
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+        If this wasn't you, your account may be compromised — sign in and change your password
+        right away.
+      </p>
+    `),
+  });
+}
+
 export async function sendPasswordChangedEmail(to: string, name: string): Promise<void> {
   const firstName = name.trim().split(/\s+/)[0] || name;
   await sendEmail({

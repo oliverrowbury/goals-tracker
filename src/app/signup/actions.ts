@@ -6,7 +6,7 @@ import { AUTH_COOKIE, baseUrl } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, generateSessionToken } from "@/lib/password";
 import { sendWelcomeEmail, sendVerificationEmail } from "@/lib/email";
-import { USERNAME_RE } from "@/lib/constants";
+import { USERNAME_RE, EMAIL_RE } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
 
 const VERIFY_TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
@@ -29,8 +29,6 @@ export type SignupState = {
   // re-typing a password on any error.
   values: { name: string; username: string; email: string };
 } | null;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function signup(_prev: SignupState, formData: FormData): Promise<SignupState> {
   const name = String(formData.get("name") ?? "").trim();

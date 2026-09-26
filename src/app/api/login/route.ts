@@ -22,7 +22,7 @@ const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   const form = await request.formData();
-  const email = String(form.get("email") ?? "")
+  const identifier = String(form.get("identifier") ?? "")
     .trim()
     .toLowerCase();
   const password = String(form.get("password") ?? "");
@@ -30,7 +30,14 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const from = safeRedirectPath(cookieStore.get(LOGIN_REDIRECT_COOKIE)?.value);
 
-  const user = email ? await prisma.user.findUnique({ where: { email } }) : null;
+  // A username never contains "@" (see USERNAME_RE) and an email always
+  // does, so which field to look up by is unambiguous from the input
+  // alone — no separate "is this an email" toggle needed on the form.
+  const user = identifier
+    ? identifier.includes("@")
+      ? await prisma.user.findUnique({ where: { email: identifier } })
+      : await prisma.user.findUnique({ where: { username: identifier } })
+    : null;
 
   if (user?.lockedUntil && user.lockedUntil > new Date()) {
     const url = new URL("/login", request.url);

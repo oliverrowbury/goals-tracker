@@ -5,6 +5,7 @@ import { UpdateNameForm } from "./UpdateNameForm";
 import { RenameSubjectForm } from "./RenameSubjectForm";
 import { PasswordForm } from "./PasswordForm";
 import { UsernameForm } from "./UsernameForm";
+import { EmailForm } from "./EmailForm";
 import { UnitsForm } from "./UnitsForm";
 import { NewSubjectForm } from "./NewSubjectForm";
 import { NotificationsForm } from "./NotificationsForm";
@@ -128,6 +129,11 @@ export default async function SettingsPage() {
         <div className="mt-6 border-t border-line pt-6">
           <p className="mb-3 text-sm font-medium text-ink">Username</p>
           <UsernameForm current={user.username} cooldownDaysLeft={usernameCooldownDaysLeft} />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-3 text-sm font-medium text-ink">Email</p>
+          <EmailForm current={user.email} />
         </div>
 
         <div className="mt-6 border-t border-line pt-6">

@@ -7,8 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, verifyPassword, generateSessionToken } from "@/lib/password";
-import { sendPasswordChangedEmail } from "@/lib/email";
-import { USERNAME_RE, GENDERS, type Gender, FOCUS_TAGS, type FocusTag } from "@/lib/constants";
+import { sendPasswordChangedEmail, sendEmailChangedEmail } from "@/lib/email";
+import { USERNAME_RE, EMAIL_RE, GENDERS, type Gender, FOCUS_TAGS, type FocusTag } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
 import { toKg, toCm } from "@/lib/workout";
 import { ageInYears } from "@/lib/dates";
@@ -89,6 +89,39 @@ export async function updateUsername(_prev: SettingsActionState, formData: FormD
   await prisma.user.update({ where: { id: user.id }, data: { username, usernameChangedAt: new Date() } });
   revalidatePath("/settings");
   return { success: "Username updated." };
+}
+
+// Requires the current password, same bar as deleteAccount — email is the
+// login identifier and the target of "forgot password," so changing it is
+// a security-relevant action, not a cosmetic profile field like name/bio.
+export async function updateEmail(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+  const password = String(formData.get("password") ?? "");
+
+  if (!EMAIL_RE.test(email)) return { error: "That doesn't look like a valid email address." };
+
+  const user = await getCurrentUser();
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) return { error: "Password is wrong." };
+
+  if (email === user.email) return { success: "That's already your email." };
+
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return { error: "That email is already in use." };
+
+  // The new address hasn't been verified — reset the flag rather than
+  // carrying over whatever the old address's status was. No new
+  // verification email is sent here: Resend's sandbox sender can't
+  // actually deliver to an arbitrary new address yet (see the "verify
+  // your email" nag's own paused comment in (main)/layout.tsx), so
+  // sending one here would just silently go nowhere.
+  await prisma.user.update({ where: { id: user.id }, data: { email, emailVerifiedAt: null } });
+  await sendEmailChangedEmail(user.email, user.name, email);
+
+  revalidatePath("/settings");
+  return { success: "Email updated." };
 }
 
 export type UnitsActionState = { weightUnit: "KG" | "LB"; distanceUnit: "KM" | "MI" } | null;

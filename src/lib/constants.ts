@@ -61,3 +61,7 @@ export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"]
 // username readable in a URL (/friends/add/[username]) with nothing to
 // URL-encode. Shared between signup and the Settings username field.
 export const USERNAME_RE = /^[a-z][a-z0-9_]{2,19}$/;
+
+// Not a full RFC 5322 validator — just enough to reject an obviously
+// malformed address. Shared between signup and the Settings email field.
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
