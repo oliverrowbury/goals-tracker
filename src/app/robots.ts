@@ -11,6 +11,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: ["/login", "/signup", "/privacy", "/terms"],
       disallow: "/",
     },
-    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://goals-tracker-y6se.vercel.app"}/sitemap.xml`,
+    sitemap: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://proudlyapp.co.uk"}/sitemap.xml`,
   };
 }

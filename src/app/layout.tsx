@@ -19,7 +19,7 @@ const fraunces = Fraunces({
   weight: ["500", "600"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://goals-tracker-y6se.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://proudlyapp.co.uk";
 const SITE_DESCRIPTION = "A daily journal for what you're proud of, with goals, study, and workout tracking alongside it.";
 
 export const metadata: Metadata = {

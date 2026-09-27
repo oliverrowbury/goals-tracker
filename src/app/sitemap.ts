@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://goals-tracker-y6se.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://proudlyapp.co.uk";
 
 // Same short list as robots.ts's allow rule — the only pages a crawler can
 // actually reach without a session.
