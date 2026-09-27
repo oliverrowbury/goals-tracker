@@ -16,9 +16,10 @@ export async function GET() {
         }}
       >
         <svg width="352" height="352" viewBox="0 0 48 48" fill="none">
-          <rect x="8" y="30" width="8" height="12" rx="1.5" fill="#c1592f" />
-          <rect x="20" y="20" width="8" height="22" rx="1.5" fill="#c1592f" />
-          <rect x="32" y="8" width="8" height="34" rx="1.5" fill="#c1592f" />
+          <rect x="6" y="32" width="7" height="10" rx="1.5" fill="#c1592f" />
+          <rect x="16" y="24" width="7" height="18" rx="1.5" fill="#c1592f" />
+          <rect x="26" y="17" width="7" height="25" rx="1.5" fill="#c1592f" />
+          <rect x="36" y="8" width="7" height="34" rx="1.5" fill="#c1592f" />
         </svg>
       </div>
     ),
