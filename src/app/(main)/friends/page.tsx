@@ -299,7 +299,7 @@ export default async function FriendsPage() {
         </Link>
         <Link href={`/friends/${user.username}/followers`} className="hover:opacity-70">
           <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
-          <span className="text-ink-muted">followers</span>
+          <span className="text-ink-muted">follower{followerCount === 1 ? "" : "s"}</span>
         </Link>
       </div>
 
@@ -308,28 +308,28 @@ export default async function FriendsPage() {
           <JournalIcon className="h-5 w-5 shrink-0 text-accent" />
           <div>
             <p className="font-serif text-base font-semibold text-ink">{journalCount}</p>
-            <p className="text-xs text-ink-muted">journals</p>
+            <p className="text-xs text-ink-muted">journal{journalCount === 1 ? "" : "s"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <ClockIcon className="h-5 w-5 shrink-0 text-study" />
           <div>
             <p className="font-serif text-base font-semibold text-ink">{studySessionCount}</p>
-            <p className="text-xs text-ink-muted">study sessions</p>
+            <p className="text-xs text-ink-muted">study session{studySessionCount === 1 ? "" : "s"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <DumbbellIcon className="h-5 w-5 shrink-0 text-workout" />
           <div>
             <p className="font-serif text-base font-semibold text-ink">{workoutCount}</p>
-            <p className="text-xs text-ink-muted">workouts</p>
+            <p className="text-xs text-ink-muted">workout{workoutCount === 1 ? "" : "s"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <TargetIcon className="h-5 w-5 shrink-0 text-goals" />
           <div>
             <p className="font-serif text-base font-semibold text-ink">{goalsDoneCount}</p>
-            <p className="text-xs text-ink-muted">goals done</p>
+            <p className="text-xs text-ink-muted">goal{goalsDoneCount === 1 ? "" : "s"} done</p>
           </div>
         </div>
       </div>

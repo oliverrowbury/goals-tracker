@@ -57,7 +57,7 @@ export function WeeklyStudyChart({ subjects, days, todayISO }: { subjects: Subje
 
               return (
                 <div key={day.dateISO} className="flex flex-1 flex-col items-center gap-1.5">
-                  <p className="h-4 text-[11px] font-medium tabular-nums text-ink-muted">
+                  <p className="h-4 whitespace-nowrap text-[11px] font-medium tabular-nums text-ink-muted">
                     {total > 0 ? formatMinutes(total) : ""}
                   </p>
                   <div

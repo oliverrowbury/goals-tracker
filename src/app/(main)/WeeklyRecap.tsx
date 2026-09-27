@@ -7,7 +7,7 @@ import { formatDistance, formatPace } from "@/lib/workout";
 import { ChartIcon } from "@/components/Icons";
 import type { DistanceUnit } from "@/lib/constants";
 
-type GoalSummary = { title: string; hit: boolean; detail: string };
+type GoalSummary = { id: string; title: string; hit: boolean; detail: string };
 type WorkoutSummary = { id: string; label: string; type: string; distanceKm: number | null; durationMinutes: number | null };
 
 export type WeeklyRecapData = {
@@ -63,22 +63,32 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
   const goalSummaries = goals
     .map((goal) => {
       if (goal.frequencyType === "WEEKLY_TARGET") {
-        const total = goal.subjectId
+        const autoPart = goal.subjectId
           ? (minutesBySubject.get(goal.subjectId) ?? 0)
           : goal.workoutMetric === "SESSIONS"
             ? workoutSessionCount
             : goal.workoutMetric === "MINUTES"
               ? workoutMinutes
-              : goal.logs
-                  .filter((l) => days.includes(l.date.toISOString().slice(0, 10)))
-                  .reduce((sum, l) => sum + (l.value ?? 0), 0);
-        return { title: goal.title, hit: total >= (goal.targetValue ?? 0), detail: `${total}/${goal.targetValue} ${goal.unit ?? ""}` };
+              : 0;
+        // Same manual top-up goals/page.tsx's GoalExtraInput writes — without
+        // this, an auto-tracked goal shows a lower total here than on the
+        // Goals page itself for the exact same week.
+        const manualPart = goal.logs
+          .filter((l) => days.includes(l.date.toISOString().slice(0, 10)))
+          .reduce((sum, l) => sum + (l.value ?? 0), 0);
+        const total = autoPart + manualPart;
+        return {
+          id: goal.id,
+          title: goal.title,
+          hit: total >= (goal.targetValue ?? 0),
+          detail: `${total}/${goal.targetValue} ${goal.unit ?? ""}`,
+        };
       }
       const dueDays = days.filter((d) => isGoalDueOn(goal, d) && d <= today);
       if (dueDays.length === 0) return null;
       const completedDates = new Set(goal.logs.filter((l) => l.completed).map((l) => l.date.toISOString().slice(0, 10)));
       const doneCount = dueDays.filter((d) => completedDates.has(d)).length;
-      return { title: goal.title, hit: doneCount === dueDays.length, detail: `${doneCount}/${dueDays.length} days` };
+      return { id: goal.id, title: goal.title, hit: doneCount === dueDays.length, detail: `${doneCount}/${dueDays.length} days` };
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
 
@@ -151,7 +161,7 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
           ) : (
             <ul className="-mx-5 divide-y divide-line">
               {goalSummaries.map((g) => (
-                <li key={g.title} className="flex items-center justify-between px-5 py-2 text-sm">
+                <li key={g.id} className="flex items-center justify-between px-5 py-2 text-sm">
                   <span className={g.hit ? "text-ink" : "text-ink-muted"}>{g.title}</span>
                   <span className={g.hit ? "font-medium text-goals" : "text-ink-muted"}>{g.detail}</span>
                 </li>
