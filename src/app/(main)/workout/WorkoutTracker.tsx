@@ -500,7 +500,7 @@ function NumberStepper({
       <button
         type="button"
         onClick={() => bump(-step)}
-        className="px-2.5 text-base text-ink-muted hover:bg-workout-soft hover:text-workout active:bg-workout-soft"
+        className="w-6 shrink-0 text-sm text-ink-muted hover:bg-workout-soft hover:text-workout active:bg-workout-soft"
         tabIndex={-1}
       >
         −
@@ -508,18 +508,27 @@ function NumberStepper({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={(e) => e.target.select()}
+        onFocus={(e) => {
+          e.target.select();
+          // A real phone's on-screen keyboard can cover this row entirely
+          // once it slides up, especially with several sets already
+          // logged above it — the delay lets that animation get underway
+          // first (scrolling immediately still leaves it hidden a moment
+          // later once the keyboard finishes opening).
+          const el = e.target;
+          setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+        }}
         type="number"
         inputMode="decimal"
         min={min}
         step={allowAnyValue ? "any" : step}
         required
-        className="w-14 min-w-0 bg-transparent px-1 py-2 text-center text-base focus:outline-none"
+        className="w-0 min-w-0 flex-1 bg-transparent px-0.5 py-2 text-center text-sm focus:outline-none"
       />
       <button
         type="button"
         onClick={() => bump(step)}
-        className="px-2.5 text-base text-ink-muted hover:bg-workout-soft hover:text-workout active:bg-workout-soft"
+        className="w-6 shrink-0 text-sm text-ink-muted hover:bg-workout-soft hover:text-workout active:bg-workout-soft"
         tabIndex={-1}
       >
         +
@@ -564,8 +573,15 @@ function ExerciseReference({ name }: { name: string }) {
 
 // A logged set's row in the Hevy-style table below — a fixed 4-column grid
 // (set/previous/weight/reps) so every row, including the still-being-typed
-// one at the bottom, lines up under the same header.
-const SET_ROW_GRID = "grid grid-cols-[28px_1fr_1fr_1fr] items-center gap-2";
+// one at the bottom, lines up under the same header. Weight/reps get a
+// fixed-ish minmax rather than sharing 1fr evenly with Previous: a bare
+// `1fr` track can still be squeezed narrower than its content's intrinsic
+// width, and NumberStepper's own wrapper clips overflow instead of letting
+// it bleed — on a narrow phone (~320-360px) that silently cut off the
+// typed number and the + button entirely, leaving only "−" visible, which
+// is what "can't see the weight or reps" turned out to be. Previous is the
+// one column that can actually afford to shrink (it already truncates).
+const SET_ROW_GRID = "grid grid-cols-[22px_minmax(0,1fr)_5.5rem_4.5rem] items-center gap-1";
 
 function previousLabel(prev: { weight: number; reps: number; isWarmup: boolean } | undefined, weightUnit: WeightUnit): string {
   if (!prev) return "—";

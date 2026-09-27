@@ -5,6 +5,20 @@
    variant — .dark is toggled by ThemeToggle and persisted in localStorage. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Every numeric input in the app pairs with its own +/- buttons (see
+   NumberStepper on the Workout page) — the native spin-button arrows are
+   redundant clutter on top of those, and on a narrow phone they were also
+   eating into the input's own already-tight width, contributing to the
+   weight/reps digits getting clipped there. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 :root {
   --paper: #fbf6ee;
   --ink: #2b2420;
