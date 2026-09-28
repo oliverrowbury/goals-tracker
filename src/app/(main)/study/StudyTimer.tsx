@@ -204,11 +204,30 @@ export function StudyTimer({
   // timed session.
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const clockOffsetMs = useClockOffsetMs(serverNow);
-  const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, openSession?.pausedAt ?? null, clockOffsetMs);
+
+  // Pause/resume mutate the session on the server, then revalidate the whole
+  // page — until that round-trip lands, `openSession.pausedAt` is still
+  // whatever it was before the click, so the clock kept visibly ticking (or
+  // stayed frozen) for however long that took, up to a few seconds on a cold
+  // serverless function. This tracks what we expect the next server value to
+  // be so the displayed clock freezes/resumes the instant a button is
+  // pressed, and is cleared once the server actually agrees — see the effect
+  // below. `undefined` means "no pending optimistic change, trust the server."
+  const [optimisticPausedAt, setOptimisticPausedAt] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (optimisticPausedAt === undefined) return;
+    const serverPausedAt = openSession?.pausedAt ?? null;
+    const serverAgrees = (optimisticPausedAt === null) === (serverPausedAt === null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the server's pausedAt (a prop) resolving to match our optimistic guess, not a per-render update; there's no external-system subscription to attach this to
+    if (serverAgrees) setOptimisticPausedAt(undefined);
+  }, [openSession?.pausedAt, optimisticPausedAt]);
+  const effectivePausedAt = optimisticPausedAt !== undefined ? optimisticPausedAt : (openSession?.pausedAt ?? null);
+
+  const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, effectivePausedAt, clockOffsetMs);
 
   const activeSubject = subjects.find((s) => s.id === openSession?.subjectId);
-  const isRunning = !!openSession && !openSession.pausedAt;
-  const isPaused = !!openSession && !!openSession.pausedAt;
+  const isRunning = !!openSession && !effectivePausedAt;
+  const isPaused = !!openSession && !!effectivePausedAt;
 
   // Pomodoro is a client-side layer on top of the same pause/resume actions
   // used above — a "work" interval ending calls pauseStudySession exactly
@@ -246,6 +265,9 @@ export function StudyTimer({
       setJustFinished(null);
       setSelectedSubjectId(null);
     }
+    // A new session has its own fresh pausedAt (null) — any optimistic
+    // override belonged to the session that just ended/finished.
+    setOptimisticPausedAt(undefined);
   }
 
   // Ticks the current phase down once a second — work only while the
@@ -270,18 +292,20 @@ export function StudyTimer({
   useEffect(() => {
     if (!pomodoroEnabled || phaseSecondsLeft > 0 || !openSessionId) return;
     if (pomodoroPhase === "work") {
-      startTransition(() => pauseStudySession(openSessionId));
       // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOptimisticPausedAt(new Date(Date.now() - clockOffsetMs).toISOString());
+      startTransition(() => pauseStudySession(openSessionId));
       setPomodoroPhase("break");
       setPhaseSecondsLeft(breakMinutes * 60);
     } else {
+      setOptimisticPausedAt(null);
       startTransition(() => resumeStudySession(openSessionId));
-       
+
       setPomodoroPhase("work");
       setPhaseSecondsLeft(workMinutes * 60);
       setCompletedPomodoros((c) => c + 1);
     }
-  }, [phaseSecondsLeft, pomodoroEnabled, pomodoroPhase, openSessionId, breakMinutes, workMinutes]);
+  }, [phaseSecondsLeft, pomodoroEnabled, pomodoroPhase, openSessionId, breakMinutes, workMinutes, clockOffsetMs]);
 
   function togglePomodoro() {
     const next = !pomodoroEnabled;
@@ -293,12 +317,14 @@ export function StudyTimer({
       setPhaseSecondsLeft(workMinutes * 60);
     } else if (onPomodoroBreak && openSessionId) {
       // Turning it off mid-break shouldn't leave the session stuck paused.
+      setOptimisticPausedAt(null);
       startTransition(() => resumeStudySession(openSessionId));
     }
   }
 
   function skipBreak() {
     if (!openSessionId) return;
+    setOptimisticPausedAt(null);
     startTransition(() => resumeStudySession(openSessionId));
     setPomodoroPhase("work");
     setPhaseSecondsLeft(workMinutes * 60);
@@ -319,6 +345,7 @@ export function StudyTimer({
         setTimeout(() => {
           if (hiddenSinceRef.current && Date.now() - hiddenSinceRef.current >= AUTO_PAUSE_AFTER_MS && document.hidden) {
             setAutoPaused(true);
+            setOptimisticPausedAt(new Date(Date.now() - clockOffsetMs).toISOString());
             startTransition(() => pauseStudySession(sessionId));
           }
         }, AUTO_PAUSE_AFTER_MS + 200);
@@ -329,7 +356,7 @@ export function StudyTimer({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isRunning, openSession]);
+  }, [isRunning, openSession, clockOffsetMs]);
 
   return (
     <div className="space-y-8">
@@ -380,6 +407,7 @@ export function StudyTimer({
                     disabled={isPending}
                     onClick={() => {
                       setAutoPaused(false);
+                      setOptimisticPausedAt(new Date(Date.now() - clockOffsetMs).toISOString());
                       startTransition(() => pauseStudySession(openSession.id));
                     }}
                     className="rounded-lg border border-line px-5 py-2 text-sm font-medium text-ink hover:border-study disabled:opacity-50"
@@ -392,6 +420,7 @@ export function StudyTimer({
                     disabled={isPending}
                     onClick={() => {
                       setAutoPaused(false);
+                      setOptimisticPausedAt(null);
                       startTransition(() => resumeStudySession(openSession.id));
                     }}
                     className="rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
