@@ -206,24 +206,51 @@ export function StudyTimer({
   const clockOffsetMs = useClockOffsetMs(serverNow);
 
   // Pause/resume mutate the session on the server, then revalidate the whole
-  // page — until that round-trip lands, `openSession.pausedAt` is still
-  // whatever it was before the click, so the clock kept visibly ticking (or
-  // stayed frozen) for however long that took, up to a few seconds on a cold
-  // serverless function. This tracks what we expect the next server value to
-  // be so the displayed clock freezes/resumes the instant a button is
-  // pressed, and is cleared once the server actually agrees — see the effect
-  // below. `undefined` means "no pending optimistic change, trust the server."
-  const [optimisticPausedAt, setOptimisticPausedAt] = useState<string | null | undefined>(undefined);
+  // page — until that round-trip lands, openSession's own startedAt/pausedAt
+  // are still whatever they were before the click, so the clock kept
+  // visibly ticking (or stayed frozen) for however long that took, up to a
+  // few seconds on a cold serverless function. This tracks what we expect
+  // the next server values to be so the displayed clock freezes/resumes the
+  // instant a button is pressed, and is cleared once the server actually
+  // agrees — see the effect below. `undefined` means "no pending optimistic
+  // change, trust the server."
+  //
+  // Resuming needs startedAt in the override too, not just pausedAt: the
+  // server's resumeStudySession shifts startedAt forward by however long the
+  // session was paused, so (now - startedAt) is still correct once running
+  // again. Freezing pausedAt back to null while still handing
+  // useElapsedSeconds the OLD startedAt briefly counted the entire paused
+  // stretch as elapsed study time — a much bigger, wrong number — until the
+  // server's real (shifted) startedAt arrived a few seconds later and it
+  // snapped back down. optimisticResume below mirrors that same shift
+  // client-side so the number is right from the first frame.
+  const [timeOverride, setTimeOverride] = useState<{ startedAt: string; pausedAt: string | null } | undefined>(undefined);
   useEffect(() => {
-    if (optimisticPausedAt === undefined) return;
+    if (timeOverride === undefined) return;
     const serverPausedAt = openSession?.pausedAt ?? null;
-    const serverAgrees = (optimisticPausedAt === null) === (serverPausedAt === null);
+    const serverAgrees = (timeOverride.pausedAt === null) === (serverPausedAt === null);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the server's pausedAt (a prop) resolving to match our optimistic guess, not a per-render update; there's no external-system subscription to attach this to
-    if (serverAgrees) setOptimisticPausedAt(undefined);
-  }, [openSession?.pausedAt, optimisticPausedAt]);
-  const effectivePausedAt = optimisticPausedAt !== undefined ? optimisticPausedAt : (openSession?.pausedAt ?? null);
+    if (serverAgrees) setTimeOverride(undefined);
+  }, [openSession?.pausedAt, timeOverride]);
+  const effectiveStartedAt = timeOverride ? timeOverride.startedAt : (openSession?.startedAt ?? null);
+  const effectivePausedAt = timeOverride ? timeOverride.pausedAt : (openSession?.pausedAt ?? null);
 
-  const elapsedSeconds = useElapsedSeconds(openSession?.startedAt ?? null, effectivePausedAt, clockOffsetMs);
+  // Only pause ever needs the current clock read outside a click handler
+  // (the tab-hidden auto-pause fires from a timeout, not a click), so these
+  // two live at component scope rather than as local consts in each handler.
+  function optimisticPause() {
+    if (!openSession) return;
+    setTimeOverride({ startedAt: openSession.startedAt, pausedAt: new Date(Date.now() - clockOffsetMs).toISOString() });
+  }
+  function optimisticResume() {
+    if (!openSession || !effectivePausedAt) return;
+    const nowMs = Date.now() - clockOffsetMs;
+    const pausedMs = nowMs - new Date(effectivePausedAt).getTime();
+    const shiftedStart = new Date(new Date(openSession.startedAt).getTime() + pausedMs).toISOString();
+    setTimeOverride({ startedAt: shiftedStart, pausedAt: null });
+  }
+
+  const elapsedSeconds = useElapsedSeconds(effectiveStartedAt, effectivePausedAt, clockOffsetMs);
 
   const activeSubject = subjects.find((s) => s.id === openSession?.subjectId);
   const isRunning = !!openSession && !effectivePausedAt;
@@ -265,9 +292,9 @@ export function StudyTimer({
       setJustFinished(null);
       setSelectedSubjectId(null);
     }
-    // A new session has its own fresh pausedAt (null) — any optimistic
+    // A new session has its own fresh startedAt/pausedAt — any optimistic
     // override belonged to the session that just ended/finished.
-    setOptimisticPausedAt(undefined);
+    setTimeOverride(undefined);
   }
 
   // Ticks the current phase down once a second — work only while the
@@ -293,18 +320,22 @@ export function StudyTimer({
     if (!pomodoroEnabled || phaseSecondsLeft > 0 || !openSessionId) return;
     if (pomodoroPhase === "work") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOptimisticPausedAt(new Date(Date.now() - clockOffsetMs).toISOString());
+      optimisticPause();
       startTransition(() => pauseStudySession(openSessionId));
       setPomodoroPhase("break");
       setPhaseSecondsLeft(breakMinutes * 60);
     } else {
-      setOptimisticPausedAt(null);
+      optimisticResume();
       startTransition(() => resumeStudySession(openSessionId));
 
       setPomodoroPhase("work");
       setPhaseSecondsLeft(workMinutes * 60);
       setCompletedPomodoros((c) => c + 1);
     }
+    // optimisticPause/optimisticResume aren't listed — this effect already
+    // re-runs every second via phaseSecondsLeft (the ticking effect above
+    // updates it), so it never runs with a closure staler than a second.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phaseSecondsLeft, pomodoroEnabled, pomodoroPhase, openSessionId, breakMinutes, workMinutes, clockOffsetMs]);
 
   function togglePomodoro() {
@@ -317,14 +348,14 @@ export function StudyTimer({
       setPhaseSecondsLeft(workMinutes * 60);
     } else if (onPomodoroBreak && openSessionId) {
       // Turning it off mid-break shouldn't leave the session stuck paused.
-      setOptimisticPausedAt(null);
+      optimisticResume();
       startTransition(() => resumeStudySession(openSessionId));
     }
   }
 
   function skipBreak() {
     if (!openSessionId) return;
-    setOptimisticPausedAt(null);
+    optimisticResume();
     startTransition(() => resumeStudySession(openSessionId));
     setPomodoroPhase("work");
     setPhaseSecondsLeft(workMinutes * 60);
@@ -345,7 +376,7 @@ export function StudyTimer({
         setTimeout(() => {
           if (hiddenSinceRef.current && Date.now() - hiddenSinceRef.current >= AUTO_PAUSE_AFTER_MS && document.hidden) {
             setAutoPaused(true);
-            setOptimisticPausedAt(new Date(Date.now() - clockOffsetMs).toISOString());
+            optimisticPause();
             startTransition(() => pauseStudySession(sessionId));
           }
         }, AUTO_PAUSE_AFTER_MS + 200);
@@ -356,6 +387,10 @@ export function StudyTimer({
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    // optimisticPause isn't listed — every value it closes over (openSession,
+    // clockOffsetMs) is already a dep here, so this effect already re-runs
+    // whenever its captured closure would've gone stale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning, openSession, clockOffsetMs]);
 
   return (
@@ -407,7 +442,7 @@ export function StudyTimer({
                     disabled={isPending}
                     onClick={() => {
                       setAutoPaused(false);
-                      setOptimisticPausedAt(new Date(Date.now() - clockOffsetMs).toISOString());
+                      optimisticPause();
                       startTransition(() => pauseStudySession(openSession.id));
                     }}
                     className="rounded-lg border border-line px-5 py-2 text-sm font-medium text-ink hover:border-study disabled:opacity-50"
@@ -420,7 +455,7 @@ export function StudyTimer({
                     disabled={isPending}
                     onClick={() => {
                       setAutoPaused(false);
-                      setOptimisticPausedAt(null);
+                      optimisticResume();
                       startTransition(() => resumeStudySession(openSession.id));
                     }}
                     className="rounded-lg bg-study px-5 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
