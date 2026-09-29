@@ -2,7 +2,7 @@
 // the "y" — the steps do the climbing, not the whole word. Sized in `em`
 // so it scales cleanly wherever it's dropped (nav bar vs. login card)
 // just by setting a font-size on an ancestor.
-const BAR_HEIGHTS_EM = [0.16, 0.28, 0.4, 0.54];
+const BAR_HEIGHTS_EM = [0.28, 0.4, 0.54];
 
 export function Wordmark({ className = "", animated = false }: { className?: string; animated?: boolean }) {
   return (

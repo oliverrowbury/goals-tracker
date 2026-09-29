@@ -29,7 +29,7 @@ import {
 // floating bare bars in the corner — an actual app-icon mark, not a raw
 // chart glyph. Kept local rather than added to Wordmark itself, since
 // nowhere else needs an icon-only variant.
-const BAR_HEIGHTS_PX = [6, 10, 14, 18];
+const BAR_HEIGHTS_PX = [10, 14, 18];
 function SidebarLogoIcon() {
   return (
     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft" aria-hidden="true">

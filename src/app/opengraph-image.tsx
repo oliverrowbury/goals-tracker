@@ -7,7 +7,7 @@ export const contentType = "image/png";
 // inline styles — Satori (what ImageResponse renders through) doesn't run
 // Tailwind or read CSS custom properties, so the app's own --accent tokens
 // are hardcoded here instead.
-const BAR_HEIGHTS = [26, 46, 66, 90];
+const BAR_HEIGHTS = [46, 66, 90];
 
 export default function OpengraphImage() {
   return new ImageResponse(
