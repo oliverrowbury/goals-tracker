@@ -15,6 +15,7 @@ import {
   createExercise,
   setWorkoutVisibility,
   setWorkoutArchived,
+  autoCloseIfStale,
 } from "./actions";
 import { formatMinutes } from "@/lib/study";
 import {
@@ -751,6 +752,22 @@ export function WorkoutTracker({
   const [restEndAt, setRestEndAt] = useState<number | null>(null);
   const clockOffsetMs = useClockOffsetMs(serverNow);
   const elapsedSeconds = useElapsedSeconds(openWorkout?.startedAt ?? null, clockOffsetMs);
+
+  // A workout left open for hours (tab closed mid-session, phone died) has
+  // no equivalent of Study's tab-hidden auto-pause to catch it, so it just
+  // sits there with the live timer above counting up indefinitely — visibly
+  // broken-looking (a "25:31:01" workout) the next time this page loads,
+  // and would eventually get recorded with that same nonsense duration once
+  // something finally closes it. Check once when a stale one shows up on
+  // screen and let the server decide whether it's actually abandoned.
+  useEffect(() => {
+    if (!openWorkout) return;
+    startTransition(() => autoCloseIfStale(openWorkout.id));
+    // Only re-check if a different workout becomes the open one — not on
+    // every render, and not on every tick of the elapsed-time clock above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openWorkout?.id]);
+
   const {
     distanceKm: gpsDistanceKm,
     status: gpsStatus,

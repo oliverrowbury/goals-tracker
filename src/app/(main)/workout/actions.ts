@@ -29,17 +29,63 @@ function revalidateWorkoutViews() {
   revalidatePath("/");
 }
 
+// Generous beyond any real single session (even a long hike or event) —
+// anything open longer than this almost certainly means the tab was just
+// left open/forgotten, not a genuine multi-hour workout. Recording one of
+// these at face value would leave a nonsense multi-hour entry sitting in
+// the log, skewing weekly totals, streaks, and volume.
+const MAX_PLAUSIBLE_WORKOUT_MINUTES = 6 * 60;
+
 // Same "only one timer at a time" rule as Study — closing out anything left
-// open (e.g. a tab closed mid-workout) before starting a new one.
+// open (e.g. a tab closed mid-workout) before starting a new one. Also used
+// by autoCloseIfStale below to tidy up a long-abandoned session on its own,
+// without waiting for the user to start a new workout.
 async function closeStrayOpenWorkouts(userId: string) {
-  const open = await prisma.workout.findMany({ where: { userId, endedAt: null } });
+  const open = await prisma.workout.findMany({
+    where: { userId, endedAt: null },
+    include: { sets: { select: { id: true } } },
+  });
   for (const workout of open) {
     const endedAt = new Date();
-    await prisma.workout.update({
-      where: { id: workout.id },
-      data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },
-    });
+    const durationMinutes = minutesBetween(workout.startedAt ?? endedAt, endedAt);
+    // Nothing logged (strength only — cardio never has sets), or left open
+    // far longer than any real session — same "not worth keeping" call
+    // finishStrengthWorkout already makes for a 0-set finish.
+    const nothingToKeep = workout.type === "STRENGTH" && workout.sets.length === 0;
+    if (nothingToKeep || durationMinutes > MAX_PLAUSIBLE_WORKOUT_MINUTES) {
+      await prisma.workout.delete({ where: { id: workout.id } });
+      continue;
+    }
+    await prisma.workout.update({ where: { id: workout.id }, data: { endedAt, durationMinutes } });
   }
+}
+
+// Same idea as Study's tab-hidden auto-pause, adapted to Workout's simpler
+// start/finish model (no pause) — called from the client once the open
+// workout on screen has clearly been abandoned, so a forgotten session gets
+// tidied up as soon as the page is next visited instead of sitting there
+// with an ever-growing, increasingly absurd-looking timer until the user
+// happens to start a new workout. A no-op if the workout is still a
+// plausible in-progress session (the common case) or already closed.
+export async function autoCloseIfStale(workoutId: string) {
+  const user = await getCurrentUser();
+  const workout = await prisma.workout.findFirst({
+    where: { id: workoutId, userId: user.id, endedAt: null },
+    include: { sets: { select: { id: true } } },
+  });
+  if (!workout) return;
+
+  const endedAt = new Date();
+  const durationMinutes = minutesBetween(workout.startedAt ?? endedAt, endedAt);
+  if (durationMinutes <= MAX_PLAUSIBLE_WORKOUT_MINUTES) return;
+
+  const nothingToKeep = workout.type === "STRENGTH" && workout.sets.length === 0;
+  if (nothingToKeep) {
+    await prisma.workout.delete({ where: { id: workoutId } });
+  } else {
+    await prisma.workout.update({ where: { id: workoutId }, data: { endedAt, durationMinutes } });
+  }
+  revalidateWorkoutViews();
 }
 
 export async function startWorkout(type: WorkoutType, label: string) {
