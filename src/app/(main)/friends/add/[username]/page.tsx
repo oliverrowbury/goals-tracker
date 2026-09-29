@@ -289,7 +289,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </Link>
             <Link href={`/friends/${target.username}/followers`} className="hover:opacity-70">
               <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
-              <span className="text-ink-muted">followers</span>
+              <span className="text-ink-muted">follower{followerCount === 1 ? "" : "s"}</span>
             </Link>
           </>
         ) : (
@@ -300,7 +300,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
             </span>
             <span>
               <span className="font-serif text-base font-semibold text-ink">{followerCount}</span>{" "}
-              <span className="text-ink-muted">followers</span>
+              <span className="text-ink-muted">follower{followerCount === 1 ? "" : "s"}</span>
             </span>
           </>
         )}
