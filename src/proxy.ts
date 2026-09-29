@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { AUTH_COOKIE, LOGIN_REDIRECT_COOKIE } from "@/lib/auth";
-import { CURRENT_USER_HEADER } from "@/lib/user";
+import { CURRENT_USER_HEADER, hasCompletedProfile } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 
 // Proxy (formerly "middleware") runs on the Node.js runtime by default as
@@ -23,6 +23,20 @@ export async function proxy(request: NextRequest) {
   if (token) {
     const user = await prisma.user.findUnique({ where: { sessionToken: token } });
     if (user) {
+      // /onboarding gates the rest of the app behind birthday/gender/city
+      // (see hasCompletedProfile's own comment — this is meant to run here,
+      // but the redirect itself had gone missing, so no signup ever actually
+      // landed on /onboarding; it only ever redirected away once already
+      // complete). Everyone with a valid session but an incomplete profile
+      // gets sent there, same as the login redirect below sends a signed-out
+      // request to /login. /api/logout is always let through regardless, so
+      // an incomplete profile can never trap someone with no way to sign
+      // back out.
+      const pathname = request.nextUrl.pathname;
+      if (!hasCompletedProfile(user) && pathname !== "/onboarding" && pathname !== "/api/logout") {
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
+
       const headers = new Headers(request.headers);
       // Header values have to be plain ASCII (the Fetch API's ByteString
       // restriction) — anything a user typed into a free-text profile field
