@@ -115,6 +115,63 @@ export async function setStudySessionNote(sessionId: string, note: string) {
   revalidatePath("/friends");
 }
 
+// Editing a finished session from the log — subject, note, the date it
+// counts toward, and duration, all in one form. Same reasoning as
+// updateWorkoutDetails: an occasional correction (wrong subject, forgot to
+// start the timer on time), not something typed continuously.
+//
+// StudySession has no separate `date` column the way Workout does — the day
+// it's grouped/queried under (this week's totals, streaks, the calendar) is
+// startedAt's own calendar date. So changing the date here has to actually
+// move startedAt, not just a display label; it keeps the original
+// time-of-day and shifts endedAt by the same amount so the two stay
+// consistent with whatever durationMinutes ends up being, in case anything
+// ever reads the gap between them instead of durationMinutes directly.
+export async function updateStudySessionDetails(sessionId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  const session = await prisma.studySession.findFirst({ where: { id: sessionId, userId: user.id } });
+  if (!session) return;
+
+  const subjectId = String(formData.get("subjectId") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+  const dateISO = String(formData.get("date") ?? "").trim();
+  const durationRaw = Number(formData.get("durationMinutes"));
+
+  const data: {
+    subjectId?: string;
+    note?: string | null;
+    startedAt?: Date;
+    endedAt?: Date;
+    durationMinutes?: number;
+  } = { note: note || null };
+
+  if (subjectId) data.subjectId = subjectId;
+
+  let durationMinutes = session.durationMinutes ?? 0;
+  if (Number.isFinite(durationRaw) && durationRaw > 0) {
+    durationMinutes = Math.round(durationRaw);
+    data.durationMinutes = durationMinutes;
+  }
+
+  if (dateISO) {
+    const shifted = isoToDate(dateISO);
+    shifted.setUTCHours(
+      session.startedAt.getUTCHours(),
+      session.startedAt.getUTCMinutes(),
+      session.startedAt.getUTCSeconds(),
+      session.startedAt.getUTCMilliseconds(),
+    );
+    data.startedAt = shifted;
+    data.endedAt = new Date(shifted.getTime() + durationMinutes * 60_000);
+  } else if (data.durationMinutes) {
+    data.endedAt = new Date(session.startedAt.getTime() + durationMinutes * 60_000);
+  }
+
+  await prisma.studySession.update({ where: { id: sessionId }, data });
+  revalidateStudyViews();
+  revalidatePath("/friends");
+}
+
 // See setWorkoutArchived — same "take this off my profile activity list"
 // toggle for a study session.
 export async function setStudySessionArchived(sessionId: string, archived: boolean) {

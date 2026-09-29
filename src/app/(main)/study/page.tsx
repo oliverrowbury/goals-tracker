@@ -5,11 +5,17 @@ import { todayISO, shiftISO, monthRangeContaining, yearRangeContaining } from "@
 import { StudyTimer } from "./StudyTimer";
 import { StudyStats } from "./StudyStats";
 import { WeeklyStudyChart } from "./WeeklyStudyChart";
+import { StudySessionLog } from "./StudySessionLog";
 import { ClockIcon } from "@/components/Icons";
 import { PageHeader } from "@/components/PageHeader";
 
 export const metadata = { title: "Study" };
 export const dynamic = "force-dynamic";
+
+// How many past sessions the log shows — same bound as Workout's own
+// history list, for the same reason: a personal app's log doesn't need to
+// scan a user's entire history to be useful.
+const HISTORY_LIMIT = 20;
 
 function totalsBySubject(sessions: { subjectId: string; durationMinutes: number | null }[]) {
   const totals = new Map<string, number>();
@@ -67,7 +73,7 @@ export default async function StudyPage() {
   const month = monthRangeContaining(today);
   const year = yearRangeContaining(today);
 
-  const [subjects, openSession, weekSessions, monthSessions, yearSessions] = await Promise.all([
+  const [subjects, openSession, weekSessions, monthSessions, yearSessions, recentSessions] = await Promise.all([
     prisma.subject.findMany({ where: { userId: user.id, active: true }, orderBy: { name: "asc" } }),
     prisma.studySession.findFirst({ where: { userId: user.id, endedAt: null }, orderBy: { startedAt: "asc" } }),
     prisma.studySession.findMany({
@@ -94,6 +100,12 @@ export default async function StudyPage() {
         startedAt: { gte: new Date(`${year.startISO}T00:00:00.000Z`), lte: new Date(`${year.endISO}T23:59:59.999Z`) },
       },
       select: { subjectId: true, durationMinutes: true },
+    }),
+    prisma.studySession.findMany({
+      where: { userId: user.id, endedAt: { not: null } },
+      select: { id: true, subjectId: true, durationMinutes: true, note: true, startedAt: true, visibility: true, archived: true },
+      orderBy: { startedAt: "desc" },
+      take: HISTORY_LIMIT,
     }),
   ]);
 
@@ -154,6 +166,21 @@ export default async function StudyPage() {
             month: withOpenSession(totalsBySubject(monthSessions), openSession, month.startISO, month.endISO),
             year: withOpenSession(totalsBySubject(yearSessions), openSession, year.startISO, year.endISO),
           }}
+        />
+      </div>
+
+      <div className="mt-8">
+        <StudySessionLog
+          subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
+          history={recentSessions.map((s) => ({
+            id: s.id,
+            subjectId: s.subjectId,
+            dateISO: s.startedAt.toISOString().slice(0, 10),
+            durationMinutes: s.durationMinutes,
+            note: s.note,
+            visibility: s.visibility,
+            archived: s.archived,
+          }))}
         />
       </div>
     </div>

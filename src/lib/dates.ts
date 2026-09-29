@@ -189,8 +189,10 @@ export function shortDayMonth(iso: string): string {
 export function relativeLabel(date: Date, today: string): string {
   const dateISO = date.toISOString().slice(0, 10);
   if (dateISO === today) {
-    const hoursAgo = Math.floor((Date.now() - date.getTime()) / (60 * 60 * 1000));
-    if (hoursAgo < 1) return "Just now";
+    const minutesAgo = Math.floor((Date.now() - date.getTime()) / (60 * 1000));
+    if (minutesAgo < 1) return "Just now";
+    if (minutesAgo < 60) return `${minutesAgo} minute${minutesAgo === 1 ? "" : "s"} ago`;
+    const hoursAgo = Math.floor(minutesAgo / 60);
     return `${hoursAgo} hour${hoursAgo === 1 ? "" : "s"} ago`;
   }
   if (dateISO === shiftISO(today, -1)) return "Yesterday";
