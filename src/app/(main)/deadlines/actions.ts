@@ -74,7 +74,14 @@ export async function toggleDeadlineCompleted(deadlineId: string) {
 }
 
 export async function deleteDeadline(deadlineId: string) {
-  await prisma.deadline.delete({ where: { id: deadlineId } });
+  // Same reasoning as updateDeadline clearing these on an edit — a deadline
+  // close enough to have already had a reminder sent has rows here, and
+  // Deadline has no cascade delete, so deleting it straight would fail on
+  // the foreign key. Clear those first, in the same transaction.
+  await prisma.$transaction([
+    prisma.deadlineReminderSent.deleteMany({ where: { deadlineId } }),
+    prisma.deadline.delete({ where: { id: deadlineId } }),
+  ]);
 
   revalidatePath("/deadlines");
   revalidatePath("/");
