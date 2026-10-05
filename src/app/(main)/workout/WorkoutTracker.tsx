@@ -608,12 +608,11 @@ function ExerciseSection({
 }) {
   const weightStep = weightUnit === "LB" ? 5 : 2.5;
 
-  // Seed the form from wherever a sensible default comes from: the set just
-  // logged this session, or failing that the last time this exercise was
-  // worked at all — so re-doing familiar work means tapping the checkmark
-  // rather than retyping the same numbers you used last week.
+  // Seed reps (not weight — that's typed fresh each set) from wherever a
+  // sensible default comes from: the set just logged this session, or
+  // failing that the last time this exercise was worked at all.
   const seedSet = sets.length > 0 ? sets[sets.length - 1] : lastPerformed?.sets[lastPerformed.sets.length - 1];
-  const [weight, setWeight] = useState(() => (seedSet ? String(parseFloat(fromKg(seedSet.weight, weightUnit).toFixed(1))) : ""));
+  const [weight, setWeight] = useState("");
   const [reps, setReps] = useState(() => (seedSet ? String(seedSet.reps) : ""));
   const [isWarmup, setIsWarmup] = useState(false);
   const [isPending, startTransition] = useTransition();
