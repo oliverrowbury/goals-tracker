@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user";
 import { updateGoal } from "../../actions";
 import { GoalForm } from "../../GoalForm";
 
@@ -8,7 +9,11 @@ export const metadata = { title: "Edit goal" };
 
 export default async function EditGoalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const goal = await prisma.goal.findUnique({ where: { id } });
+  const user = await getCurrentUser();
+  // Scoped to the current user, not just a bare findUnique(id) — otherwise
+  // this page would render (and updateGoal would happily save edits to)
+  // anyone's goal given its id, not just the owner's.
+  const goal = await prisma.goal.findFirst({ where: { id, userId: user.id } });
   if (!goal) notFound();
   const reminder = await prisma.reminder.findFirst({ where: { goalId: id } });
 

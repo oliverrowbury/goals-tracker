@@ -54,16 +54,15 @@ export async function startStudySession(subjectId: string) {
 }
 
 export async function pauseStudySession(sessionId: string) {
-  await prisma.studySession.update({
-    where: { id: sessionId },
-    data: { pausedAt: new Date() },
-  });
+  const user = await getCurrentUser();
+  await prisma.studySession.updateMany({ where: { id: sessionId, userId: user.id }, data: { pausedAt: new Date() } });
   revalidateStudyViews();
 }
 
 export async function resumeStudySession(sessionId: string) {
-  const session = await prisma.studySession.findUniqueOrThrow({ where: { id: sessionId } });
-  if (!session.pausedAt) return;
+  const user = await getCurrentUser();
+  const session = await prisma.studySession.findFirst({ where: { id: sessionId, userId: user.id } });
+  if (!session?.pausedAt) return;
 
   // Shift startedAt forward by however long it was paused, so elapsed time
   // (now - startedAt) is correct again without a separate accumulator.
@@ -78,7 +77,9 @@ export async function resumeStudySession(sessionId: string) {
 }
 
 export async function finishStudySession(sessionId: string) {
-  const session = await prisma.studySession.findUniqueOrThrow({ where: { id: sessionId } });
+  const user = await getCurrentUser();
+  const session = await prisma.studySession.findFirst({ where: { id: sessionId, userId: user.id } });
+  if (!session) return;
   const endedAt = session.pausedAt ?? new Date();
   const durationMinutes = minutesBetween(session.startedAt, endedAt);
 
@@ -181,8 +182,12 @@ export async function setStudySessionArchived(sessionId: string, archived: boole
 }
 
 export async function deleteStudySession(sessionId: string) {
-  const session = await prisma.studySession.findUnique({ where: { id: sessionId } });
-  if (!session) return; // already gone — nothing to do
+  const user = await getCurrentUser();
+  // Ownership check — studySessionId is visible to any friend who can see
+  // this session in the feed (friends/post/study/[id]), so without this a
+  // friend could delete someone else's shared study session outright.
+  const session = await prisma.studySession.findFirst({ where: { id: sessionId, userId: user.id } });
+  if (!session) return; // already gone, or not this user's — nothing to do
 
   await prisma.studySession.delete({ where: { id: sessionId } });
 

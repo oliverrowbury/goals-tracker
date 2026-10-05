@@ -130,6 +130,12 @@ export async function addSet(workoutId: string, exerciseId: string, formData: Fo
 }
 
 export async function removeSet(setId: string) {
+  // Same ownership check as updateWorkoutSet below — a set's id alone
+  // doesn't say who it belongs to.
+  const user = await getCurrentUser();
+  const set = await prisma.workoutSet.findFirst({ where: { id: setId }, include: { workout: true } });
+  if (!set || set.workout.userId !== user.id) return;
+
   await prisma.workoutSet.delete({ where: { id: setId } });
   revalidatePath("/workout");
 }
@@ -137,7 +143,8 @@ export async function removeSet(setId: string) {
 export async function renameWorkout(workoutId: string, label: string) {
   const trimmed = label.trim();
   if (!trimmed) return;
-  await prisma.workout.update({ where: { id: workoutId }, data: { label: trimmed } });
+  const user = await getCurrentUser();
+  await prisma.workout.updateMany({ where: { id: workoutId, userId: user.id }, data: { label: trimmed } });
   revalidateWorkoutViews();
 }
 
@@ -207,7 +214,9 @@ export async function updateWorkoutSet(setId: string, formData: FormData) {
 }
 
 export async function finishStrengthWorkout(workoutId: string) {
-  const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
+  const user = await getCurrentUser();
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout) return;
   const setCount = await prisma.workoutSet.count({ where: { workoutId } });
 
   // Finishing with nothing logged (started it, then tapped Finish without
@@ -263,7 +272,8 @@ export async function finishCardioWorkout(workoutId: string, formData: FormData)
   const enteredDistance = Number(formData.get("distance"));
   const route = parseRoute(String(formData.get("route") ?? ""));
   const user = await getCurrentUser();
-  const workout = await prisma.workout.findUniqueOrThrow({ where: { id: workoutId } });
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout) return;
   const endedAt = new Date();
 
   // Same unit-at-the-edges rule as addSet — the input is in the user's
@@ -289,6 +299,13 @@ export async function finishCardioWorkout(workoutId: string, formData: FormData)
 // Used both for "started by accident, discard it" on an open session and
 // for deleting a finished workout from history — same operation either way.
 export async function deleteWorkout(workoutId: string) {
+  const user = await getCurrentUser();
+  // Ownership check first — workoutId is visible to any friend who can see
+  // this workout in the feed (friends/post/workout/[id]), so without this
+  // a friend could delete someone else's shared workout outright.
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout) return;
+
   await prisma.$transaction([
     prisma.workoutSet.deleteMany({ where: { workoutId } }),
     prisma.workout.delete({ where: { id: workoutId } }),

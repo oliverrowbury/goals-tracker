@@ -105,9 +105,14 @@ export async function createGoal(formData: FormData) {
 }
 
 export async function updateGoal(goalId: string, formData: FormData) {
+  const user = await getCurrentUser();
   const fields = readGoalFields(formData);
 
-  await prisma.goal.update({ where: { id: goalId }, data: fields });
+  // updateMany (not update) so this only touches a row that's actually
+  // this user's — a plain update({ where: { id } }) would happily edit
+  // anyone's goal given its id, same bug class as deleteGoal below.
+  const { count } = await prisma.goal.updateMany({ where: { id: goalId, userId: user.id }, data: fields });
+  if (count === 0) return;
   await saveGoalReminder(goalId, formData);
 
   revalidatePath("/goals");
@@ -116,6 +121,12 @@ export async function updateGoal(goalId: string, formData: FormData) {
 }
 
 export async function deleteGoal(goalId: string) {
+  const user = await getCurrentUser();
+  // Ownership check first — without it, any logged-in user could delete
+  // any goal just by knowing its id, not only their own.
+  const goal = await prisma.goal.findFirst({ where: { id: goalId, userId: user.id } });
+  if (!goal) return;
+
   // GoalLog/Reminder rows reference this goal without cascade delete, so
   // they have to go first or the delete hits a foreign-key error.
   await prisma.$transaction([
@@ -130,11 +141,13 @@ export async function deleteGoal(goalId: string) {
 
 export async function toggleGoalCompletion(goalId: string, dateISO: string) {
   if (isFutureISO(dateISO)) return;
+  const user = await getCurrentUser();
   const date = isoToDate(dateISO);
   const [goal, existing] = await Promise.all([
-    prisma.goal.findUniqueOrThrow({ where: { id: goalId }, select: { userId: true } }),
+    prisma.goal.findFirst({ where: { id: goalId, userId: user.id }, select: { userId: true } }),
     prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } }),
   ]);
+  if (!goal) return;
   const wasCompleted = existing?.completed ?? false;
   const nowCompleted = !wasCompleted;
 
@@ -155,11 +168,13 @@ export async function toggleGoalCompletion(goalId: string, dateISO: string) {
 
 export async function setGoalLogValue(goalId: string, dateISO: string, value: number) {
   if (isFutureISO(dateISO)) return;
+  const user = await getCurrentUser();
   const date = isoToDate(dateISO);
   const [goal, existing] = await Promise.all([
-    prisma.goal.findUniqueOrThrow({ where: { id: goalId }, select: { userId: true } }),
+    prisma.goal.findFirst({ where: { id: goalId, userId: user.id }, select: { userId: true } }),
     prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } }),
   ]);
+  if (!goal) return;
   const wasCompleted = existing?.completed ?? false;
   const nowCompleted = value > 0;
 

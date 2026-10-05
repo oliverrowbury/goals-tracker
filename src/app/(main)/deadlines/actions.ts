@@ -40,6 +40,12 @@ export async function createDeadline(formData: FormData) {
 }
 
 export async function updateDeadline(deadlineId: string, formData: FormData) {
+  const user = await getCurrentUser();
+  // Ownership check first — an unscoped update/transaction here would let
+  // anyone edit (and clear the reminder log of) any deadline by id.
+  const existing = await prisma.deadline.findFirst({ where: { id: deadlineId, userId: user.id } });
+  if (!existing) return;
+
   const fields = readDeadlineFields(formData);
 
   // Editing the due date/time invalidates any reminders already sent
@@ -56,7 +62,9 @@ export async function updateDeadline(deadlineId: string, formData: FormData) {
 }
 
 export async function toggleDeadlineCompleted(deadlineId: string) {
-  const deadline = await prisma.deadline.findUniqueOrThrow({ where: { id: deadlineId } });
+  const user = await getCurrentUser();
+  const deadline = await prisma.deadline.findFirst({ where: { id: deadlineId, userId: user.id } });
+  if (!deadline) return;
   const completed = !deadline.completed;
 
   await prisma.deadline.update({ where: { id: deadlineId }, data: { completed } });
@@ -74,6 +82,11 @@ export async function toggleDeadlineCompleted(deadlineId: string) {
 }
 
 export async function deleteDeadline(deadlineId: string) {
+  const user = await getCurrentUser();
+  // Ownership check first — same reasoning as updateDeadline above.
+  const existing = await prisma.deadline.findFirst({ where: { id: deadlineId, userId: user.id } });
+  if (!existing) return;
+
   // Same reasoning as updateDeadline clearing these on an edit — a deadline
   // close enough to have already had a reminder sent has rows here, and
   // Deadline has no cascade delete, so deleting it straight would fail on

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/user";
 import { updateDeadline } from "../../actions";
 import { DeadlineForm } from "../../DeadlineForm";
 import { dateToISO } from "@/lib/dates";
@@ -9,7 +10,10 @@ export const metadata = { title: "Edit deadline" };
 
 export default async function EditDeadlinePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const deadline = await prisma.deadline.findUnique({ where: { id } });
+  const user = await getCurrentUser();
+  // Scoped to the current user — see goals/[id]/edit's same fix for why a
+  // bare findUnique(id) here would leak and let someone edit any deadline.
+  const deadline = await prisma.deadline.findFirst({ where: { id, userId: user.id } });
   if (!deadline) notFound();
 
   // Same reasoning as the goal-edit page — keep the already-linked subject
