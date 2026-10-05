@@ -46,7 +46,7 @@ import {
   EyeOffIcon,
   CheckIcon,
 } from "@/components/Icons";
-import { CARDIO_ACTIVITIES, type WorkoutType, type WeightUnit, type DistanceUnit } from "@/lib/constants";
+import type { WorkoutType, WeightUnit, DistanceUnit } from "@/lib/constants";
 import { RouteMap } from "./RouteMap";
 import { ShareButton } from "@/components/ShareButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
@@ -743,8 +743,6 @@ export function WorkoutTracker({
     openWorkout ? Array.from(new Set(openWorkout.sets.map((s) => s.exerciseId))) : [],
   );
   const [addingExercise, setAddingExercise] = useState(false);
-  const [startTab, setStartTab] = useState<WorkoutType | null>(null);
-  const [selectedCardioActivity, setSelectedCardioActivity] = useState<string | null>(null);
   const [justFinished, setJustFinished] = useState<JustFinishedWorkout | null>(null);
   const [distanceOverride, setDistanceOverride] = useState<string | null>(null);
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
@@ -793,8 +791,6 @@ export function WorkoutTracker({
     // never races with that.
     if (openWorkout) {
       setJustFinished(null);
-      setStartTab(null);
-      setSelectedCardioActivity(null);
     }
   }
 
@@ -814,69 +810,18 @@ export function WorkoutTracker({
       {!openWorkout && !justFinished && (
         <div>
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Start a workout</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Tapping a type only selects it — it doesn't start anything
-                yet. Starting is its own deliberate action below, so a stray
-                tap here can't accidentally kick off a timed workout. */}
-            <button
-              onClick={() => {
-                setStartTab("STRENGTH");
-                setSelectedCardioActivity(null);
-              }}
-              className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
-                startTab === "STRENGTH"
-                  ? "border-workout bg-workout-soft text-workout"
-                  : "border-line bg-card text-ink-muted hover:border-workout hover:text-workout"
-              }`}
-            >
-              <DumbbellIcon className="h-6 w-6" />
-              <span className="text-sm font-medium">Strength</span>
-            </button>
-            <button
-              onClick={() => setStartTab("CARDIO")}
-              className={`flex flex-col items-center gap-2 rounded-xl border p-4 transition ${
-                startTab === "CARDIO"
-                  ? "border-workout bg-workout-soft text-workout"
-                  : "border-line bg-card text-ink-muted hover:border-workout hover:text-workout"
-              }`}
-            >
-              <ActivityIcon className="h-6 w-6" />
-              <span className="text-sm font-medium">Cardio</span>
-            </button>
-          </div>
-
-          {startTab === "CARDIO" && (
-            <div className="mt-4">
-              <p className="mb-2 text-xs text-ink-muted">What are you doing?</p>
-              <div className="flex flex-wrap gap-2">
-                {CARDIO_ACTIVITIES.map((activity) => (
-                  <button
-                    key={activity}
-                    onClick={() => setSelectedCardioActivity(activity)}
-                    className={`rounded-lg border px-3.5 py-2 text-sm transition ${
-                      selectedCardioActivity === activity
-                        ? "border-workout bg-workout-soft text-workout"
-                        : "border-line bg-card text-ink hover:border-workout hover:text-workout"
-                    }`}
-                  >
-                    {activity}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {startTab && (startTab === "STRENGTH" || selectedCardioActivity) && (
-            <button
-              disabled={isPending}
-              onClick={() =>
-                startTransition(() => startWorkout(startTab, startTab === "STRENGTH" ? "Workout" : selectedCardioActivity!))
-              }
-              className="mt-4 w-full rounded-xl bg-workout py-3.5 text-base font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
-            >
-              Start {startTab === "STRENGTH" ? "Workout" : selectedCardioActivity}
-            </button>
-          )}
+          {/* Cardio's been dropped (GPS tracking wasn't reliable, and it
+              was one extra decision before every workout) — Strength is
+              the only type a new workout can start as now. Past cardio
+              workouts are untouched and still show normally everywhere. */}
+          <button
+            disabled={isPending}
+            onClick={() => startTransition(() => startWorkout("STRENGTH", "Workout"))}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-workout py-3.5 text-base font-medium text-white shadow-sm hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-6"
+          >
+            <DumbbellIcon className="h-5 w-5" />
+            Start Workout
+          </button>
         </div>
       )}
 
