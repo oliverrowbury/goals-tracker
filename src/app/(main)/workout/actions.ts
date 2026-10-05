@@ -53,7 +53,13 @@ async function closeStrayOpenWorkouts(userId: string) {
     // finishStrengthWorkout already makes for a 0-set finish.
     const nothingToKeep = workout.type === "STRENGTH" && workout.sets.length === 0;
     if (nothingToKeep || durationMinutes > MAX_PLAUSIBLE_WORKOUT_MINUTES) {
-      await prisma.workout.delete({ where: { id: workout.id } });
+      // A stale STRENGTH workout can still have sets logged (unlike the
+      // nothing-to-keep case) — clear those first, same FK reasoning as
+      // deleteWorkout below.
+      await prisma.$transaction([
+        prisma.workoutSet.deleteMany({ where: { workoutId: workout.id } }),
+        prisma.workout.delete({ where: { id: workout.id } }),
+      ]);
       continue;
     }
     await prisma.workout.update({ where: { id: workout.id }, data: { endedAt, durationMinutes } });
