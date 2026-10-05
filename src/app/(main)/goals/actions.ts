@@ -90,9 +90,19 @@ async function saveGoalReminder(goalId: string, formData: FormData) {
   }
 }
 
+// Guards against linking a goal to another user's subject — wouldn't leak
+// their data, but would misattribute auto-tracked stats against a subject
+// that isn't this user's.
+async function ownedSubjectId(subjectId: string | null, userId: string): Promise<string | null> {
+  if (!subjectId) return null;
+  const subject = await prisma.subject.findFirst({ where: { id: subjectId, userId } });
+  return subject ? subjectId : null;
+}
+
 export async function createGoal(formData: FormData) {
   const user = await getCurrentUser();
   const fields = readGoalFields(formData);
+  fields.subjectId = await ownedSubjectId(fields.subjectId, user.id);
 
   const goal = await prisma.goal.create({
     data: { ...fields, userId: user.id, startDate: new Date() },
@@ -107,6 +117,7 @@ export async function createGoal(formData: FormData) {
 export async function updateGoal(goalId: string, formData: FormData) {
   const user = await getCurrentUser();
   const fields = readGoalFields(formData);
+  fields.subjectId = await ownedSubjectId(fields.subjectId, user.id);
 
   // updateMany (not update) so this only touches a row that's actually
   // this user's — a plain update({ where: { id } }) would happily edit

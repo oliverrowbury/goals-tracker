@@ -28,9 +28,18 @@ function readDeadlineFields(formData: FormData) {
   };
 }
 
+// Guards against linking a deadline to another user's subject — same
+// reasoning as goals/actions.ts's ownedSubjectId.
+async function ownedSubjectId(subjectId: string | null, userId: string): Promise<string | null> {
+  if (!subjectId) return null;
+  const subject = await prisma.subject.findFirst({ where: { id: subjectId, userId } });
+  return subject ? subjectId : null;
+}
+
 export async function createDeadline(formData: FormData) {
   const user = await getCurrentUser();
   const fields = readDeadlineFields(formData);
+  fields.subjectId = await ownedSubjectId(fields.subjectId, user.id);
 
   await prisma.deadline.create({ data: { ...fields, userId: user.id } });
 
@@ -47,6 +56,7 @@ export async function updateDeadline(deadlineId: string, formData: FormData) {
   if (!existing) return;
 
   const fields = readDeadlineFields(formData);
+  fields.subjectId = await ownedSubjectId(fields.subjectId, user.id);
 
   // Editing the due date/time invalidates any reminders already sent
   // against the old moment — clearing the log lets them fire again for

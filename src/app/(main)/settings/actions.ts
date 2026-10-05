@@ -147,12 +147,20 @@ export async function renameSubject(subjectId: string, formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
 
-  await prisma.subject.update({ where: { id: subjectId }, data: { name } });
+  const user = await getCurrentUser();
+  await prisma.subject.updateMany({ where: { id: subjectId, userId: user.id }, data: { name } });
   revalidatePath("/settings");
   revalidatePath("/study");
 }
 
 export async function deleteSubject(subjectId: string) {
+  const user = await getCurrentUser();
+  // Ownership check first — without it, any logged-in user could wipe
+  // another user's entire study-session history for a subject just by
+  // knowing its id, not only their own.
+  const subject = await prisma.subject.findFirst({ where: { id: subjectId, userId: user.id } });
+  if (!subject) return;
+
   // A goal auto-tracked from this subject falls back to manual logging
   // rather than blocking the delete; study sessions for it go with it —
   // the confirm dialog on the client warns about that before calling this.

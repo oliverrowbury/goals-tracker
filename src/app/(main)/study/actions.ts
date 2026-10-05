@@ -31,6 +31,11 @@ function revalidateStudyViews() {
 
 export async function startStudySession(subjectId: string) {
   const user = await getCurrentUser();
+  // Otherwise a session could be created under another user's subject id
+  // — it wouldn't leak their data, but it would misattribute stats/streaks
+  // against a subject that isn't this user's.
+  const subject = await prisma.subject.findFirst({ where: { id: subjectId, userId: user.id } });
+  if (!subject) return;
 
   // Only one timer runs at a time — close out anything left open (e.g. a
   // tab that was closed mid-session) before starting the new one. If it was
@@ -146,7 +151,9 @@ export async function updateStudySessionDetails(sessionId: string, formData: For
     durationMinutes?: number;
   } = { note: note || null };
 
-  if (subjectId) data.subjectId = subjectId;
+  if (subjectId && (await prisma.subject.findFirst({ where: { id: subjectId, userId: user.id } }))) {
+    data.subjectId = subjectId;
+  }
 
   let durationMinutes = session.durationMinutes ?? 0;
   if (Number.isFinite(durationRaw) && durationRaw > 0) {
@@ -221,6 +228,8 @@ export async function logManualSession(
   if (!subjectId) return { error: "Choose a subject" };
   if (!Number.isFinite(minutes) || minutes <= 0) return { error: "Enter how many minutes" };
   if (!dateISO) return { error: "Choose a date" };
+  const subject = await prisma.subject.findFirst({ where: { id: subjectId, userId: user.id } });
+  if (!subject) return { error: "Choose a subject" };
 
   const startedAt = isoToDate(dateISO);
   startedAt.setUTCHours(12); // midday, so it never lands on a day boundary
