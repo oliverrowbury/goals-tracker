@@ -49,12 +49,19 @@ export async function GET(request: Request) {
       if (workouts > 0) parts.push(`${workouts} workout${workouts === 1 ? "" : "s"}`);
       if (goalLogs > 0) parts.push(`${goalLogs} goal${goalLogs === 1 ? "" : "s"} ticked off`);
 
-      await sendPushToUser(userId, {
-        title: "Your week, recapped",
-        body: parts.join(" · "),
-        url: "/",
-      });
-      sent++;
+      // sendPushToUser throws synchronously if VAPID isn't configured —
+      // caught per-user so one failure (or a VAPID outage) doesn't reject
+      // the whole Promise.all and skip every other user's recap this run.
+      try {
+        await sendPushToUser(userId, {
+          title: "Your week, recapped",
+          body: parts.join(" · "),
+          url: "/",
+        });
+        sent++;
+      } catch (err) {
+        console.error("Failed to send weekly recap push:", err);
+      }
     }),
   );
 

@@ -44,14 +44,22 @@ export async function GET(request: Request) {
     titlesByUser.set(reminder.goal.userId, titles);
   }
 
+  // Each send is wrapped individually — sendPushToUser throws synchronously
+  // if VAPID isn't configured, and an unwrapped Promise.all would let that
+  // one throw reject the whole batch, silently skipping every other user's
+  // reminder for this run instead of just the one that failed.
   await Promise.all(
-    Array.from(titlesByUser.entries()).map(([userId, titles]) =>
-      sendPushToUser(userId, {
-        title: "Proudly",
-        body: titles.length === 1 ? `Reminder: ${titles[0]}` : `Reminders today: ${titles.join(", ")}`,
-        url: "/goals",
-      }),
-    ),
+    Array.from(titlesByUser.entries()).map(async ([userId, titles]) => {
+      try {
+        await sendPushToUser(userId, {
+          title: "Proudly",
+          body: titles.length === 1 ? `Reminder: ${titles[0]}` : `Reminders today: ${titles.join(", ")}`,
+          url: "/goals",
+        });
+      } catch (err) {
+        console.error("Failed to send goal reminder push:", err);
+      }
+    }),
   );
 
   return NextResponse.json({ sent: titlesByUser.size, checkedDay: today, slot });

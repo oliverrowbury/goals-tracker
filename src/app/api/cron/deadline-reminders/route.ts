@@ -58,11 +58,21 @@ export async function GET(request: Request) {
         const target = dueAt - OFFSETS[kind];
         if (Math.abs(now - target) > WINDOW_MS / 2) continue;
 
-        await sendPushToUser(deadline.userId, {
-          title: "Proudly",
-          body: `${deadline.title} is due ${LABELS[kind]}`,
-          url: "/deadlines",
-        });
+        // sendPushToUser throws synchronously if VAPID isn't configured
+        // (an unwrapped Promise.all across every deadline would let that
+        // one throw take down the whole run) — caught here rather than
+        // recorded as sent, so a VAPID outage retries next hour instead
+        // of silently burning this reminder's one slot forever.
+        try {
+          await sendPushToUser(deadline.userId, {
+            title: "Proudly",
+            body: `${deadline.title} is due ${LABELS[kind]}`,
+            url: "/deadlines",
+          });
+        } catch (err) {
+          console.error("Failed to send deadline reminder push:", err);
+          continue;
+        }
         // Recorded even if the user has no push subscription — the
         // reminder "happened" for this deadline/kind either way, and
         // shouldn't be retried forever just because they never enabled
