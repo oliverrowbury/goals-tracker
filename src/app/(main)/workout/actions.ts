@@ -350,14 +350,19 @@ export async function uploadWorkoutPhoto(workoutId: string, formData: FormData):
 
   const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
   if (!workout) return { error: "Workout not found" };
-  if (workout.photoUrl) await deleteWorkoutPhoto(workout.photoUrl);
 
+  // Upload the new photo before deleting the old one — uploadWorkoutPhoto's
+  // path is always unique (Date.now()-suffixed), so there's no collision
+  // risk, and a failed/flaky upload no longer leaves the workout with no
+  // photo at all.
   let photoUrl: string;
   try {
     photoUrl = await uploadWorkoutPhotoToStorage(user.id, workoutId, file);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Upload failed" };
   }
+
+  if (workout.photoUrl) await deleteWorkoutPhoto(workout.photoUrl).catch(() => {});
 
   await prisma.workout.update({ where: { id: workoutId }, data: { photoUrl } });
   revalidateWorkoutViews();

@@ -248,14 +248,18 @@ export async function uploadAvatar(formData: FormData): Promise<{ error: string 
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo first" };
   if (!file.type.startsWith("image/")) return { error: "That's not an image file" };
 
-  if (user.avatarUrl) await deleteAvatarPhoto(user.avatarUrl);
-
+  // Upload the new photo before deleting the old one — uploadAvatarPhoto's
+  // path is always unique (Date.now()-suffixed), so there's no collision
+  // risk, and a failed/flaky upload no longer leaves the user with no
+  // photo at all while the DB still points at whatever was just deleted.
   let avatarUrl: string;
   try {
     avatarUrl = await uploadAvatarPhoto(user.id, file);
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Upload failed" };
   }
+
+  if (user.avatarUrl) await deleteAvatarPhoto(user.avatarUrl).catch(() => {});
 
   await prisma.user.update({ where: { id: user.id }, data: { avatarUrl } });
   revalidatePath("/settings");
