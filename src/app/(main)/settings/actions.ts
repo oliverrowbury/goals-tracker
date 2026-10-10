@@ -345,9 +345,12 @@ export async function deleteAccount(_prev: SettingsActionState, formData: FormDa
   redirect("/login");
 }
 
+const MAX_FEEDBACK_LENGTH = 2000;
+
 export async function sendFeedback(_prev: SettingsActionState, formData: FormData): Promise<SettingsActionState> {
   const message = String(formData.get("message") ?? "").trim();
   if (!message) return { error: "Write something first." };
+  if (message.length > MAX_FEEDBACK_LENGTH) return { error: `Keep it under ${MAX_FEEDBACK_LENGTH} characters.` };
 
   const user = await getCurrentUser();
   await prisma.feedback.create({ data: { userId: user.id, message } });
