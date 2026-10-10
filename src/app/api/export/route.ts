@@ -9,7 +9,23 @@ import { getCurrentUser } from "@/lib/user";
 export async function GET() {
   const user = await getCurrentUser();
 
-  const [journalEntries, goals, goalLogs, subjects, studySessions, workouts, workoutSets, feedback] = await Promise.all([
+  const [
+    journalEntries,
+    goals,
+    goalLogs,
+    subjects,
+    studySessions,
+    workouts,
+    workoutSets,
+    feedback,
+    deadlines,
+    messages,
+    comments,
+    cheersGiven,
+    cheersReceived,
+    following,
+    followers,
+  ] = await Promise.all([
     prisma.journalEntry.findMany({ where: { userId: user.id }, orderBy: { date: "asc" } }),
     prisma.goal.findMany({ where: { userId: user.id } }),
     prisma.goalLog.findMany({ where: { goal: { userId: user.id } } }),
@@ -18,6 +34,13 @@ export async function GET() {
     prisma.workout.findMany({ where: { userId: user.id } }),
     prisma.workoutSet.findMany({ where: { workout: { userId: user.id } } }),
     prisma.feedback.findMany({ where: { userId: user.id } }),
+    prisma.deadline.findMany({ where: { userId: user.id } }),
+    prisma.message.findMany({ where: { OR: [{ senderId: user.id }, { recipientId: user.id }] }, orderBy: { createdAt: "asc" } }),
+    prisma.comment.findMany({ where: { authorId: user.id } }),
+    prisma.cheer.findMany({ where: { fromUserId: user.id } }),
+    prisma.cheer.findMany({ where: { toUserId: user.id } }),
+    prisma.follow.findMany({ where: { followerId: user.id } }),
+    prisma.follow.findMany({ where: { followingId: user.id } }),
   ]);
 
   const data = {
@@ -31,6 +54,13 @@ export async function GET() {
     workouts,
     workoutSets,
     feedback,
+    deadlines,
+    messages,
+    comments,
+    cheersGiven,
+    cheersReceived,
+    following,
+    followers,
   };
 
   return new NextResponse(JSON.stringify(data, null, 2), {
