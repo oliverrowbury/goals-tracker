@@ -193,7 +193,8 @@ export async function savePushSubscription(subscription: { endpoint: string; key
 }
 
 export async function removePushSubscription(endpoint: string) {
-  await prisma.pushSubscription.deleteMany({ where: { endpoint } });
+  const user = await getCurrentUser();
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: user.id } });
 }
 
 // The three fields /onboarding requires, plus the fully optional ones —

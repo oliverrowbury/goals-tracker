@@ -71,9 +71,32 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   const sessionToken = generateSessionToken();
   const verifyToken = generateSessionToken();
   const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
-  await prisma.user.create({
-    data: { name, username, email, passwordHash, sessionToken, verifyToken, verifyTokenExpiresAt },
-  });
+  try {
+    await prisma.user.create({
+      data: { name, username, email, passwordHash, sessionToken, verifyToken, verifyTokenExpiresAt },
+    });
+  } catch (err) {
+    // The findUnique checks above can't fully close this — two concurrent
+    // signups for the same email/username (a double-submit, or two tabs)
+    // can both pass them and race on create. Without this, the loser hit
+    // an uncaught unique-constraint error and landed on the generic error
+    // page, losing their whole typed-out form instead of the same friendly
+    // message the pre-check gives everyone else.
+    //
+    // meta.target isn't populated under this project's driver-adapter
+    // (@prisma/adapter-pg) setup — confirmed empirically, not assumed —
+    // so the conflicting field is parsed out of the error message instead,
+    // e.g. "Unique constraint failed on the fields: (`email`)".
+    const e = err as { code?: string; message?: string; meta?: { target?: string[] } };
+    const field = e?.meta?.target?.[0] ?? e?.message?.match(/fields: \(`(\w+)`\)/)?.[1];
+    if (e?.code === "P2002" && field === "email") {
+      return { fieldErrors: { email: "That email already has an account — sign in instead." }, values };
+    }
+    if (e?.code === "P2002" && field === "username") {
+      return { fieldErrors: { username: "That username is taken." }, values };
+    }
+    throw err;
+  }
 
   // Awaited (not fire-and-forget) — on a serverless host the function can
   // be frozen as soon as the response goes out, which for a redirect is
