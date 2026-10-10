@@ -31,8 +31,13 @@ export async function GET(request: Request) {
 
   const today = currentWeekday();
 
+  // channel: "PUSH" is currently every Reminder ever created (goals/actions.ts
+  // hardcodes it, there's no EMAIL option exposed anywhere yet), but the
+  // field exists and this is the one place that should actually respect it
+  // once that changes — without this filter, an EMAIL-channel reminder
+  // would get push-notified instead of emailed the moment that option ships.
   const dueReminders = await prisma.reminder.findMany({
-    where: { enabled: true, daysOfWeek: { has: today }, slots: { has: slot } },
+    where: { enabled: true, channel: "PUSH", daysOfWeek: { has: today }, slots: { has: slot } },
     include: { goal: { select: { title: true, userId: true, active: true } } },
   });
 

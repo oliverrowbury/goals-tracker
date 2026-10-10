@@ -121,7 +121,11 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
 
   return (
     <div id="recap" className="mt-10 scroll-mt-6">
-      <div className="mb-4 flex items-center justify-between">
+      {/* flex-wrap — the title plus up to three pill buttons (Prev/This
+          week/Next, once navigated off the current week) doesn't fit one
+          row on a narrow phone; wrapping to a second line beats clipping
+          or forcing horizontal scroll. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex items-center gap-2.5">
           <ChartIcon className="h-5 w-5 shrink-0 text-ink-muted" />
           <h2 className="font-serif text-xl font-semibold text-ink">Week of {formatWeekRange(startISO, endISO)}</h2>

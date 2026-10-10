@@ -19,6 +19,10 @@ export function PhotoUpload({ dateISO, initialPhotoUrl }: { dateISO: string; ini
       if (result?.error) {
         setError(result.error);
       } else {
+        // Revoke the previous blob URL before replacing it — otherwise
+        // changing the photo repeatedly in one session leaks one per swap.
+        // A harmless no-op if photoUrl was the real server URL instead.
+        if (photoUrl) URL.revokeObjectURL(photoUrl);
         setPhotoUrl(URL.createObjectURL(file));
       }
     });
@@ -35,6 +39,7 @@ export function PhotoUpload({ dateISO, initialPhotoUrl }: { dateISO: string; ini
             title="Remove photo"
             disabled={isPending}
             onClick={() => {
+              if (photoUrl) URL.revokeObjectURL(photoUrl);
               setPhotoUrl(null);
               startTransition(() => {
                 removeEntryPhoto(dateISO);

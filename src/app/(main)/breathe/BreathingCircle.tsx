@@ -72,10 +72,19 @@ export function BreathingCircle() {
 
   return (
     <div className="flex flex-col items-center gap-6 py-10">
+      {/* aspect-square (not a fixed h-80 w-80) keeps the circle a circle
+          while letting it shrink below 320px on a narrow phone — it was
+          wider than the ~288px available inside the page's own side
+          padding on a 320px viewport (iPhone SE and similar). overflow-hidden
+          is the other half of the fix: the rotating ambient-halo layer below
+          is a square DOM box (rounded-full only clips its own paint, not its
+          layout box), so at a diagonal rotation angle its axis-aligned
+          bounding box pokes outside the circle and widens the page's
+          scrollable area — confirmed via scrollWidth, not just visually. */}
       <button
         type="button"
         onClick={toggle}
-        className="relative flex h-80 w-80 items-center justify-center rounded-full"
+        className="relative flex aspect-square w-[min(20rem,calc(100vw-3rem))] items-center justify-center overflow-hidden rounded-full"
         aria-label={running ? "Stop breathing exercise" : "Start breathing exercise"}
       >
         {/* Ambient halo — rotates continuously, independent of the breathing

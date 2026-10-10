@@ -656,9 +656,9 @@ enum ReportTargetType {
 }
 
 // A flagged user/comment/post/message for the owner (you) to review —
-// deliberately no in-app moderation queue UI beyond /admin/reports (gated
-// by ADMIN_EMAIL, same pattern as OwnerBadge), since report volume on a
-// friends-scale app doesn't justify more than that yet.
+// deliberately no dedicated moderation queue route, just a section inlined
+// into /settings (gated by ADMIN_EMAIL, same pattern as OwnerBadge), since
+// report volume on a friends-scale app doesn't justify more than that yet.
 model Report {
   id String @id @default(uuid())
 

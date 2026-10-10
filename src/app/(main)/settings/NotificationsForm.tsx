@@ -29,6 +29,7 @@ export function NotificationsForm() {
   // permission dialog) — without this the button just looks inert the
   // whole time, and a double-tap could fire the flow twice.
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -41,6 +42,7 @@ export function NotificationsForm() {
 
   async function enable() {
     setPending(true);
+    setError(null);
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -65,6 +67,11 @@ export function NotificationsForm() {
 
       await savePushSubscription(subscription.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } });
       setStatus("subscribed");
+    } catch {
+      // A failure here (network blip, a session hiccup on the server
+      // action) previously just reverted the button with zero explanation
+      // — looked exactly like nothing had happened at all.
+      setError("Couldn't enable notifications — try again.");
     } finally {
       setPending(false);
     }
@@ -72,6 +79,7 @@ export function NotificationsForm() {
 
   async function disable() {
     setPending(true);
+    setError(null);
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       const subscription = await registration?.pushManager.getSubscription();
@@ -80,6 +88,8 @@ export function NotificationsForm() {
         await subscription.unsubscribe();
       }
       setStatus("unsubscribed");
+    } catch {
+      setError("Couldn't disable notifications — try again.");
     } finally {
       setPending(false);
     }
@@ -118,6 +128,7 @@ export function NotificationsForm() {
         </div>
       )}
       {unavailable && <p className="text-sm text-ink-muted">Push notifications aren&apos;t available yet — check back soon.</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <p className="border-t border-line pt-4 text-sm text-ink-muted">
         Reminders are set per goal now, since different goals need different days — turn one on from that goal’s{" "}

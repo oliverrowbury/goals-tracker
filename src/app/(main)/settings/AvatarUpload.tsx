@@ -20,6 +20,10 @@ export function AvatarUpload({ name, initialAvatarUrl }: { name: string; initial
       if (result?.error) {
         setError(result.error);
       } else {
+        // Revoke the previous blob URL before replacing it — otherwise
+        // changing the photo repeatedly in one session leaks one per swap.
+        // A harmless no-op if avatarUrl was the real server URL instead.
+        if (avatarUrl) URL.revokeObjectURL(avatarUrl);
         setAvatarUrl(URL.createObjectURL(file));
       }
     });
@@ -43,6 +47,7 @@ export function AvatarUpload({ name, initialAvatarUrl }: { name: string; initial
               type="button"
               disabled={isPending}
               onClick={() => {
+                if (avatarUrl) URL.revokeObjectURL(avatarUrl);
                 setAvatarUrl(null);
                 startTransition(() => {
                   removeAvatar();
