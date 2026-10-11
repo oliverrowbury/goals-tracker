@@ -104,7 +104,7 @@ export function StudySummary({ session, onDone }: { session: JustFinishedSession
           accentVar="--study"
           fileName="study-session.png"
           shareTitle="My study session"
-          shareText={`${session.subjectName}: ${formatMinutes(session.durationMinutes)} — via Proudly`}
+          shareText={`${session.subjectName}: ${formatMinutes(session.durationMinutes)} · via Proudly`}
           data={{
             eyebrow: "Study session",
             heading: session.subjectName,

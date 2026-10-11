@@ -66,10 +66,10 @@ export async function updateUsername(_prev: SettingsActionState, formData: FormD
     .trim()
     .toLowerCase();
   if (!USERNAME_RE.test(username)) {
-    return { error: "3-20 characters, starting with a letter — lowercase letters, numbers, and underscores only." };
+    return { error: "3-20 characters, starting with a letter, lowercase letters, numbers, and underscores only." };
   }
   if (containsProfanity(username)) {
-    return { error: "That username isn't allowed — please pick another." };
+    return { error: "That username isn't allowed, please pick another." };
   }
 
   const user = await getCurrentUser();
@@ -356,5 +356,5 @@ export async function sendFeedback(_prev: SettingsActionState, formData: FormDat
   await prisma.feedback.create({ data: { userId: user.id, message } });
   revalidatePath("/settings");
 
-  return { success: "Thanks — feedback sent." };
+  return { success: "Thanks, feedback sent." };
 }

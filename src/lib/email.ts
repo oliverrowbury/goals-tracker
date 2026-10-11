@@ -10,7 +10,7 @@ function getClient(): Resend | null {
   if (client !== undefined) return client;
   const apiKey = process.env.RESEND_API_KEY;
   client = apiKey ? new Resend(apiKey) : null;
-  if (!client) console.warn("RESEND_API_KEY is not set — emails will be logged, not sent.");
+  if (!client) console.warn("RESEND_API_KEY is not set, emails will be logged, not sent.");
   return client;
 }
 
@@ -65,7 +65,7 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#2b2420;">
         Your account is set up. Proudly is where you'll journal what you're proud of, track goals,
-        time your study sessions, and log workouts — all in one place.
+        time your study sessions, and log workouts, all in one place.
       </p>
       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
         First thing worth doing: write today's journal entry, or set up a goal you want to keep track of.
@@ -85,7 +85,7 @@ export async function sendNewMessageEmail(to: string, name: string, fromName: st
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
       <p style="margin:0;font-size:15px;line-height:1.6;color:#2b2420;">
-        ${fromName} just sent you a message on Proudly — open the app to read and reply.
+        ${fromName} just sent you a message on Proudly. Open the app to read and reply.
       </p>
     `),
   });
@@ -99,7 +99,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
-        Someone asked to reset the password on your Proudly account. If that was you, pick a new one here —
+        Someone asked to reset the password on your Proudly account. If that was you, pick a new one here;
         this link works for one hour:
       </p>
       <p style="margin:0 0 24px;">
@@ -108,7 +108,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
         </a>
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
-        If you didn't ask for this, you can ignore this email — your password won't change.
+        If you didn't ask for this, you can ignore this email; your password won't change.
       </p>
     `),
   });
@@ -122,7 +122,7 @@ export async function sendVerificationEmail(to: string, name: string, verifyUrl:
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
       <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
-        One last step — confirm this is your email address:
+        One last step: confirm this is your email address:
       </p>
       <p style="margin:0 0 24px;">
         <a href="${verifyUrl}" style="display:inline-block;background-color:#c1592f;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
@@ -151,7 +151,7 @@ export async function sendEmailChangedEmail(to: string, name: string, newEmail: 
         This is a confirmation that your Proudly account's email was just changed to <strong>${newEmail}</strong>.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
-        If this wasn't you, your account may be compromised — sign in and change your password
+        If this wasn't you, your account may be compromised. Sign in and change your password
         right away.
       </p>
     `),
@@ -169,7 +169,7 @@ export async function sendPasswordChangedEmail(to: string, name: string): Promis
         This is a confirmation that your Proudly account password was just changed.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
-        If this wasn't you, your account may be compromised — sign in and change your password again
+        If this wasn't you, your account may be compromised. Sign in and change your password again
         right away.
       </p>
     `),

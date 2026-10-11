@@ -131,7 +131,7 @@ export function ProfileForm({
 
       <div>
         <p className="mb-1.5 block text-sm font-medium text-ink">What are you here for?</p>
-        <p className="mb-2 text-xs text-ink-muted">Shown on your profile — pick as many as apply.</p>
+        <p className="mb-2 text-xs text-ink-muted">Shown on your profile, pick as many as apply.</p>
         <div className="flex flex-wrap gap-3">
           {FOCUS_TAGS.map((tag) => (
             <label key={tag} className="flex items-center gap-1.5 text-sm text-ink">

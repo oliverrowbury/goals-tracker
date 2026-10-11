@@ -394,7 +394,7 @@ export async function createExercise(_prev: CreateExerciseState, formData: FormD
   const existing = await prisma.exercise.findFirst({
     where: { name: { equals: name, mode: "insensitive" }, OR: [{ userId: null }, { userId: user.id }] },
   });
-  if (existing) return { error: `"${existing.name}" already exists — pick it from the list instead` };
+  if (existing) return { error: `"${existing.name}" already exists, pick it from the list instead` };
 
   const created = await prisma.exercise.create({ data: { userId: user.id, name, category, isCustom: true } });
   revalidatePath("/workout");

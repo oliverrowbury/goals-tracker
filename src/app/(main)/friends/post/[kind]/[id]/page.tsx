@@ -74,8 +74,8 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
     const rawStats = isCardio
       ? [
           { label: "Time", value: formatMinutes(workout.durationMinutes ?? 0) },
-          { label: "Distance", value: workout.distanceKm ? formatDistance(workout.distanceKm, viewer.distanceUnit) : "—" },
-          { label: "Pace", value: formatPace(workout.distanceKm, workout.durationMinutes, viewer.distanceUnit) ?? "—" },
+          { label: "Distance", value: workout.distanceKm ? formatDistance(workout.distanceKm, viewer.distanceUnit) : "-" },
+          { label: "Pace", value: formatPace(workout.distanceKm, workout.durationMinutes, viewer.distanceUnit) ?? "-" },
         ]
       : [
           { label: "Exercises", value: String(new Set(workout.sets.map((s) => s.exerciseId)).size) },

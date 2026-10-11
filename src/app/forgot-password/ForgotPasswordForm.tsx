@@ -32,7 +32,7 @@ export function ForgotPasswordForm() {
         {state?.submitted ? (
           <div className="mt-4">
             <p className="text-sm text-ink">
-              If that email has a Proudly account, we&apos;ve sent a link to reset the password — it&apos;s good
+              If that email has a Proudly account, we&apos;ve sent a link to reset the password. It&apos;s good
               for an hour.
             </p>
             <Link href="/login" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">

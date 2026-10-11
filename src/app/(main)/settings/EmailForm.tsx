@@ -38,7 +38,7 @@ export function EmailForm({ current }: { current: string }) {
           required
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
-        <p className="mt-1 text-xs text-ink-muted">Needed to confirm it&apos;s really you — this is what you log in and reset your password with.</p>
+        <p className="mt-1 text-xs text-ink-muted">Needed to confirm it&apos;s really you. This is what you log in and reset your password with.</p>
       </div>
 
       <button

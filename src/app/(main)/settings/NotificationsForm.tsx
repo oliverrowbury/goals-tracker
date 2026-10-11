@@ -71,7 +71,7 @@ export function NotificationsForm() {
       // A failure here (network blip, a session hiccup on the server
       // action) previously just reverted the button with zero explanation
       // — looked exactly like nothing had happened at all.
-      setError("Couldn't enable notifications — try again.");
+      setError("Couldn't enable notifications. Try again.");
     } finally {
       setPending(false);
     }
@@ -89,7 +89,7 @@ export function NotificationsForm() {
       }
       setStatus("unsubscribed");
     } catch {
-      setError("Couldn't disable notifications — try again.");
+      setError("Couldn't disable notifications. Try again.");
     } finally {
       setPending(false);
     }
@@ -102,7 +102,7 @@ export function NotificationsForm() {
       )}
       {status === "denied" && (
         <p className="text-sm text-ink-muted">
-          Notifications are blocked for this site — allow them in your browser&apos;s site settings to enable reminders.
+          Notifications are blocked for this site. Allow them in your browser&apos;s site settings to enable reminders.
         </p>
       )}
       {(status === "unsubscribed" || status === "subscribed") && (
@@ -127,11 +127,11 @@ export function NotificationsForm() {
           {status === "subscribed" && !pending && <span className="text-sm text-ink-muted">Enabled here ✓</span>}
         </div>
       )}
-      {unavailable && <p className="text-sm text-ink-muted">Push notifications aren&apos;t available yet — check back soon.</p>}
+      {unavailable && <p className="text-sm text-ink-muted">Push notifications aren&apos;t available yet. Check back soon.</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <p className="border-t border-line pt-4 text-sm text-ink-muted">
-        Reminders are set per goal now, since different goals need different days — turn one on from that goal’s{" "}
+        Reminders are set per goal now, since different goals need different days. Turn one on from that goal’s{" "}
         <span className="font-medium text-ink">Edit</span> page. You still need to enable notifications on each
         device you want reminded on.
       </p>

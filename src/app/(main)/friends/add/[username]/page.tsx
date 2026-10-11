@@ -172,8 +172,8 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         const rawStats = isCardio
           ? [
               { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
-              { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
-              { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
+              { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "-" },
+              { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "-" },
             ]
           : [
               { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
@@ -308,7 +308,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
       <div className="mt-4 border-t border-line pt-4">
         {isSelf ? (
-          <p className="text-center text-sm text-ink-muted">This is your own profile — share your link instead.</p>
+          <p className="text-center text-sm text-ink-muted">This is your own profile. Share your link instead.</p>
         ) : theirBlockOfMe ? (
           <p className="text-center text-sm text-ink-muted">This profile isn&apos;t available.</p>
         ) : myBlockOfThem ? (
@@ -325,7 +325,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           </form>
         ) : outgoing ? (
           <form action={removeFollowByTarget.bind(null, target.id)} className="text-center">
-            <p className="mb-2 text-sm text-ink-muted">Request sent — waiting for {target.name} to accept.</p>
+            <p className="mb-2 text-sm text-ink-muted">Request sent, waiting for {target.name} to accept.</p>
             <button type="submit" className="text-sm text-ink-muted hover:text-accent">
               Cancel request
             </button>

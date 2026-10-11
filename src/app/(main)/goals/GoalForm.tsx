@@ -186,7 +186,7 @@ export function GoalForm({
             defaultValue={values.subjectId ? `subject:${values.subjectId}` : values.workoutMetric ? `workout:${values.workoutMetric}` : ""}
             className={inputClass}
           >
-            <option value="">No — I’ll log this myself</option>
+            <option value="">No, I’ll log this myself</option>
             {subjects.map((subject) => (
               <option key={subject.id} value={`subject:${subject.id}`}>
                 {subject.name} (Study)

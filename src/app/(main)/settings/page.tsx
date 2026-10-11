@@ -262,7 +262,7 @@ export default async function SettingsPage() {
           <MoonIcon className="h-4 w-4 text-ink-muted" />
           Appearance
         </h2>
-        <p className="mb-4 text-sm text-ink-muted">Light or dark — no other color options, that&apos;s the whole picker.</p>
+        <p className="mb-4 text-sm text-ink-muted">Light or dark, no other color options. That&apos;s the whole picker.</p>
         <DarkModeSwitch />
       </section>
 
@@ -281,7 +281,7 @@ export default async function SettingsPage() {
           Sharing
         </h2>
         <p className="mb-4 text-sm text-ink-muted">
-          Your journal is never visible to anyone, followers included — these only ever cover streaks, never content.
+          Your journal is never visible to anyone, followers included. These only ever cover streaks, never content.
         </p>
         <ShareActivityToggle
           initial={{
@@ -337,7 +337,7 @@ export default async function SettingsPage() {
             <p className="text-sm font-medium text-ink">Send feedback</p>
           </div>
           <p className="mb-3 text-sm text-ink-muted">
-            Bugs, ideas, things that annoy you — this goes straight to Oliver, not an app store review.
+            Bugs, ideas, things that annoy you. This goes straight to Oliver, not an app store review.
           </p>
           <FeedbackForm />
 

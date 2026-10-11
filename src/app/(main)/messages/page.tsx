@@ -89,7 +89,7 @@ export default async function MessagesPage() {
         <EmptyState
           icon={MessageIcon}
           iconClassName="bg-calm-soft text-calm"
-          message="No conversations yet — you can message someone once you both follow each other. Follow each other on the Friends page first."
+          message="No conversations yet. You can message someone once you both follow each other. Follow each other on the Friends page first."
         />
       )}
 

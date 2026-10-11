@@ -198,12 +198,12 @@ export function WorkoutSummary({
               <p className="text-xs text-ink-muted">Time</p>
             </div>
             <div>
-              <p className="font-serif text-xl font-semibold text-ink">{pace ?? "—"}</p>
+              <p className="font-serif text-xl font-semibold text-ink">{pace ?? "-"}</p>
               <p className="text-xs text-ink-muted">Pace</p>
             </div>
             <div>
               <p className="font-serif text-xl font-semibold text-ink">
-                {workout.distanceKm ? formatDistance(workout.distanceKm, distanceUnit) : "—"}
+                {workout.distanceKm ? formatDistance(workout.distanceKm, distanceUnit) : "-"}
               </p>
               <p className="text-xs text-ink-muted">Distance</p>
             </div>
@@ -273,8 +273,8 @@ export function WorkoutSummary({
           shareTitle="My workout"
           shareText={
             isCardio
-              ? `${workout.label}: ${workout.distanceKm ? `${formatDistance(workout.distanceKm, distanceUnit)}, ` : ""}${formatClock(workout.durationSeconds)} — via Proudly`
-              : `${workout.label}: ${workout.exerciseCount ?? 0} exercises, ${formatClock(workout.durationSeconds)} — via Proudly`
+              ? `${workout.label}: ${workout.distanceKm ? `${formatDistance(workout.distanceKm, distanceUnit)}, ` : ""}${formatClock(workout.durationSeconds)} · via Proudly`
+              : `${workout.label}: ${workout.exerciseCount ?? 0} exercises, ${formatClock(workout.durationSeconds)} · via Proudly`
           }
           data={{
             eyebrow: isCardio ? "Cardio workout" : "Strength workout",

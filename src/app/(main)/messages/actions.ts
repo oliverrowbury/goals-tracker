@@ -31,7 +31,7 @@ export async function sendMessage(recipientId: string, formData: FormData): Prom
   const recentCount = await prisma.message.count({
     where: { senderId: user.id, createdAt: { gt: new Date(Date.now() - MESSAGE_RATE_WINDOW_MS) } },
   });
-  if (recentCount >= MESSAGE_RATE_LIMIT) return { error: "Slow down — too many messages in a row. Try again in a minute." };
+  if (recentCount >= MESSAGE_RATE_LIMIT) return { error: "Slow down, too many messages in a row. Try again in a minute." };
 
   const [recipient, mutual, blocked] = await Promise.all([
     prisma.user.findUnique({ where: { id: recipientId }, select: { id: true, name: true, email: true, username: true } }),

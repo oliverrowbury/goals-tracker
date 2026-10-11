@@ -117,7 +117,7 @@ export default async function JournalPage({
                 <li key={session.id} className="flex items-center gap-2 px-3.5 py-2 text-sm text-ink">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: subject?.color ?? "#999" }} />
                   {subject?.name ?? "Unknown subject"}
-                  <span className="text-ink-muted">— {formatMinutes(session.durationMinutes ?? 0)}</span>
+                  <span className="text-ink-muted">· {formatMinutes(session.durationMinutes ?? 0)}</span>
                   <form action={deleteStudySession.bind(null, session.id)} className="ml-auto">
                     <button
                       type="submit"

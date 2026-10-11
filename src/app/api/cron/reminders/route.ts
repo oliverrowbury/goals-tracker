@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const slotParam = searchParams.get("slot");
   const slot = (REMINDER_SLOTS as readonly string[]).includes(slotParam ?? "") ? (slotParam as ReminderSlot) : null;
   if (!slot) {
-    return NextResponse.json({ error: "Missing or invalid ?slot= — expected one of " + REMINDER_SLOTS.join(", ") }, { status: 400 });
+    return NextResponse.json({ error: "Missing or invalid ?slot=, expected one of " + REMINDER_SLOTS.join(", ") }, { status: 400 });
   }
 
   const today = currentWeekday();

@@ -17,7 +17,7 @@ export function VerifyEmailBanner() {
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-accent-soft px-4 py-2.5 text-sm text-accent-strong">
       <p>
-        {sent ? "Verification email sent — check your inbox." : "Verify your email to keep your account fully secure."}
+        {sent ? "Verification email sent. Check your inbox." : "Verify your email to keep your account fully secure."}
       </p>
       <div className="flex shrink-0 items-center gap-3">
         {!sent && (

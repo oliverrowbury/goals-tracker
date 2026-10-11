@@ -142,8 +142,8 @@ export async function ownActivity(userId: string, weightUnit: WeightUnit, distan
       const rawStats = isCardio
         ? [
             { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
-            { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, distanceUnit) : "—" },
-            { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, distanceUnit) ?? "—" },
+            { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, distanceUnit) : "-" },
+            { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, distanceUnit) ?? "-" },
           ]
         : [
             { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },

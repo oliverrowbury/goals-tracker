@@ -33,7 +33,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
         {!token ? (
           <p className="rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-            That reset link is missing its token —{" "}
+            That reset link is missing its token.{" "}
             <Link href="/forgot-password" className="font-medium underline">
               request a new one
             </Link>

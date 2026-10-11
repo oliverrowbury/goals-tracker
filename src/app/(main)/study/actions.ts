@@ -264,7 +264,7 @@ export async function createSubject(_prev: CreateSubjectState, formData: FormDat
     return {
       error: existing.active
         ? `You already have a subject called "${existing.name}"`
-        : `"${existing.name}" already exists but is archived — reactivate it from Settings instead of adding it again`,
+        : `"${existing.name}" already exists but is archived, reactivate it from Settings instead of adding it again`,
     };
   }
 

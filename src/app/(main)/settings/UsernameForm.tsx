@@ -49,7 +49,7 @@ export function UsernameForm({
           You can change it again in {cooldownDaysLeft} day{cooldownDaysLeft === 1 ? "" : "s"}.
         </p>
       )}
-      <p className="mt-1 text-xs text-ink-muted">Used by friends to find and add you — see it on /friends.</p>
+      <p className="mt-1 text-xs text-ink-muted">Used by friends to find and add you, see it on /friends.</p>
     </div>
   );
 }

@@ -93,7 +93,7 @@ export function SignupForm() {
       </h1>
 
       <div className="animate-[fade-up_0.6s_cubic-bezier(0.16,1,0.3,1)_both] [animation-delay:1s]">
-        <p className="mb-6 text-sm text-ink-muted">Create your own account — your data stays yours alone.</p>
+        <p className="mb-6 text-sm text-ink-muted">Create your own account. Your data stays yours alone.</p>
 
         <Field
           id="name"
@@ -112,7 +112,7 @@ export function SignupForm() {
           autoComplete="username"
           error={errors.username}
           defaultValue={state?.values.username}
-          hint="Your public @handle — check it's what you want (your browser may have filled it in). You can change it later in Settings."
+          hint="Your public @handle, check it's what you want (your browser may have filled it in). You can change it later in Settings."
         />
         <Field id="email" label="Email" type="email" autoComplete="email" error={errors.email} defaultValue={state?.values.email} />
         <Field id="password" label="Password" type="password" autoComplete="new-password" error={errors.password} />

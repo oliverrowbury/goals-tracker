@@ -214,7 +214,7 @@ function MessageBubble({
                 <ConfirmButton
                   triggerClassName="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-accent hover:bg-accent-soft"
                   title="Delete this message?"
-                  message="This deletes it for both of you — it can't be undone."
+                  message="This deletes it for both of you. It can't be undone."
                   confirmLabel="Delete"
                   onConfirm={() => onDelete(m.id)}
                 >
@@ -383,7 +383,7 @@ export function MessageThread({
         mergeFresh(fresh.messages);
       } catch (err) {
         console.error("Failed to send message:", err);
-        setError("Something went wrong sending that — try again.");
+        setError("Something went wrong sending that. Try again.");
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId));
       }
     });

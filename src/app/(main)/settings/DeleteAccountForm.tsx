@@ -19,7 +19,7 @@ export function DeleteAccountForm() {
   return (
     <form action={formAction} className="max-w-sm space-y-3">
       <p className="text-sm text-ink">
-        This permanently deletes your account and everything in it — journal, goals, study history, workouts, photos,
+        This permanently deletes your account and everything in it: journal, goals, study history, workouts, photos,
         follows. It can&apos;t be undone.
       </p>
       {state?.error && <p className="rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">{state.error}</p>}

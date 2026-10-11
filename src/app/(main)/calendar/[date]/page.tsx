@@ -141,7 +141,7 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
               <li key={session.id} className="flex items-center gap-2 px-3.5 py-2.5 text-sm text-ink">
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: session.subject.color }} />
                 {session.subject.name}
-                <span className="text-ink-muted">— {formatMinutes(session.durationMinutes ?? 0)}</span>
+                <span className="text-ink-muted">· {formatMinutes(session.durationMinutes ?? 0)}</span>
               </li>
             ))}
           </ul>
@@ -205,7 +205,7 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
       {!entry?.mood && !entry?.bodyText.trim() && !entry?.photoUrl && (
         <p className="mt-2 text-xs text-ink-muted">
           <ClockIcon className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
-          No journal entry for this day —{" "}
+          No journal entry for this day;{" "}
           <Link href={`/journal?date=${dateISO}`} className="text-accent hover:underline">
             write one
           </Link>

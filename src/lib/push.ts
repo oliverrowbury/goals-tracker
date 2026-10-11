@@ -6,7 +6,7 @@ function ensureConfigured() {
   if (configured) return;
   const { NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
   if (!NEXT_PUBLIC_VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !VAPID_SUBJECT) {
-    throw new Error("VAPID env vars are not set — push notifications are not configured.");
+    throw new Error("VAPID env vars are not set, push notifications are not configured.");
   }
   webpush.setVapidDetails(VAPID_SUBJECT, NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
   configured = true;

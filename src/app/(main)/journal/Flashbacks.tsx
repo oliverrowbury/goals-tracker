@@ -27,7 +27,7 @@ export function Flashbacks({ flashbacks }: { flashbacks: Flashback[] }) {
           )}
           <div className="min-w-0">
             <p className="text-xs font-medium text-accent">
-              {f.yearsAgo === 1 ? "A year ago today" : `${f.yearsAgo} years ago today`} — {formatLong(f.dateISO)}
+              {f.yearsAgo === 1 ? "A year ago today" : `${f.yearsAgo} years ago today`} · {formatLong(f.dateISO)}
             </p>
             {f.bodyText.trim() && <p className="truncate text-sm text-ink-muted">{snippet(f.bodyText)}</p>}
           </div>

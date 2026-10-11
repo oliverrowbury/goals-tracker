@@ -20,7 +20,7 @@ export default function TermsPage() {
           <h2 className="font-serif text-lg font-semibold text-ink">What Proudly is</h2>
           <p className="mt-2">
             Proudly is a personal journaling, goal-tracking, and study-timer app, with some lightweight wellness
-            features (a daily mood check-in and a breathing exercise). It’s a free, personal project — not a
+            features (a daily mood check-in and a breathing exercise). It’s a free, personal project, not a
             registered company, and not a medical, therapeutic, or mental health service.
           </p>
         </section>
@@ -30,7 +30,7 @@ export default function TermsPage() {
           <p className="mt-2">
             The mood tracker, breathing exercise, and journaling prompts are simple wellness tools, not a substitute
             for professional support. If you’re struggling, please talk to a doctor, a trusted adult, or a service
-            like Samaritans (116 123, free, UK — samaritans.org) or Shout (text SHOUT to 85258). In an emergency,
+            like Samaritans (116 123, free, UK; samaritans.org) or Shout (text SHOUT to 85258). In an emergency,
             call 999 (UK) or your local emergency number.
           </p>
         </section>
@@ -46,7 +46,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-serif text-lg font-semibold text-ink">Following other people</h2>
           <p className="mt-2">
-            Proudly has an optional social layer — you can follow other users, and they can follow you, each direction
+            Proudly has an optional social layer: you can follow other users, and they can follow you, each direction
             needing that person’s acceptance. Following someone lets you see whatever streaks and activity they’ve
             chosen to share; it doesn’t give them anything of yours in return unless they separately follow you back
             and you’ve chosen to share it. Your journal is never part of this, regardless of who follows you.
@@ -66,7 +66,7 @@ export default function TermsPage() {
           <h2 className="font-serif text-lg font-semibold text-ink">No warranty</h2>
           <p className="mt-2">
             Proudly is provided free, “as is,” with no guarantee it will always be available, bug-free, or suit any
-            particular purpose. It may change, break, or be discontinued at any time, without notice — it’s a
+            particular purpose. It may change, break, or be discontinued at any time, without notice. It’s a
             personal project, run and maintained by one person.
           </p>
         </section>
@@ -75,7 +75,7 @@ export default function TermsPage() {
           <h2 className="font-serif text-lg font-semibold text-ink">Limitation of liability</h2>
           <p className="mt-2">
             To the fullest extent the law allows, Proudly and its creator aren’t liable for any loss or damage
-            arising from your use of the app — including lost data. We take reasonable care with your data (see the
+            arising from your use of the app, including lost data. We take reasonable care with your data (see the
             Privacy Policy), but back up anything genuinely irreplaceable elsewhere too.
           </p>
         </section>
@@ -83,7 +83,7 @@ export default function TermsPage() {
         <section>
           <h2 className="font-serif text-lg font-semibold text-ink">Ending your account</h2>
           <p className="mt-2">
-            You can permanently delete your account and everything in it yourself, any time, from Settings — or ask
+            You can permanently delete your account and everything in it yourself, any time, from Settings, or ask
             us to do it for you. We may also suspend or remove an account that’s used to break these terms or the
             law.
           </p>

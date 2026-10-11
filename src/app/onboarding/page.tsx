@@ -18,7 +18,7 @@ export default async function OnboardingPage() {
           <Wordmark />
         </h1>
         <p className="mb-6 text-sm text-ink-muted">
-          A few last things before you&apos;re in — birthday, gender, and city are required; the rest is up to you.
+          A few last things before you&apos;re in: birthday, gender, and city are required; the rest is up to you.
         </p>
         <OnboardingForm weightUnit={user.weightUnit} distanceUnit={user.distanceUnit} />
 

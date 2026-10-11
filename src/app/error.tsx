@@ -26,7 +26,7 @@ export default function GlobalErrorBoundary({ error, reset }: { error: Error & {
         </h1>
         <p className="mt-4 font-serif text-lg font-semibold text-ink">Something went wrong</p>
         <p className="mt-1.5 text-sm text-ink-muted">
-          That page hit an error on our end — not something you did. Try again, or head back home.
+          That page hit an error on our end, not something you did. Try again, or head back home.
         </p>
         <div className="mt-5 flex items-center justify-center gap-3">
           <button

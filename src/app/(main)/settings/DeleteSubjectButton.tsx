@@ -7,7 +7,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 export function DeleteSubjectButton({ subjectId, name, minutes }: { subjectId: string; name: string; minutes: number }) {
   const message =
     minutes > 0
-      ? `Delete "${name}"? You've logged ${formatMinutes(minutes)} against it — deleting the subject deletes that study history too. This can't be undone.`
+      ? `Delete "${name}"? You've logged ${formatMinutes(minutes)} against it, and deleting the subject deletes that study history too. This can't be undone.`
       : `Delete "${name}"? This can't be undone.`;
 
   return (

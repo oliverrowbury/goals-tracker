@@ -49,7 +49,7 @@ export default async function DeadlinesPage() {
       />
 
       {upcoming.length === 0 && (
-        <EmptyState icon={AlarmIcon} message="No deadlines yet — add an exam or assignment to track it." />
+        <EmptyState icon={AlarmIcon} message="No deadlines yet. Add an exam or assignment to track it." />
       )}
 
       <div className="space-y-2.5">

@@ -74,7 +74,7 @@ export default async function GoalsPage() {
       />
 
       {goals.length === 0 && (
-        <EmptyState icon={TargetIcon} iconClassName="bg-goals-soft text-goals" message="No goals yet — add one to start tracking." />
+        <EmptyState icon={TargetIcon} iconClassName="bg-goals-soft text-goals" message="No goals yet. Add one to start tracking." />
       )}
 
       <div className="space-y-3">

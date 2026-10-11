@@ -130,10 +130,10 @@ function RestTimer({ endAt, onExtend, onDismiss }: { endAt: number; onExtend: (d
         <p className="text-sm text-ink-muted">
           {remaining > 0 ? (
             <>
-              Resting — <span className="font-mono font-medium tabular-nums text-ink">{formatClock(remaining)}</span>
+              Resting: <span className="font-mono font-medium tabular-nums text-ink">{formatClock(remaining)}</span>
             </>
           ) : (
-            "Rest done — go again"
+            "Rest done, go again"
           )}
         </p>
         <div className="flex items-center gap-1">
@@ -310,7 +310,7 @@ function WorkoutNoteField({ workoutId, note }: { workoutId: string; note: string
       onBlur={() => {
         if (value.trim() !== (note ?? "").trim()) startTransition(() => updateWorkoutNote(workoutId, value));
       }}
-      placeholder="Add a note — how it felt, what to try next time…"
+      placeholder="Add a note: how it felt, what to try next time…"
       rows={2}
       className="mt-3 w-full resize-none rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-workout focus:outline-none"
     />
@@ -585,7 +585,7 @@ function ExerciseReference({ name }: { name: string }) {
 const SET_ROW_GRID = "grid grid-cols-[22px_minmax(0,1fr)_5.5rem_4.5rem] items-center gap-1";
 
 function previousLabel(prev: { weight: number; reps: number; isWarmup: boolean } | undefined, weightUnit: WeightUnit): string {
-  if (!prev) return "—";
+  if (!prev) return "-";
   return `${formatWeight(prev.weight, weightUnit)}×${prev.reps}${prev.isWarmup ? " w" : ""}`;
 }
 
@@ -868,7 +868,7 @@ export function WorkoutTracker({
                 disabled={isPending}
                 triggerClassName="flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
                 title="Discard this workout?"
-                message="It won't be saved anywhere — this can't be undone."
+                message="It won't be saved anywhere. This can't be undone."
                 confirmLabel="Discard"
                 onConfirm={() => deleteWorkout(openWorkout.id)}
               >
@@ -943,10 +943,10 @@ export function WorkoutTracker({
             {gpsStatus === "tracking" &&
               (gpsDistanceKm > 0
                 ? `📍 ${formatDistance(gpsDistanceKm, distanceUnit)} tracked so far`
-                : "📍 Tracking your distance — get moving for it to pick up a track")}
+                : "📍 Tracking your distance, get moving for it to pick up a track")}
             {gpsStatus === "acquiring" && "📍 Finding your location…"}
-            {gpsStatus === "denied" && "Location unavailable — enter distance yourself below"}
-            {gpsStatus === "unsupported" && "Your browser can't track location — enter distance yourself below"}
+            {gpsStatus === "denied" && "Location unavailable, enter distance yourself below"}
+            {gpsStatus === "unsupported" && "Your browser can't track location, enter distance yourself below"}
           </p>
 
           {gpsPoints.length >= 2 && (
@@ -992,13 +992,13 @@ export function WorkoutTracker({
             </button>
           </form>
           <p className="mt-1.5 text-xs text-ink-muted">
-            {gpsStatus === "tracking" ? "Tracked automatically — edit it above if it’s off." : "Distance is up to you to enter."}
+            {gpsStatus === "tracking" ? "Tracked automatically; edit it above if it’s off." : "Distance is up to you to enter."}
           </p>
           <ConfirmButton
             disabled={isPending}
             triggerClassName="mx-auto mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50"
             title="Discard this session?"
-            message="It won't be saved anywhere — this can't be undone."
+            message="It won't be saved anywhere. This can't be undone."
             confirmLabel="Discard"
             onConfirm={() => deleteWorkout(openWorkout.id)}
           >
@@ -1303,8 +1303,8 @@ function WorkoutLogCard({
               shareTitle="My workout"
               shareText={
                 isCardio
-                  ? `${workout.label}: ${workout.distanceKm ? `${formatDistance(workout.distanceKm, distanceUnit)}, ` : ""}${formatMinutes(workout.durationMinutes ?? 0)} — via Proudly`
-                  : `${workout.label}: ${exerciseOrder.length} exercises, ${formatMinutes(workout.durationMinutes ?? 0)} — via Proudly`
+                  ? `${workout.label}: ${workout.distanceKm ? `${formatDistance(workout.distanceKm, distanceUnit)}, ` : ""}${formatMinutes(workout.durationMinutes ?? 0)} · via Proudly`
+                  : `${workout.label}: ${exerciseOrder.length} exercises, ${formatMinutes(workout.durationMinutes ?? 0)} · via Proudly`
               }
               data={{
                 eyebrow: isCardio ? "Cardio workout" : "Strength workout",

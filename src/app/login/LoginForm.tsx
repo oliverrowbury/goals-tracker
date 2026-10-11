@@ -37,7 +37,7 @@ export function LoginForm({ error }: { error?: string }) {
 
         {error === "locked" && (
           <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-            Too many wrong attempts — this account is locked for 15 minutes. Use{" "}
+            Too many wrong attempts. This account is locked for 15 minutes. Use{" "}
             <Link href="/forgot-password" className="font-medium underline">
               forgot password
             </Link>{" "}
@@ -46,7 +46,7 @@ export function LoginForm({ error }: { error?: string }) {
         )}
         {error && error !== "locked" && (
           <p className="mb-4 rounded-md bg-accent-soft px-3 py-2 text-sm text-accent-strong">
-            Wrong email/username or password — try again.
+            Wrong email/username or password. Try again.
           </p>
         )}
 

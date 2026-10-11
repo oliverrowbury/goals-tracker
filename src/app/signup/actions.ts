@@ -48,9 +48,9 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   else if (name.split(/\s+/).length < 2) fieldErrors.name = "Enter your first and last name.";
   if (!username) fieldErrors.username = "Choose a username.";
   else if (!USERNAME_RE.test(username)) {
-    fieldErrors.username = "3-20 characters, starting with a letter — lowercase letters, numbers, and underscores only.";
+    fieldErrors.username = "3-20 characters, starting with a letter, lowercase letters, numbers, and underscores only.";
   } else if (containsProfanity(username)) {
-    fieldErrors.username = "That username isn't allowed — please pick another.";
+    fieldErrors.username = "That username isn't allowed, please pick another.";
   }
   if (!email) fieldErrors.email = "Enter your email.";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "That doesn't look like a valid email address.";
@@ -64,7 +64,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
     prisma.user.findUnique({ where: { email } }),
     prisma.user.findUnique({ where: { username } }),
   ]);
-  if (existingEmail) return { fieldErrors: { email: "That email already has an account — sign in instead." }, values };
+  if (existingEmail) return { fieldErrors: { email: "That email already has an account, sign in instead." }, values };
   if (existingUsername) return { fieldErrors: { username: "That username is taken." }, values };
 
   const passwordHash = await hashPassword(password);
@@ -90,7 +90,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
     const e = err as { code?: string; message?: string; meta?: { target?: string[] } };
     const field = e?.meta?.target?.[0] ?? e?.message?.match(/fields: \(`(\w+)`\)/)?.[1];
     if (e?.code === "P2002" && field === "email") {
-      return { fieldErrors: { email: "That email already has an account — sign in instead." }, values };
+      return { fieldErrors: { email: "That email already has an account, sign in instead." }, values };
     }
     if (e?.code === "P2002" && field === "username") {
       return { fieldErrors: { username: "That username is taken." }, values };

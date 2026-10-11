@@ -14,13 +14,13 @@ export async function resetPassword(_prev: ResetPasswordState, formData: FormDat
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-  if (!token) return { error: "That reset link is invalid — request a new one." };
+  if (!token) return { error: "That reset link is invalid, request a new one." };
   if (password.length < 6) return { error: "Needs to be at least 6 characters." };
   if (password !== confirmPassword) return { error: "Passwords don't match." };
 
   const user = await prisma.user.findUnique({ where: { resetToken: token } });
   if (!user || !user.resetTokenExpiresAt || user.resetTokenExpiresAt < new Date()) {
-    return { error: "That reset link is invalid or has expired — request a new one." };
+    return { error: "That reset link is invalid or has expired, request a new one." };
   }
 
   const passwordHash = await hashPassword(password);

@@ -32,7 +32,7 @@ export default function OpengraphImage() {
           </div>
         </div>
         <div style={{ display: "flex", marginTop: 32, fontSize: 32, color: "#6b5f52", maxWidth: 860, textAlign: "center" }}>
-          A daily journal for what you&apos;re proud of — goals, study, and workouts alongside it.
+          A daily journal for what you&apos;re proud of, with goals, study, and workouts alongside it.
         </div>
       </div>
     ),

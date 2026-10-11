@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   // login/marketing-ish ones) omit their own title entirely.
   title: {
     default: "Proudly",
-    template: "%s — Proudly",
+    template: "%s · Proudly",
   },
   description: SITE_DESCRIPTION,
   openGraph: {

@@ -405,7 +405,7 @@ export function StudyTimer({
             {formatClock(elapsedSeconds)}
           </p>
           {isPaused && autoPaused && !pomodoroEnabled && (
-            <p className="mt-2 text-xs text-ink-muted">Paused automatically — this tab was in the background a while.</p>
+            <p className="mt-2 text-xs text-ink-muted">Paused automatically, this tab was in the background a while.</p>
           )}
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
@@ -484,7 +484,7 @@ export function StudyTimer({
             disabled={isPending}
             triggerClassName="mt-4 flex items-center gap-1 text-xs text-ink-muted hover:text-accent disabled:opacity-50 mx-auto"
             title="Discard this session?"
-            message="It won't be saved anywhere — use Finish instead if you want to keep it."
+            message="It won't be saved anywhere. Use Finish instead if you want to keep it."
             confirmLabel="Discard"
             onConfirm={() => deleteStudySession(openSession.id)}
           >

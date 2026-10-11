@@ -249,7 +249,7 @@ export function JournalEditor({
             accentVar="--accent"
             fileName="proud-moment.png"
             shareTitle="A proud moment"
-            shareText={`${text.trim().slice(0, 200)} — via Proudly`}
+            shareText={`${text.trim().slice(0, 200)} · via Proudly`}
             data={{ eyebrow: "Proud moment", heading: "Today", body: text.trim() }}
             className="ml-auto flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-muted transition hover:border-accent hover:text-accent"
           />

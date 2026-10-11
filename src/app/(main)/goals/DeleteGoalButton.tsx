@@ -8,7 +8,7 @@ export function DeleteGoalButton({ goalId, title }: { goalId: string; title: str
     <ConfirmButton
       triggerClassName="text-ink-muted hover:text-accent disabled:opacity-50"
       title="Delete this goal?"
-      message={`Delete "${title}"? This removes all its history too — this can't be undone.`}
+      message={`Delete "${title}"? This removes all its history too. This can't be undone.`}
       confirmLabel="Delete"
       onConfirm={() => deleteGoal(goalId)}
     >

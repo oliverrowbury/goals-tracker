@@ -164,7 +164,7 @@ export async function submitReport(
   await prisma.report.create({
     data: { reporterId: user.id, targetUserId, targetType, targetId, reason: trimmedReason },
   });
-  return { success: "Thanks — we'll take a look." };
+  return { success: "Thanks, we'll take a look." };
 }
 
 export type ShareCategory = "journal" | "study" | "workout";
@@ -293,7 +293,7 @@ export async function addComment(kind: ActivityKind, activityId: string, formDat
   const recentCount = await prisma.comment.count({
     where: { authorId: user.id, createdAt: { gt: new Date(Date.now() - COMMENT_RATE_WINDOW_MS) } },
   });
-  if (recentCount >= COMMENT_RATE_LIMIT) return { error: "Slow down — too many comments in a row. Try again in a minute." };
+  if (recentCount >= COMMENT_RATE_LIMIT) return { error: "Slow down, too many comments in a row. Try again in a minute." };
 
   const access = await canCommentOn(user.id, kind, activityId);
   if (!access) return { error: "You can't comment on this." };

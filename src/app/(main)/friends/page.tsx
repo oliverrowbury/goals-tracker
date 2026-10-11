@@ -187,8 +187,8 @@ export default async function FriendsPage() {
       const rawStats = isCardio
         ? [
             { label: "Time", value: formatMinutes(w.durationMinutes ?? 0) },
-            { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "—" },
-            { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "—" },
+            { label: "Distance", value: w.distanceKm ? formatDistance(w.distanceKm, user.distanceUnit) : "-" },
+            { label: "Pace", value: formatPace(w.distanceKm, w.durationMinutes, user.distanceUnit) ?? "-" },
           ]
         : [
             { label: "Exercises", value: String(new Set(w.sets.map((s) => s.exerciseId)).size) },
@@ -470,7 +470,7 @@ export default async function FriendsPage() {
           <h2 className="mb-3 text-sm font-medium text-ink-muted">Activity</h2>
 
           {feed.length === 0 ? (
-            <EmptyState message="Nothing from people you follow in the last week — workouts and study sessions show up here once someone finishes one and has that category shared. Older posts still live on their profile." />
+            <EmptyState message="Nothing from people you follow in the last week. Workouts and study sessions show up here once someone finishes one and has that category shared. Older posts still live on their profile." />
           ) : (
             <ul className="space-y-3">
               {feed.map((item) => {

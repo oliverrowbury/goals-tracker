@@ -44,7 +44,7 @@ function storageClient() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error("SUPABASE_URL / SUPABASE_ANON_KEY are not set — photo uploads are disabled until they are.");
+    throw new Error("SUPABASE_URL / SUPABASE_ANON_KEY are not set, photo uploads are disabled until they are.");
   }
   return createClient(url, key).storage.from(BUCKET);
 }
