@@ -1,8 +1,7 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { AUTH_COOKIE, baseUrl } from "@/lib/auth";
+import { baseUrl } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, generateSessionToken } from "@/lib/password";
 import { sendWelcomeEmail, sendVerificationEmail } from "@/lib/email";
@@ -68,12 +67,11 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   if (existingUsername) return { fieldErrors: { username: "That username is taken." }, values };
 
   const passwordHash = await hashPassword(password);
-  const sessionToken = generateSessionToken();
   const verifyToken = generateSessionToken();
   const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
   try {
     await prisma.user.create({
-      data: { name, username, email, passwordHash, sessionToken, verifyToken, verifyTokenExpiresAt },
+      data: { name, username, email, passwordHash, verifyToken, verifyTokenExpiresAt },
     });
   } catch (err) {
     // The findUnique checks above can't fully close this — two concurrent
@@ -105,14 +103,9 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   await sendWelcomeEmail(email, name);
   await sendVerificationEmail(email, name, `${await baseUrl()}/api/verify-email?token=${verifyToken}`);
 
-  const cookieStore = await cookies();
-  cookieStore.set(AUTH_COOKIE, sessionToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 60 * 60 * 24 * 30,
-    path: "/",
-  });
-
-  redirect("/");
+  // Sign in on purpose, not automatically — landing back on /login after
+  // creating the account means the password they just typed is the first
+  // thing that actually gets verified, same as any other account they sign
+  // up for elsewhere.
+  redirect("/login?created=1");
 }

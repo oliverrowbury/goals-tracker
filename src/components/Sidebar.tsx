@@ -20,6 +20,7 @@ import {
   MenuIcon,
   CloseIcon,
   ChevronDownIcon,
+  UserIcon,
 } from "@/components/Icons";
 
 // The collapsed sidebar's logo — the ascending-bars mark from Wordmark,
@@ -290,6 +291,24 @@ export function Sidebar({
       >
         <ChevronDownIcon className="h-3.5 w-3.5 -rotate-90" />
       </button>
+
+      {/* A persistent way into your own profile (the "your activity"
+          card at the top of Friends) from anywhere in the app, not just
+          from inside the mobile drawer or desktop sidebar's account row —
+          hidden on Friends itself (you're already there) and while the
+          drawer's open (it would just sit under the backdrop). */}
+      {pathname !== "/friends" && !mobileOpen && (
+        <Link
+          href="/friends"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Your profile"
+          title={`Level ${level}`}
+          className="fixed bottom-4 right-4 z-30 flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-lg transition hover:bg-accent-strong hover:shadow-xl"
+        >
+          <UserIcon className="h-4 w-4" />
+          Lv {level}
+        </Link>
+      )}
     </>
   );
 }
