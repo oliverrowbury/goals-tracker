@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { setMood } from "./journal/actions";
 import { MOODS } from "@/lib/mood";
 
-// Shown once per day, right after login, until answered — no skip button
-// on purpose. Gated by the server (only rendered when today's mood is
-// still unset), so once answered it's simply gone for the rest of the day.
+const SKIP_KEY_PREFIX = "mood-skip-";
+
+// Shown once per day, right after login, until answered or skipped.
+// Gated by the server (only rendered when today's mood is still unset),
+// so once answered it's simply gone for the rest of the day — a skip
+// doesn't write anything server-side, it's just remembered in
+// localStorage for today's date so it doesn't nag again on the next page
+// load today, but still asks again tomorrow.
 //
 // `delayed` is set when this page load is the moment someone just logged
 // in (see WELCOME_COOKIE) — the backdrop appears immediately either way
@@ -19,6 +24,30 @@ export function MoodCheckInModal({ dateISO, delayed = false }: { dateISO: string
   const [answered, setAnswered] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  useEffect(() => {
+    try {
+      // Deferred to an effect rather than a lazy useState initializer —
+      // the server always renders "not skipped" (it can't see
+      // localStorage), so reading it during the client's first render
+      // would disagree with that and trip a hydration mismatch. A brief
+      // flash before it hides is an acceptable trade for not fighting
+      // hydration over this (same pattern as OnboardingChecklist).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (localStorage.getItem(SKIP_KEY_PREFIX + dateISO) === "1") setAnswered(true);
+    } catch {
+      // ignore — just stays shown
+    }
+  }, [dateISO]);
+
+  function skip() {
+    setAnswered(true);
+    try {
+      localStorage.setItem(SKIP_KEY_PREFIX + dateISO, "1");
+    } catch {
+      // not persisted — it'll just ask again on the next page load today
+    }
+  }
+
   if (answered) return null;
 
   return (
@@ -27,9 +56,17 @@ export function MoodCheckInModal({ dateISO, delayed = false }: { dateISO: string
       style={delayed ? { animationDelay: "480ms" } : undefined}
     >
       <div
-        className="w-full max-w-sm rounded-2xl border border-line bg-card p-7 text-center shadow-lg animate-[mood-modal-in_420ms_cubic-bezier(0.16,1,0.3,1)_both]"
+        className="relative w-full max-w-sm rounded-2xl border border-line bg-card p-7 text-center shadow-lg animate-[mood-modal-in_420ms_cubic-bezier(0.16,1,0.3,1)_both]"
         style={delayed ? { animationDelay: "480ms" } : undefined}
       >
+        <button
+          type="button"
+          onClick={skip}
+          aria-label="Skip"
+          className="absolute right-3 top-3 p-1.5 -m-1.5 text-ink-muted hover:text-ink"
+        >
+          ×
+        </button>
         <p className="font-serif text-xl font-semibold text-ink">How are you feeling today?</p>
         <p className="mt-1 text-sm text-ink-muted">Pick one to get started.</p>
         <div className="mt-5 flex items-center justify-center gap-2">
