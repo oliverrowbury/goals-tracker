@@ -365,10 +365,10 @@ export default async function FriendsPage() {
             eyebrow: "My stats",
             heading: `Level ${level}`,
             stats: [
-              { label: "journal streak", value: `${own.journalStreak}d` },
-              { label: "study streak", value: `${own.studyStreak}d` },
-              { label: "workout streak", value: `${own.workoutStreak}d` },
-              { label: "goals done", value: String(goalsDoneCount) },
+              { label: "journal", value: `${own.journalStreak}d` },
+              { label: "study", value: `${own.studyStreak}d` },
+              { label: "workout", value: `${own.workoutStreak}d` },
+              { label: "goals", value: String(goalsDoneCount) },
             ],
           }}
           accentVar="--accent"
