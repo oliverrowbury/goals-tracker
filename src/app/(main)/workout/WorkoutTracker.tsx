@@ -1082,7 +1082,7 @@ function EditableSetRow({ set, index, weightUnit }: { set: HistorySet; index: nu
         inputMode="decimal"
         min={0}
         step="any"
-        className="w-14 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
+        className="w-20 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
       />
       <span>{weightUnit === "LB" ? "lb" : "kg"} ×</span>
       <input
@@ -1092,7 +1092,7 @@ function EditableSetRow({ set, index, weightUnit }: { set: HistorySet; index: nu
         type="number"
         inputMode="numeric"
         min={1}
-        className="w-12 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
+        className="w-14 rounded border border-line bg-paper px-1.5 py-1 text-center focus:border-workout focus:outline-none"
       />
       {set.isWarmup && <span>(warm-up)</span>}
     </li>

@@ -41,7 +41,7 @@ export function GoalExtraInput({
             setGoalLogValue(goalId, dateISO, newValue);
           });
         }}
-        className="w-14 rounded-md border border-line px-1.5 py-1 text-right text-xs focus:border-goals focus:outline-none"
+        className="w-16 rounded-md border border-line px-1.5 py-1 text-right text-xs focus:border-goals focus:outline-none"
       />
       {unit && <span>{unit}</span>}
     </label>

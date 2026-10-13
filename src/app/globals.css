@@ -19,6 +19,23 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
+/* iOS Safari auto-zooms the whole page in when a focused input/textarea's
+   font is under 16px, on the (reasonable, but here unwanted) assumption
+   that smaller text needs zooming to read while typing — and it doesn't
+   reliably zoom back out again on blur, leaving the page stuck zoomed in
+   until the person manually pinches back out. Most of this app's fields
+   render at Tailwind's text-sm (14px), under that threshold. Scoped to
+   mobile widths (desktop never had this problem and keeps its normal
+   14px sizing) and !important since it has to beat the text-sm utility
+   class's own specificity, not just come after it in source order. */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 :root {
   /* A cool stone/charcoal base with a deep teal accent — deliberately not
      the warm cream-and-terracotta combination (every other section color
