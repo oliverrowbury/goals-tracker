@@ -24,16 +24,16 @@ function layout(bodyHtml: string): string {
   return `
 <!DOCTYPE html>
 <html>
-  <body style="margin:0;padding:32px 16px;background-color:#fbf6ee;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#2b2420;">
-    <table role="presentation" width="100%" style="max-width:480px;margin:0 auto;background-color:#fffdfa;border-radius:16px;border:1px solid #e9ddcc;">
+  <body style="margin:0;padding:32px 16px;background-color:#f2f0e8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#242b29;">
+    <table role="presentation" width="100%" style="max-width:480px;margin:0 auto;background-color:#fdfdfb;border-radius:16px;border:1px solid #dde1da;">
       <tr>
         <td style="padding:32px;">
-          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#c1592f;">Proudly</p>
+          <p style="margin:0 0 24px;font-size:22px;font-weight:700;color:#0e7d74;">Proudly</p>
           ${bodyHtml}
         </td>
       </tr>
     </table>
-    <p style="max-width:480px;margin:16px auto 0;text-align:center;font-size:12px;color:#85786a;">
+    <p style="max-width:480px;margin:16px auto 0;text-align:center;font-size:12px;color:#7c8a86;">
       You're receiving this because you have a Proudly account.
     </p>
   </body>
@@ -63,14 +63,14 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
     subject: "Welcome to Proudly",
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#242b29;">
         Your account is set up. Proudly is where you'll journal what you're proud of, track goals,
         time your study sessions, and log workouts, all in one place.
       </p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#242b29;">
         First thing worth doing: write today's journal entry, or set up a goal you want to keep track of.
       </p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
         If you didn't create this account, you can ignore this email.
       </p>
     `),
@@ -84,7 +84,7 @@ export async function sendNewMessageEmail(to: string, name: string, fromName: st
     subject: `${fromName} sent you a message on Proudly`,
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0;font-size:15px;line-height:1.6;color:#242b29;">
         ${fromName} just sent you a message on Proudly. Open the app to read and reply.
       </p>
     `),
@@ -98,16 +98,16 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
     subject: "Reset your Proudly password",
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#242b29;">
         Someone asked to reset the password on your Proudly account. If that was you, pick a new one here;
         this link works for one hour:
       </p>
       <p style="margin:0 0 24px;">
-        <a href="${resetUrl}" style="display:inline-block;background-color:#c1592f;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
+        <a href="${resetUrl}" style="display:inline-block;background-color:#0e7d74;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
           Reset your password
         </a>
       </p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
         If you didn't ask for this, you can ignore this email; your password won't change.
       </p>
     `),
@@ -121,15 +121,15 @@ export async function sendVerificationEmail(to: string, name: string, verifyUrl:
     subject: "Verify your email for Proudly",
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#242b29;">
         One last step: confirm this is your email address:
       </p>
       <p style="margin:0 0 24px;">
-        <a href="${verifyUrl}" style="display:inline-block;background-color:#c1592f;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
+        <a href="${verifyUrl}" style="display:inline-block;background-color:#0e7d74;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
           Verify email
         </a>
       </p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
         If you didn't create a Proudly account, you can ignore this email.
       </p>
     `),
@@ -147,10 +147,10 @@ export async function sendEmailChangedEmail(to: string, name: string, newEmail: 
     subject: "Your Proudly email was changed",
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#242b29;">
         This is a confirmation that your Proudly account's email was just changed to <strong>${newEmail}</strong>.
       </p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
         If this wasn't you, your account may be compromised. Sign in and change your password
         right away.
       </p>
@@ -165,10 +165,10 @@ export async function sendPasswordChangedEmail(to: string, name: string): Promis
     subject: "Your Proudly password was changed",
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#2b2420;">
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#242b29;">
         This is a confirmation that your Proudly account password was just changed.
       </p>
-      <p style="margin:0;font-size:13px;line-height:1.6;color:#85786a;">
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
         If this wasn't you, your account may be compromised. Sign in and change your password again
         right away.
       </p>

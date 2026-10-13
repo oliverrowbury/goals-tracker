@@ -20,18 +20,18 @@ export default function OpengraphImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "#fbf6ee",
+          background: "#f2f0e8",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <span style={{ fontSize: 104, fontWeight: 700, color: "#2b2420" }}>Proudly</span>
+          <span style={{ fontSize: 104, fontWeight: 700, color: "#242b29" }}>Proudly</span>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 9 }}>
             {BAR_HEIGHTS.map((h, i) => (
-              <div key={i} style={{ width: 20, height: h, borderRadius: 4, background: "#c1592f" }} />
+              <div key={i} style={{ width: 20, height: h, borderRadius: 4, background: "#0e7d74" }} />
             ))}
           </div>
         </div>
-        <div style={{ display: "flex", marginTop: 32, fontSize: 32, color: "#6b5f52", maxWidth: 860, textAlign: "center" }}>
+        <div style={{ display: "flex", marginTop: 32, fontSize: 32, color: "#5a6764", maxWidth: 860, textAlign: "center" }}>
           A daily journal for what you&apos;re proud of, with goals, study, and workouts alongside it.
         </div>
       </div>

@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "A daily journal for what you're proud of, with goals, study, and workout tracking alongside it.",
     start_url: "/",
     display: "standalone",
-    background_color: "#fbf6ee",
-    theme_color: "#c1592f",
+    background_color: "#f2f0e8",
+    theme_color: "#0e7d74",
     icons: [
       { src: "/icon-192", sizes: "192x192", type: "image/png" },
       { src: "/icon-512", sizes: "512x512", type: "image/png" },

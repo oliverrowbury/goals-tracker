@@ -54,7 +54,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#c1592f",
+  themeColor: "#0e7d74",
 };
 
 // Runs before paint so there's no flash of the wrong theme — can't do this

@@ -20,18 +20,23 @@ input[type="number"] {
 }
 
 :root {
-  --paper: #fbf6ee;
-  --ink: #2b2420;
-  /* Was #85786a — only ~4:1 against the paper/card background, which fails
-     WCAG AA (4.5:1) for normal-size text and reads as genuinely hard to
-     read given how much small caption/label text uses this color. Darkened
-     to ~5.8:1 while keeping the same warm brown-grey hue. */
-  --ink-muted: #6b5f52;
-  --card: #fffdfa;
-  --line: #e9ddcc;
-  --accent: #c1592f;
-  --accent-strong: #a2481f;
-  --accent-soft: #f3e2d3;
+  /* A cool stone/charcoal base with a deep teal accent — deliberately not
+     the warm cream-and-terracotta combination (every other section color
+     below was already fine; that specific pairing was the one thing that
+     read as "made with Claude" rather than its own brand). Teal is also
+     the one major hue not already claimed by a section below (orange,
+     blue, green, red, gold, purple), so it reads as a genuinely distinct
+     5th color rather than a near-miss of one of them. */
+  --paper: #f2f0e8;
+  --ink: #242b29;
+  /* Tuned to roughly the same ~5.8:1 contrast against paper/card that the
+     old warm brown-grey hit — same legibility, cooler hue. */
+  --ink-muted: #5a6764;
+  --card: #fdfdfb;
+  --line: #dde1da;
+  --accent: #0e7d74;
+  --accent-strong: #0a625b;
+  --accent-soft: #d9efec;
 
   /* Section-identity colors — Journal keeps the main terracotta accent;
      Goals/Study get their own hue (matching the subject color palette) so
@@ -60,7 +65,7 @@ input[type="number"] {
      dark in both themes — unlike --ink, which deliberately flips light/dark
      since it's body text color first and would otherwise put white text on
      a near-white button in dark mode. */
-  --ink-solid: #2b2420;
+  --ink-solid: #242b29;
 
   /* Shadow strength, referenced by the shadow-* utilities below — a flat
      5% shadow reads fine on a pale background but disappears entirely
@@ -71,14 +76,14 @@ input[type="number"] {
 }
 
 .dark {
-  --paper: #1c1815;
-  --ink: #f0e9df;
-  --ink-muted: #a89a89;
-  --card: #262019;
-  --line: #3c342b;
-  --accent: #dd8055;
-  --accent-strong: #e99b76;
-  --accent-soft: #3a2a20;
+  --paper: #171a19;
+  --ink: #e9efed;
+  --ink-muted: #9aa6a3;
+  --card: #1f2422;
+  --line: #343c3a;
+  --accent: #4fc3b8;
+  --accent-strong: #6fd4ca;
+  --accent-soft: #1a3c38;
 
   --goals: #83b1dd;
   --goals-soft: #22303e;
@@ -94,7 +99,7 @@ input[type="number"] {
   --calm-strong: #beafdf;
   --calm-soft: #2c2438;
 
-  --ink-solid: #3c342b;
+  --ink-solid: #343c3a;
 
   --shadow-opacity: 0.3;
   --shadow-opacity-strong: 0.45;
