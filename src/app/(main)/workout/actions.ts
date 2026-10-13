@@ -117,6 +117,12 @@ export async function addSet(workoutId: string, exerciseId: string, formData: Fo
   const user = await getCurrentUser();
   const weight = toKg(enteredWeight, user.weightUnit);
 
+  // Same ownership check as removeSet/updateWorkoutSet — a workoutId alone
+  // doesn't say who it belongs to, and this one's reachable from a friend's
+  // shared workout post, not just your own in-progress session.
+  const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
+  if (!workout) return;
+
   const count = await prisma.workoutSet.count({ where: { workoutId, exerciseId } });
   await prisma.workoutSet.create({
     data: { workoutId, exerciseId, setNumber: count + 1, weight, reps, isWarmup },

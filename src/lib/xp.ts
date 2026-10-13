@@ -20,14 +20,27 @@ export function levelForXp(xp: number): { level: number; xpIntoLevel: number; xp
   return { level, xpIntoLevel, xpForNextLevel: XP_PER_LEVEL };
 }
 
+// An atomic increment, not a read-then-write — two XP-awarding actions
+// landing close together (e.g. ticking off two goals in quick succession)
+// would otherwise both read the same starting xp and one award would
+// silently overwrite the other instead of adding to it.
+//
 // Clamped at 0 so an undo (e.g. un-ticking a goal) can't push a user
 // negative — see toggleGoalCompletion, the only caller that ever passes a
-// negative amount.
+// negative amount. The clamp itself is a separate, idempotent follow-up
+// write rather than part of the same atomic step, which is fine: it only
+// ever sets xp to exactly 0, so two of them racing still lands on 0.
 export async function awardXp(userId: string, amount: number) {
-  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { xp: true } });
-  const xp = Math.max(0, user.xp + amount);
-  await prisma.user.update({ where: { id: userId }, data: { xp } });
+  const { xp } = await prisma.user.update({
+    where: { id: userId },
+    data: { xp: { increment: amount } },
+    select: { xp: true },
+  });
 
-  const { level } = levelForXp(xp);
+  if (xp < 0) {
+    await prisma.user.update({ where: { id: userId }, data: { xp: 0 } });
+  }
+
+  const { level } = levelForXp(Math.max(xp, 0));
   await awardLevelBadges(userId, level);
 }

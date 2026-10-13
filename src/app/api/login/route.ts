@@ -55,14 +55,21 @@ export async function POST(request: Request) {
 
   if (!user || !valid) {
     if (user) {
-      const failedLoginAttempts = user.failedLoginAttempts + 1;
-      await prisma.user.update({
+      // Atomic increment, not a read-then-write — concurrent wrong-password
+      // requests (a parallelized guessing script, the exact thing this
+      // counter defends against) would otherwise both read the same
+      // starting count and under-count, weakening the lockout.
+      const { failedLoginAttempts } = await prisma.user.update({
         where: { id: user.id },
-        data: {
-          failedLoginAttempts,
-          lockedUntil: failedLoginAttempts >= MAX_FAILED_ATTEMPTS ? new Date(Date.now() + LOCKOUT_DURATION_MS) : null,
-        },
+        data: { failedLoginAttempts: { increment: 1 } },
+        select: { failedLoginAttempts: true },
       });
+      if (failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS) },
+        });
+      }
     }
     // The redirect-target cookie is left as-is (not cleared) so a retry
     // after a typo still lands back where the user was trying to go.

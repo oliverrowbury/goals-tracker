@@ -143,7 +143,19 @@ export async function getNotifications(): Promise<{ followRequests: FollowReques
     })),
   ].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
-  await prisma.user.update({ where: { id: user.id }, data: { likesSeenAt: new Date(), commentsSeenAt: new Date() } });
+  // Only advance the seen cursor past everything in the window when we're
+  // sure we actually displayed everything in it — hitting the `take` cap
+  // means there could be older likes/comments still sitting beyond the 15
+  // shown, and advancing to "now" would mark those as seen despite never
+  // showing them, permanently dropping them from the unseen count. Leaving
+  // the cursor where it was in that case just means the badge stays up
+  // (over-notifying), which is the safe failure mode, not under-notifying.
+  const seenUpdate: { likesSeenAt?: Date; commentsSeenAt?: Date } = {};
+  if (cheers.length < 15) seenUpdate.likesSeenAt = new Date();
+  if (comments.length < 15) seenUpdate.commentsSeenAt = new Date();
+  if (Object.keys(seenUpdate).length > 0) {
+    await prisma.user.update({ where: { id: user.id }, data: seenUpdate });
+  }
 
   return { followRequests, activity };
 }

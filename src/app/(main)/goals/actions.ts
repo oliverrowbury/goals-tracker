@@ -154,18 +154,26 @@ export async function toggleGoalCompletion(goalId: string, dateISO: string) {
   if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
-  const [goal, existing] = await Promise.all([
-    prisma.goal.findFirst({ where: { id: goalId, userId: user.id }, select: { userId: true } }),
-    prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } }),
-  ]);
+  const goal = await prisma.goal.findFirst({ where: { id: goalId, userId: user.id }, select: { userId: true } });
   if (!goal) return;
-  const wasCompleted = existing?.completed ?? false;
-  const nowCompleted = !wasCompleted;
 
-  if (existing) {
-    await prisma.goalLog.update({ where: { id: existing.id }, data: { completed: nowCompleted } });
-  } else {
+  // No separate read-then-decide: the create-or-flip and the "did this
+  // request actually cause the transition" check are both done as atomic,
+  // conditional writes. That closes two races at once — two near-
+  // simultaneous toggles on a day with no existing log both trying to
+  // `create` (which used to throw an uncaught unique-constraint error on
+  // the loser), and two toggles both reading the same starting state and
+  // both awarding/reverting XP for what the user experiences as one tap.
+  let nowCompleted = true;
+  try {
     await prisma.goalLog.create({ data: { goalId, date, completed: true } });
+  } catch {
+    const flippedOn = await prisma.goalLog.updateMany({ where: { goalId, date, completed: false }, data: { completed: true } });
+    if (flippedOn.count === 0) {
+      const flippedOff = await prisma.goalLog.updateMany({ where: { goalId, date, completed: true }, data: { completed: false } });
+      if (flippedOff.count === 0) return; // lost the race entirely — another request already did this flip
+      nowCompleted = false;
+    }
   }
 
   // Award on the not-done → done transition, undo it on the reverse — so
@@ -181,21 +189,33 @@ export async function setGoalLogValue(goalId: string, dateISO: string, value: nu
   if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
-  const [goal, existing] = await Promise.all([
-    prisma.goal.findFirst({ where: { id: goalId, userId: user.id }, select: { userId: true } }),
-    prisma.goalLog.findUnique({ where: { goalId_date: { goalId, date } } }),
-  ]);
+  const goal = await prisma.goal.findFirst({ where: { id: goalId, userId: user.id }, select: { userId: true } });
   if (!goal) return;
-  const wasCompleted = existing?.completed ?? false;
   const nowCompleted = value > 0;
 
-  await prisma.goalLog.upsert({
-    where: { goalId_date: { goalId, date } },
-    update: { value, completed: nowCompleted },
-    create: { goalId, date, value, completed: nowCompleted },
-  });
+  // Same atomic-transition idea as toggleGoalCompletion: the value is
+  // always written, but whether THIS request gets to award/revert XP is
+  // decided by a conditional write keyed off the completed value already
+  // in the row, not a separate read beforehand — so two near-simultaneous
+  // saves can't both see the same starting state and both award XP for
+  // what should be a single transition.
+  let didTransition = false;
+  try {
+    await prisma.goalLog.create({ data: { goalId, date, value, completed: nowCompleted } });
+    didTransition = nowCompleted;
+  } catch {
+    const flipped = await prisma.goalLog.updateMany({
+      where: { goalId, date, completed: { not: nowCompleted } },
+      data: { value, completed: nowCompleted },
+    });
+    if (flipped.count > 0) {
+      didTransition = true;
+    } else {
+      await prisma.goalLog.updateMany({ where: { goalId, date }, data: { value } });
+    }
+  }
 
-  if (nowCompleted !== wasCompleted) {
+  if (didTransition) {
     await awardXp(goal.userId, nowCompleted ? XP_AWARDS.GOAL_COMPLETE : -XP_AWARDS.GOAL_COMPLETE);
     if (nowCompleted) await awardFirstGoalBadge(goal.userId);
   }

@@ -202,18 +202,19 @@ export async function likeActivity(kind: ActivityKind, activityId: string) {
 
   const owner =
     kind === "workout"
-      ? await prisma.workout.findUnique({ where: { id: activityId }, select: { userId: true } })
-      : await prisma.studySession.findUnique({ where: { id: activityId }, select: { userId: true } });
-  if (!owner || owner.userId === user.id) return;
+      ? await prisma.workout.findUnique({ where: { id: activityId }, select: { userId: true, visibility: true } })
+      : await prisma.studySession.findUnique({ where: { id: activityId }, select: { userId: true, visibility: true } });
+  if (!owner || owner.userId === user.id || owner.visibility !== "FRIENDS") return;
 
-  const [follow, ownerUser] = await Promise.all([
+  const [follow, ownerUser, blocked] = await Promise.all([
     prisma.follow.findFirst({ where: { followerId: user.id, followingId: owner.userId, status: "ACCEPTED" } }),
     prisma.user.findUnique({
       where: { id: owner.userId },
       select: { shareWorkoutStreak: true, shareStudyStreak: true },
     }),
+    isBlocked(user.id, owner.userId),
   ]);
-  if (!follow || !ownerUser) return;
+  if (!follow || !ownerUser || blocked) return;
   if (kind === "workout" && !ownerUser.shareWorkoutStreak) return;
   if (kind === "study" && !ownerUser.shareStudyStreak) return;
 

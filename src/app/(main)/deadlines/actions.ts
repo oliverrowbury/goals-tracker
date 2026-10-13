@@ -77,7 +77,16 @@ export async function toggleDeadlineCompleted(deadlineId: string) {
   if (!deadline) return;
   const completed = !deadline.completed;
 
-  await prisma.deadline.update({ where: { id: deadlineId }, data: { completed } });
+  // Conditioned on the completed value just read, not a plain update — so
+  // two near-simultaneous toggles (double-click, two tabs) can't both read
+  // the same starting state and both award/revert XP for one completion.
+  // Only the request that actually flips it (count > 0) gets to count the
+  // transition; the loser just no-ops below.
+  const flipped = await prisma.deadline.updateMany({
+    where: { id: deadlineId, completed: deadline.completed },
+    data: { completed },
+  });
+  if (flipped.count === 0) return;
 
   // Same not-done <-> done transition pattern as goals — award once,
   // undone cleanly if un-ticked.
