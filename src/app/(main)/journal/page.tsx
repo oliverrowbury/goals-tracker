@@ -13,6 +13,7 @@ import { JournalIcon } from "@/components/Icons";
 import { deleteStudySession } from "../study/actions";
 import { PageHeader } from "@/components/PageHeader";
 import { NavPill } from "@/components/NavPill";
+import { JournalSearch } from "./JournalSearch";
 
 export const metadata = { title: "Journal" };
 
@@ -95,6 +96,7 @@ export default async function JournalPage({
         className="mb-8"
         right={
           <div className="flex items-center gap-2">
+            <JournalSearch />
             {isPast && <NavPill href="/calendar">← Calendar</NavPill>}
             <NavPill href={`/journal?date=${prevISO}`}>← Prev</NavPill>
             {isPast && <NavPill href="/journal">Today</NavPill>}

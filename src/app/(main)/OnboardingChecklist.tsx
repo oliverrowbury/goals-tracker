@@ -12,10 +12,12 @@ export function OnboardingChecklist({
   hasSubject,
   hasWorkout,
   hasJournalEntry,
+  hasGoal,
 }: {
   hasSubject: boolean;
   hasWorkout: boolean;
   hasJournalEntry: boolean;
+  hasGoal: boolean;
 }) {
   const [dismissed, setDismissed] = useState(false);
 
@@ -36,6 +38,7 @@ export function OnboardingChecklist({
 
   const steps: Step[] = [
     { done: hasJournalEntry, label: "Write a journal entry", href: "/journal", cta: "Write one →" },
+    { done: hasGoal, label: "Set a goal", href: "/goals", cta: "Set one →" },
     { done: hasSubject, label: "Add a study subject", href: "/study", cta: "Add one →" },
     { done: hasWorkout, label: "Log a workout", href: "/workout", cta: "Log one →" },
   ];

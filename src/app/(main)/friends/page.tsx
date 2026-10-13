@@ -20,6 +20,7 @@ import { computeStreak } from "@/lib/streaks";
 import { ownActivity } from "@/lib/friends";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
+import { ShareButton } from "@/components/ShareButton";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, TargetIcon } from "@/components/Icons";
 import { AddFriendSearch } from "./AddFriendSearch";
@@ -355,11 +356,27 @@ export default async function FriendsPage() {
         )}
       </div>
 
-      <p className="mt-4 border-t border-line pt-3 text-xs">
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-xs">
         <Link href="/settings#account" className="text-accent hover:underline">
           Edit your profile →
         </Link>
-      </p>
+        <ShareButton
+          data={{
+            eyebrow: "My stats",
+            heading: `Level ${level}`,
+            stats: [
+              { label: "journal streak", value: `${own.journalStreak}d` },
+              { label: "study streak", value: `${own.studyStreak}d` },
+              { label: "workout streak", value: `${own.workoutStreak}d` },
+              { label: "goals done", value: String(goalsDoneCount) },
+            ],
+          }}
+          accentVar="--accent"
+          fileName="proudly-stats.png"
+          shareTitle="My Proudly stats"
+          shareText={`Level ${level} on Proudly, ${own.journalStreak}d journal streak, ${own.studyStreak}d study streak, ${own.workoutStreak}d workout streak.`}
+        />
+      </div>
     </>
   );
 

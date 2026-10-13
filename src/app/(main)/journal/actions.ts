@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { isoToDate, todayISO, isFutureISO } from "@/lib/dates";
+import { isoToDate, dateToISO, todayISO, isFutureISO } from "@/lib/dates";
 import { uploadJournalPhoto, deleteJournalPhoto } from "@/lib/storage";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges } from "@/lib/badges";
@@ -123,4 +123,45 @@ export async function removeEntryPhoto(dateISO: string) {
   await deleteJournalPhoto(entry.photoUrl);
   await prisma.journalEntry.update({ where: { id: entry.id }, data: { photoUrl: null } });
   revalidatePath("/journal");
+}
+
+const SEARCH_RESULT_LIMIT = 10;
+const SNIPPET_RADIUS = 60;
+
+export type JournalSearchResult = { dateISO: string; snippet: string };
+
+// A plain case-insensitive substring match across the three free-text
+// fields, not full-text search — there's no index for that, and at the
+// scale this app runs at (one person's own journal) it doesn't need one.
+function buildSnippet(text: string, query: string): string {
+  const i = text.toLowerCase().indexOf(query.toLowerCase());
+  if (i === -1) return text.slice(0, SNIPPET_RADIUS * 2).trim();
+  const start = Math.max(0, i - SNIPPET_RADIUS);
+  const end = Math.min(text.length, i + query.length + SNIPPET_RADIUS);
+  return `${start > 0 ? "…" : ""}${text.slice(start, end).trim()}${end < text.length ? "…" : ""}`;
+}
+
+export async function searchJournalEntries(query: string): Promise<JournalSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+  const user = await getCurrentUser();
+
+  const entries = await prisma.journalEntry.findMany({
+    where: {
+      userId: user.id,
+      OR: [
+        { bodyText: { contains: trimmed, mode: "insensitive" } },
+        { improveText: { contains: trimmed, mode: "insensitive" } },
+        { promptResponse: { contains: trimmed, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { date: "desc" },
+    take: SEARCH_RESULT_LIMIT,
+    select: { date: true, bodyText: true, improveText: true, promptResponse: true },
+  });
+
+  return entries.map((e) => {
+    const text = [e.bodyText, e.improveText, e.promptResponse].find((t) => t?.toLowerCase().includes(trimmed.toLowerCase())) ?? e.bodyText;
+    return { dateISO: dateToISO(e.date), snippet: buildSnippet(text, trimmed) };
+  });
 }

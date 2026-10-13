@@ -118,7 +118,12 @@ export default async function HomePage({
         </Link>
       )}
 
-      <OnboardingChecklist hasSubject={subjectCount > 0} hasWorkout={workoutCount > 0} hasJournalEntry={journalEntryCount > 0} />
+      <OnboardingChecklist
+        hasSubject={subjectCount > 0}
+        hasWorkout={workoutCount > 0}
+        hasJournalEntry={journalEntryCount > 0}
+        hasGoal={goals.length > 0}
+      />
 
       <PromptOfDayCard dateISO={today} prompt={promptForDate(today)} initialResponse={entry?.promptResponse ?? ""} />
 
