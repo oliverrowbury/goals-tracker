@@ -55,8 +55,6 @@ export const FOCUS_TAG_LABELS: Record<FocusTag, string> = {
   WORKOUTS: "Working out",
 };
 
-export const CARDIO_ACTIVITIES = ["Run", "Bike", "Swim", "Walk", "Row", "Other"] as const;
-
 // Lowercase letters/digits/underscores, starting with a letter — keeps a
 // username readable in a URL (/friends/add/[username]) with nothing to
 // URL-encode. Shared between signup and the Settings username field.

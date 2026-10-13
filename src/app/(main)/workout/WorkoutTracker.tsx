@@ -28,8 +28,6 @@ import {
   fromKm,
   toKm,
   haversineKm,
-  computeSplits,
-  computeElevationGainM,
   type RoutePoint,
 } from "@/lib/workout";
 import { useClockOffsetMs } from "@/lib/time";

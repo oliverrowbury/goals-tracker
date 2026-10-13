@@ -41,7 +41,6 @@ export function BreathingCircle() {
       });
     }, 1000);
     return () => clearInterval(tick);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, phaseIndex]);
 
   // The ring drains over each phase — snap it back to full instantly (no
