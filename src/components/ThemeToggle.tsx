@@ -35,11 +35,24 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      onClick={() => setDark(!isDark)}
+      onClick={(e) => setDark(!isDark, e.currentTarget)}
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
       className="flex items-center justify-center p-2 -m-0.5 text-ink-muted hover:text-accent"
     >
-      {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+      {/* Both icons stay mounted and swap by rotating/scaling past each
+          other, instead of one popping in for the other. */}
+      <span className="relative block h-5 w-5">
+        <SunIcon
+          className={`absolute inset-0 h-5 w-5 transition-all duration-500 ease-out ${
+            isDark ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-50 opacity-0"
+          }`}
+        />
+        <MoonIcon
+          className={`absolute inset-0 h-5 w-5 transition-all duration-500 ease-out ${
+            isDark ? "rotate-90 scale-50 opacity-0" : "rotate-0 scale-100 opacity-100"
+          }`}
+        />
+      </span>
     </button>
   );
 }

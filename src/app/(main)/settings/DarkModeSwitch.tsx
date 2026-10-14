@@ -12,7 +12,7 @@ export function DarkModeSwitch() {
         type="button"
         role="switch"
         aria-checked={isDark}
-        onClick={() => setDark(!isDark)}
+        onClick={(e) => setDark(!isDark, e.currentTarget)}
         className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${isDark ? "bg-accent" : "bg-line"}`}
       >
         <span

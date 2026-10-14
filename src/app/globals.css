@@ -505,3 +505,19 @@ html.sidebar-collapsed .app-main {
     animation-delay: 0ms !important;
   }
 }
+
+/* Light/dark switch: the new theme grows out of the toggle as a circle (the
+   clip-path animation itself is driven from useDarkMode.ts). The browser's
+   default cross-fade is switched off so the circle edge is crisp. Scoped to
+   .theme-switching so no other view transition in the app is affected. */
+.theme-switching::view-transition-old(root),
+.theme-switching::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+.theme-switching::view-transition-old(root) {
+  z-index: 1;
+}
+.theme-switching::view-transition-new(root) {
+  z-index: 2;
+}
