@@ -30,7 +30,7 @@ import {
   MoonIcon,
   UsersIcon,
 } from "@/components/Icons";
-import { formatLong, todayISO, shiftISO, daysBetween } from "@/lib/dates";
+import { formatLong, todayISO, shiftISO, daysBetween, shiftMonth, monthISOOf } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
 import { levelForXp } from "@/lib/xp";
 import { BADGE_INFO } from "@/lib/badges";
@@ -228,6 +228,11 @@ export default async function SettingsPage() {
         <p className="mt-2 text-xs">
           <Link href={`/?week=${shiftISO(today, -7)}#recap`} className="text-accent hover:underline">
             Browse past weekly recaps →
+          </Link>
+        </p>
+        <p className="mt-1 text-xs">
+          <Link href={`/?month=${shiftMonth(monthISOOf(today), -1)}#monthly-recap`} className="text-accent hover:underline">
+            Browse past monthly recaps →
           </Link>
         </p>
       </div>

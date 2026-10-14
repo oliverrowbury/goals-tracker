@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, isoToDate, formatLong } from "@/lib/dates";
+import { todayISO, isoToDate, formatLong, monthISOOf } from "@/lib/dates";
 import { isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { JournalIcon, TargetIcon, ClockIcon, AlarmIcon } from "@/components/Icons";
@@ -10,6 +10,7 @@ import { daysBetween, dateToISO, daysAgo } from "@/lib/dates";
 import { moodFace } from "@/lib/mood";
 import { PromptOfDayCard } from "./PromptOfDayCard";
 import { WeeklyRecap, getWeeklyRecapData } from "./WeeklyRecap";
+import { MonthlyRecap, getMonthlyRecapData } from "./MonthlyRecap";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 
 export const metadata = { title: "Home" };
@@ -25,15 +26,15 @@ function greeting(): string {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; month?: string }>;
 }) {
-  const { week } = await searchParams;
+  const { week, month } = await searchParams;
   const user = await getCurrentUser();
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
 
   const MOOD_WINDOW_DAYS = 30;
-  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount, recapData, recentMoods] =
+  const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount, recapData, monthlyRecapData, recentMoods] =
     await Promise.all([
       prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date: isoToDate(today) } } }),
       prisma.goal.findMany({ where: { userId: user.id, active: true }, include: { logs: true } }),
@@ -55,6 +56,7 @@ export default async function HomePage({
       // parallel batch instead of only starting once this function returns —
       // nested async Server Components otherwise fetch in strict sequence.
       getWeeklyRecapData(user.id, week ?? today),
+      getMonthlyRecapData(user.id, month ?? monthISOOf(today)),
       prisma.journalEntry.findMany({
         where: { userId: user.id, mood: { not: null }, date: { gte: daysAgo(MOOD_WINDOW_DAYS) } },
         select: { mood: true },
@@ -168,6 +170,8 @@ export default async function HomePage({
       </div>
 
       <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} />
+
+      <MonthlyRecap data={monthlyRecapData} distanceUnit={user.distanceUnit} />
 
       {averageMood != null && (
         <Link

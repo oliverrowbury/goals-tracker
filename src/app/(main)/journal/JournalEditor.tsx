@@ -177,21 +177,25 @@ export function JournalEditor({
   dateISO,
   initialText,
   initialImproveText,
+  initialGratitude,
 }: {
   dateISO: string;
   initialText: string;
   initialImproveText: string;
+  initialGratitude: string;
 }) {
   const [text, setText] = useState(initialText);
   const [improveText, setImproveText] = useState(initialImproveText);
+  const [gratitude, setGratitude] = useState(initialGratitude);
   const { mode: proudMode, changeMode: changeProudMode } = useFieldMode("journal-mode-proud");
   const { mode: improveMode, changeMode: changeImproveMode } = useFieldMode("journal-mode-improve");
+  const { mode: gratitudeMode, changeMode: changeGratitudeMode } = useFieldMode("journal-mode-gratitude");
   const [isPending, startTransition] = useTransition();
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   function save() {
     startTransition(async () => {
-      await saveJournalEntry(dateISO, text, improveText);
+      await saveJournalEntry(dateISO, text, improveText, gratitude);
       setSavedAt(new Date());
     });
   }
@@ -227,6 +231,23 @@ export function JournalEditor({
           autoCorrect="on"
           spellCheck
           rows={6}
+          className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
+        />
+      )}
+
+      <p className="mb-2 mt-5 text-sm font-medium text-ink-muted">What are you grateful for</p>
+      <ModeToggle mode={gratitudeMode} onChange={changeGratitudeMode} />
+      {gratitudeMode === "list" ? (
+        <ListEditor value={gratitude} onChange={setGratitude} placeholder="Something small you're grateful for" />
+      ) : (
+        <textarea
+          value={gratitude}
+          onChange={(e) => setGratitude(autoCapitalizeSentences(e.target.value))}
+          placeholder="Something small you're grateful for"
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          spellCheck
+          rows={4}
           className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
         />
       )}
