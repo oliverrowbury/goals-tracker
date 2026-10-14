@@ -9,7 +9,7 @@ import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
 
-export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string) {
+export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string, notes: string) {
   if (isFutureISO(dateISO)) return;
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
@@ -17,8 +17,8 @@ export async function saveJournalEntry(dateISO: string, bodyText: string, improv
   const existing = await prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } });
   await prisma.journalEntry.upsert({
     where: { userId_date: { userId: user.id, date } },
-    update: { bodyText, improveText },
-    create: { userId: user.id, date, bodyText, improveText },
+    update: { bodyText, improveText, notes },
+    create: { userId: user.id, date, bodyText, improveText, notes },
   });
 
   // Only the first time this day's entry goes from empty to written —
@@ -153,15 +153,16 @@ export async function searchJournalEntries(query: string): Promise<JournalSearch
         { bodyText: { contains: trimmed, mode: "insensitive" } },
         { improveText: { contains: trimmed, mode: "insensitive" } },
         { promptResponse: { contains: trimmed, mode: "insensitive" } },
+        { notes: { contains: trimmed, mode: "insensitive" } },
       ],
     },
     orderBy: { date: "desc" },
     take: SEARCH_RESULT_LIMIT,
-    select: { date: true, bodyText: true, improveText: true, promptResponse: true },
+    select: { date: true, bodyText: true, improveText: true, promptResponse: true, notes: true },
   });
 
   return entries.map((e) => {
-    const text = [e.bodyText, e.improveText, e.promptResponse].find((t) => t?.toLowerCase().includes(trimmed.toLowerCase())) ?? e.bodyText;
+    const text = [e.bodyText, e.improveText, e.promptResponse, e.notes].find((t) => t?.toLowerCase().includes(trimmed.toLowerCase())) ?? e.bodyText;
     return { dateISO: dateToISO(e.date), snippet: buildSnippet(text, trimmed) };
   });
 }

@@ -253,6 +253,9 @@ model JournalEntry {
   // its own field rather than folded into bodyText so the two can have
   // their own prompts and be shown/edited independently.
   improveText String?
+  // Open freewrite with no set prompt, separate from bodyText so the
+  // "what are you proud of" question doesn't have to stretch to cover it.
+  notes String?
   // 1 (bad) – 5 (great), from the daily 5-face mood tracker. Nullable —
   // most old entries won't have one, and answering it isn't required.
   mood Int?

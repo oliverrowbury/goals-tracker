@@ -177,13 +177,16 @@ export function JournalEditor({
   dateISO,
   initialText,
   initialImproveText,
+  initialNotes,
 }: {
   dateISO: string;
   initialText: string;
   initialImproveText: string;
+  initialNotes: string;
 }) {
   const [text, setText] = useState(initialText);
   const [improveText, setImproveText] = useState(initialImproveText);
+  const [notes, setNotes] = useState(initialNotes);
   const { mode: proudMode, changeMode: changeProudMode } = useFieldMode("journal-mode-proud");
   const { mode: improveMode, changeMode: changeImproveMode } = useFieldMode("journal-mode-improve");
   const [isPending, startTransition] = useTransition();
@@ -191,7 +194,7 @@ export function JournalEditor({
 
   function save() {
     startTransition(async () => {
-      await saveJournalEntry(dateISO, text, improveText);
+      await saveJournalEntry(dateISO, text, improveText, notes);
       setSavedAt(new Date());
     });
   }
@@ -230,6 +233,18 @@ export function JournalEditor({
           className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
         />
       )}
+
+      <p className="mb-2 mt-5 text-sm font-medium text-ink-muted">Whatever else is on your mind</p>
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(autoCapitalizeSentences(e.target.value))}
+        placeholder="Write about anything"
+        autoCapitalize="sentences"
+        autoCorrect="on"
+        spellCheck
+        rows={6}
+        className="w-full resize-y rounded-2xl border border-line bg-card p-5 font-serif text-[16px] leading-relaxed text-ink placeholder:text-ink-muted placeholder:font-sans focus:border-accent focus:outline-none"
+      />
 
       <div className="mt-3 flex items-center gap-3">
         <button
