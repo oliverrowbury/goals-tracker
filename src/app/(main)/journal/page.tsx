@@ -138,12 +138,7 @@ export default async function JournalPage({
 
       <PhotoUpload dateISO={dateISO} initialPhotoUrl={entry?.photoUrl ?? null} />
 
-      <JournalEditor
-        dateISO={dateISO}
-        initialText={entry?.bodyText ?? ""}
-        initialImproveText={entry?.improveText ?? ""}
-        initialGratitude={entry?.gratitude ?? ""}
-      />
+      <JournalEditor dateISO={dateISO} initialText={entry?.bodyText ?? ""} initialImproveText={entry?.improveText ?? ""} />
 
       <div className="mt-8">
         <MoodChart monthISO={monthISO} entries={monthEntries.map((e) => ({ dateISO: dateToISO(e.date), mood: e.mood }))} today={today} />

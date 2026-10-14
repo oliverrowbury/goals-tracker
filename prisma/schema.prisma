@@ -253,10 +253,6 @@ model JournalEntry {
   // its own field rather than folded into bodyText so the two can have
   // their own prompts and be shown/edited independently.
   improveText String?
-  // Short gratitude note, same free-text/list treatment as bodyText and
-  // improveText — separate field so it gets its own prompt and can be
-  // shown/edited independently rather than folded into the freewrite.
-  gratitude String?
   // 1 (bad) – 5 (great), from the daily 5-face mood tracker. Nullable —
   // most old entries won't have one, and answering it isn't required.
   mood Int?
