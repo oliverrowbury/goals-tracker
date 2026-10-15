@@ -44,7 +44,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const user = await getCurrentUser();
   const isAdmin = user.email === ADMIN_EMAIL;
-  const [subjects, feedback, journalDates, subjectMinutes, studyDates, workoutDates, completedGoalDates, earnedBadges] =
+  const [subjects, feedback, journalDates, subjectMinutes, studyDates, workoutDates, completedGoalDates, earnedBadges, allUsers] =
     await Promise.all([
       prisma.subject.findMany({ where: { userId: user.id }, orderBy: { name: "asc" } }),
       // The admin sees feedback from every account — otherwise another
@@ -84,6 +84,14 @@ export default async function SettingsPage() {
         select: { date: true },
       }),
       prisma.userBadge.findMany({ where: { userId: user.id }, select: { badge: true } }),
+      // Visible to the admin only — sitting invisible in a database
+      // nobody checks is the same as not having it at all.
+      isAdmin
+        ? prisma.user.findMany({
+            orderBy: { createdAt: "desc" },
+            select: { id: true, name: true, username: true, email: true, createdAt: true, emailVerifiedAt: true },
+          })
+        : Promise.resolve([]),
     ]);
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
@@ -327,6 +335,32 @@ export default async function SettingsPage() {
         <p className="mb-4 text-sm text-ink-muted">What weight and distance are shown in on the Workout page.</p>
         <UnitsForm weightUnit={user.weightUnit} distanceUnit={user.distanceUnit} />
       </section>
+
+      {isAdmin && (
+        <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
+          <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+            <UsersIcon className="h-4 w-4 text-calm" />
+            Users ({allUsers.length})
+          </h2>
+          <p className="mb-4 text-sm text-ink-muted">Everyone who's signed up, most recent first.</p>
+          <ul className="-mx-6 divide-y divide-line border-t border-line">
+            {allUsers.map((u) => (
+              <li key={u.id} className="flex items-center justify-between gap-3 px-6 py-2.5 text-sm">
+                <div className="min-w-0">
+                  <p className="truncate text-ink">
+                    {u.name} <span className="text-ink-muted">@{u.username}</span>
+                  </p>
+                  <p className="truncate text-xs text-ink-muted">{u.email}</p>
+                </div>
+                <div className="shrink-0 text-right text-xs text-ink-muted">
+                  <p>{formatLong(u.createdAt.toISOString().slice(0, 10))}</p>
+                  <p className={u.emailVerifiedAt ? "text-accent" : ""}>{u.emailVerifiedAt ? "Verified" : "Unverified"}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
