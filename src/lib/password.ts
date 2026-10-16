@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomInt, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 
 const scryptAsync = promisify(scrypt);
@@ -25,4 +25,11 @@ export async function verifyPassword(plain: string, stored: string): Promise<boo
 
 export function generateSessionToken(): string {
   return randomBytes(32).toString("hex");
+}
+
+// Zero-padded so it's always 6 digits (randomInt alone would drop a
+// leading zero, e.g. 012345 -> "12345") — cryptographically random, not
+// Math.random(), same reasoning as the session token above.
+export function generateVerificationCode(): string {
+  return randomInt(0, 1_000_000).toString().padStart(6, "0");
 }

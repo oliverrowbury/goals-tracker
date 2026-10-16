@@ -40,3 +40,13 @@ export const WELCOME_COOKIE_MAX_AGE_S = 8;
 // — otherwise each new signup's feedback would sit invisible in their own
 // account, since Feedback rows are scoped by userId like everything else.
 export const ADMIN_EMAIL = "orowbury08@gmail.com";
+
+// Brute-force guard shared by /api/login and the signup verification-code
+// check (see signup/verify/actions.ts) — both reuse the same
+// failedLoginAttempts/lockedUntil columns rather than each tracking their
+// own counter, since "too many wrong guesses in a row" means the same
+// thing for a password and for a 6-digit code.
+export const MAX_FAILED_ATTEMPTS = 8;
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+
+export const VERIFY_CODE_TTL_MS = 15 * 60 * 1000;

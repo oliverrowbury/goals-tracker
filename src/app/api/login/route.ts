@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { AUTH_COOKIE, LOGIN_REDIRECT_COOKIE, WELCOME_COOKIE, WELCOME_COOKIE_MAX_AGE_S } from "@/lib/auth";
+import {
+  AUTH_COOKIE,
+  LOGIN_REDIRECT_COOKIE,
+  WELCOME_COOKIE,
+  WELCOME_COOKIE_MAX_AGE_S,
+  MAX_FAILED_ATTEMPTS,
+  LOCKOUT_DURATION_MS,
+} from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, generateSessionToken } from "@/lib/password";
 
@@ -17,8 +24,6 @@ function safeRedirectPath(path: string | undefined): string {
 // make each individual guess slow and un-distinguishable by timing, but
 // nothing previously stopped an unlimited number of them. Locked for 15
 // minutes after 8 wrong passwords in a row; a correct one resets the count.
-const MAX_FAILED_ATTEMPTS = 8;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   const form = await request.formData();

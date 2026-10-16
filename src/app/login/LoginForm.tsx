@@ -13,7 +13,7 @@ import { PasswordInput } from "@/components/PasswordInput";
 // attempts toward the lockout for one real typo. No need to reset it —
 // the page always navigates away next, either to a redirect on success
 // or back here with ?error= on failure, which naturally clears state.
-export function LoginForm({ error, created }: { error?: string; created?: boolean }) {
+export function LoginForm({ error, verified }: { error?: string; verified?: boolean }) {
   const [pending, setPending] = useState(false);
 
   return (
@@ -35,9 +35,9 @@ export function LoginForm({ error, created }: { error?: string; created?: boolea
       <div className="animate-[fade-up_0.6s_cubic-bezier(0.16,1,0.3,1)_both] [animation-delay:1s]">
         <p className="mb-6 text-sm text-ink-muted">Sign in to continue.</p>
 
-        {created && (
+        {verified && (
           <p className="mb-4 rounded-md bg-calm-soft px-3 py-2 text-sm text-calm-strong">
-            Account created. Sign in to get started.
+            Email verified. Sign in to get started.
           </p>
         )}
 

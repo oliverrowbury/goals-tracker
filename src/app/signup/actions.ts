@@ -1,14 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { baseUrl } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { hashPassword, generateSessionToken } from "@/lib/password";
-import { sendWelcomeEmail, sendVerificationEmail } from "@/lib/email";
+import { hashPassword, generateVerificationCode } from "@/lib/password";
+import { sendWelcomeEmail, sendVerificationCodeEmail } from "@/lib/email";
 import { USERNAME_RE, EMAIL_RE } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
-
-const VERIFY_TOKEN_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
+import { VERIFY_CODE_TTL_MS } from "@/lib/auth";
 
 export type SignupState = {
   fieldErrors: {
@@ -67,8 +65,8 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   if (existingUsername) return { fieldErrors: { username: "That username is taken." }, values };
 
   const passwordHash = await hashPassword(password);
-  const verifyToken = generateSessionToken();
-  const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_TOKEN_TTL_MS);
+  const verifyToken = generateVerificationCode();
+  const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_CODE_TTL_MS);
   try {
     await prisma.user.create({
       data: { name, username, email, passwordHash, verifyToken, verifyTokenExpiresAt },
@@ -101,11 +99,11 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   // right after this action returns, so a dangling un-awaited send can get
   // cut off before it actually reaches Resend.
   await sendWelcomeEmail(email, name);
-  await sendVerificationEmail(email, name, `${await baseUrl()}/api/verify-email?token=${verifyToken}`);
+  await sendVerificationCodeEmail(email, name, verifyToken);
 
-  // Sign in on purpose, not automatically — landing back on /login after
-  // creating the account means the password they just typed is the first
-  // thing that actually gets verified, same as any other account they sign
-  // up for elsewhere.
-  redirect("/login?created=1");
+  // Code verification, not a login, is the last step of signup itself now
+  // — the account and password already exist at this point, but they
+  // aren't told it's "done" (and sent on to sign in) until they've proven
+  // they actually control the inbox.
+  redirect(`/signup/verify?email=${encodeURIComponent(email)}`);
 }

@@ -95,9 +95,11 @@ export default async function MainLayout({ children }: { children: React.ReactNo
               sandbox sender can't actually deliver that email to anyone but
               the account owner yet (needs a verified domain, tracked
               separately), so nagging every visit to check an inbox that
-              was never going to get anything is just noise. Verification
-              itself (VerifyEmailBanner, resendVerificationEmail,
-              api/verify-email) is untouched — this only stops surfacing it. */}
+              was never going to get anything is just noise. The same
+              limitation blocks the required code step on /signup/verify
+              for anyone but the account owner until a domain is verified.
+              Verification itself (VerifyEmailBanner, resendVerificationEmail,
+              signup/verify) is untouched — this only stops surfacing the nag. */}
           {children}
         </main>
       </div>

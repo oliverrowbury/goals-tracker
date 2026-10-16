@@ -114,20 +114,21 @@ export async function sendPasswordResetEmail(to: string, name: string, resetUrl:
   });
 }
 
-export async function sendVerificationEmail(to: string, name: string, verifyUrl: string): Promise<void> {
+export async function sendVerificationCodeEmail(to: string, name: string, code: string): Promise<void> {
   const firstName = name.trim().split(/\s+/)[0] || name;
   await sendEmail({
     to,
-    subject: "Verify your email for Proudly",
+    subject: `${code} is your Proudly verification code`,
     html: layout(`
       <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
-      <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#242b29;">
-        One last step: confirm this is your email address:
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#242b29;">
+        One last step: enter this code to confirm this is your email address.
       </p>
-      <p style="margin:0 0 24px;">
-        <a href="${verifyUrl}" style="display:inline-block;background-color:#0e7d74;color:#ffffff;padding:11px 20px;border-radius:8px;font-size:15px;font-weight:600;text-decoration:none;">
-          Verify email
-        </a>
+      <p style="margin:0 0 20px;text-align:center;font-size:36px;font-weight:700;letter-spacing:0.15em;color:#0e7d74;">
+        ${code}
+      </p>
+      <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#7c8a86;">
+        This code expires in 15 minutes.
       </p>
       <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
         If you didn't create a Proudly account, you can ignore this email.

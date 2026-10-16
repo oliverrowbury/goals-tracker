@@ -64,19 +64,20 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except the login page and its API route, the signup page
-  // (its form now runs as a server action under this same route, so there's
-  // no separate api/signup anymore), forgot/reset-password and email
-  // verification (all reachable by someone who isn't logged in yet, by
-  // definition), the legal pages (readable without an account, like any
-  // privacy policy/terms page), Next.js internals, the service worker, the
-  // cron route (called by Vercel Cron, no session cookie — checks
-  // CRON_SECRET itself), and the manifest/icon/robots/sitemap/OG-image
-  // routes a browser or crawler fetches on its own before any cookie
-  // exchange happens (Add to Home Screen, tab favicon, a link preview) —
-  // gating those behind login would silently turn every one of them into a
-  // redirect to /login instead of the actual file (a broken social preview
-  // being the most visible way that'd show up).
+  // and its email-verification-code step (signup/verify — its form now
+  // runs as a server action under this same route, so there's no separate
+  // api/signup or api/verify-email anymore), forgot/reset-password (also
+  // reachable by someone who isn't logged in yet, by definition), the
+  // legal pages (readable without an account, like any privacy policy/
+  // terms page), Next.js internals, the service worker, the cron route
+  // (called by Vercel Cron, no session cookie — checks CRON_SECRET
+  // itself), and the manifest/icon/robots/sitemap/OG-image routes a
+  // browser or crawler fetches on its own before any cookie exchange
+  // happens (Add to Home Screen, tab favicon, a link preview) — gating
+  // those behind login would silently turn every one of them into a
+  // redirect to /login instead of the actual file (a broken social
+  // preview being the most visible way that'd show up).
   matcher: [
-    "/((?!login|signup|forgot-password|reset-password|api/verify-email|privacy|terms|api/login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|opengraph-image|robots.txt|sitemap.xml).*)",
+    "/((?!login|signup|forgot-password|reset-password|privacy|terms|api/login|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|opengraph-image|robots.txt|sitemap.xml).*)",
   ],
 };

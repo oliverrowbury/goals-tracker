@@ -342,7 +342,7 @@ export default async function SettingsPage() {
             <UsersIcon className="h-4 w-4 text-calm" />
             Users ({allUsers.length})
           </h2>
-          <p className="mb-4 text-sm text-ink-muted">Everyone who's signed up, most recent first.</p>
+          <p className="mb-4 text-sm text-ink-muted">Everyone who&apos;s signed up, most recent first.</p>
           <ul className="-mx-6 divide-y divide-line border-t border-line">
             {allUsers.map((u) => (
               <li key={u.id} className="flex items-center justify-between gap-3 px-6 py-2.5 text-sm">
