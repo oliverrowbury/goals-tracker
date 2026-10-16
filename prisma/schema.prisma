@@ -187,6 +187,15 @@ model User {
   // mutually exclusive, same reasoning as Goal.targetDays being an array
   // rather than a single enum: no reason someone can't be here for all of it.
   focusTags FocusTag[] @default([])
+  // Manually toggled (admin-only, see settings/page.tsx's Users section) —
+  // there's no payment processor wired up yet, so this is the whole
+  // mechanism for now, including comping every account that existed before
+  // Premium launched. Gates the free-tier caps in lib/limits.ts.
+  isPremium Boolean @default(false)
+  // Free tier gets one full weekly recap ever, a teaser rather than a
+  // permanent feature — null means "hasn't happened yet," set the first
+  // time WeeklyRecap actually renders unlocked for a non-premium account.
+  freeRecapShownAt DateTime?
   // "I've seen the likes on my posts up to here" — the Friends nav badge's
   // unseen-likes count is Cheer rows toward me created after this, reset to
   // now() whenever /friends (where likes are visible) is opened. Null means
@@ -216,6 +225,7 @@ model User {
   feedback          Feedback[]
   deadlines         Deadline[]
   badges            UserBadge[]
+  calendarEvents    CalendarEvent[]
 
   following Follow[] @relation("Follower")
   followers Follow[] @relation("Following")
@@ -506,6 +516,30 @@ model Deadline {
   remindersSent DeadlineReminderSent[]
 }
 
+// A plain Notion/Google-Calendar-style note on a date — deliberately
+// separate from Deadline (which already auto-places itself on /calendar by
+// its own dueDate and drives reminders) rather than folding this into it,
+// since an event has no completed/reminder lifecycle to track, just "this
+// is happening on this day."
+model CalendarEvent {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title String
+  date  DateTime
+  // "HH:mm", 24h — unlike Deadline's dueTime this is genuinely optional
+  // (null just means "sometime that day," nothing derives a reminder from
+  // it), so no default-to-end-of-day convention is needed here.
+  time  String?
+  notes String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
+
 enum DeadlineReminderKind {
   WEEK_BEFORE
   DAY_BEFORE
@@ -716,6 +750,7 @@ enum Badge {
   FIRST_FRIEND
   EARLY_BIRD
   NIGHT_OWL
+  PREMIUM_SUPPORTER
 }
 
 model UserBadge {

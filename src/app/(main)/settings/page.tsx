@@ -17,6 +17,7 @@ import { AvatarUpload } from "./AvatarUpload";
 import { ProfileForm } from "./ProfileForm";
 import { DeleteAccountForm } from "./DeleteAccountForm";
 import { ShareActivityToggle } from "../friends/ShareActivityToggle";
+import { toggleUserPremium } from "./actions";
 import {
   GearIcon,
   ClockIcon,
@@ -89,7 +90,7 @@ export default async function SettingsPage() {
       isAdmin
         ? prisma.user.findMany({
             orderBy: { createdAt: "desc" },
-            select: { id: true, name: true, username: true, email: true, createdAt: true, emailVerifiedAt: true },
+            select: { id: true, name: true, username: true, email: true, createdAt: true, emailVerifiedAt: true, isPremium: true },
           })
         : Promise.resolve([]),
     ]);
@@ -349,12 +350,25 @@ export default async function SettingsPage() {
                 <div className="min-w-0">
                   <p className="truncate text-ink">
                     {u.name} <span className="text-ink-muted">@{u.username}</span>
+                    {u.isPremium && <span className="ml-1.5 text-xs text-accent">· Premium</span>}
                   </p>
                   <p className="truncate text-xs text-ink-muted">{u.email}</p>
                 </div>
-                <div className="shrink-0 text-right text-xs text-ink-muted">
-                  <p>{formatLong(u.createdAt.toISOString().slice(0, 10))}</p>
-                  <p className={u.emailVerifiedAt ? "text-accent" : ""}>{u.emailVerifiedAt ? "Verified" : "Unverified"}</p>
+                <div className="flex shrink-0 items-center gap-3">
+                  <div className="text-right text-xs text-ink-muted">
+                    <p>{formatLong(u.createdAt.toISOString().slice(0, 10))}</p>
+                    <p className={u.emailVerifiedAt ? "text-accent" : ""}>{u.emailVerifiedAt ? "Verified" : "Unverified"}</p>
+                  </div>
+                  <form action={toggleUserPremium.bind(null, u.id)}>
+                    <button
+                      type="submit"
+                      className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+                        u.isPremium ? "border-accent text-accent hover:bg-accent-soft" : "border-line text-ink-muted hover:border-accent hover:text-accent"
+                      }`}
+                    >
+                      {u.isPremium ? "Remove" : "Make premium"}
+                    </button>
+                  </form>
                 </div>
               </li>
             ))}

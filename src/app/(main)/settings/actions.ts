@@ -13,6 +13,8 @@ import { containsProfanity } from "@/lib/profanity";
 import { toKg, toCm } from "@/lib/workout";
 import { ageInYears } from "@/lib/dates";
 import { uploadAvatarPhoto, deleteAvatarPhoto, deleteJournalPhoto, deleteWorkoutPhoto } from "@/lib/storage";
+import { ADMIN_EMAIL } from "@/lib/auth";
+import { awardBadge } from "@/lib/badges";
 
 const MIN_AGE = 13;
 
@@ -357,4 +359,22 @@ export async function sendFeedback(_prev: SettingsActionState, formData: FormDat
   revalidatePath("/settings");
 
   return { success: "Thanks, feedback sent." };
+}
+
+// Manual — no payment processor exists yet, so this *is* how someone
+// becomes Premium for now, including comping every account that existed
+// before Premium launched. Admin-only, same ADMIN_EMAIL gate the Users
+// list itself is already shown behind.
+export async function toggleUserPremium(targetUserId: string) {
+  const admin = await getCurrentUser();
+  if (admin.email !== ADMIN_EMAIL) return;
+
+  const target = await prisma.user.findUnique({ where: { id: targetUserId }, select: { isPremium: true } });
+  if (!target) return;
+
+  const nextIsPremium = !target.isPremium;
+  await prisma.user.update({ where: { id: targetUserId }, data: { isPremium: nextIsPremium } });
+  if (nextIsPremium) await awardBadge(targetUserId, "PREMIUM_SUPPORTER");
+
+  revalidatePath("/settings");
 }

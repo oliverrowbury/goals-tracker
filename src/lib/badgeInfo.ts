@@ -32,4 +32,5 @@ export const BADGE_INFO: Record<Badge, { emoji: string; label: string; descripti
   FIRST_FRIEND: { emoji: "🤝", label: "First follow", description: "Followed your first person on Proudly" },
   EARLY_BIRD: { emoji: "🌅", label: "Early bird", description: "Finished a workout or study session before 7am" },
   NIGHT_OWL: { emoji: "🦉", label: "Night owl", description: "Finished a workout or study session after 10pm" },
+  PREMIUM_SUPPORTER: { emoji: "💛", label: "Premium", description: "Supporting Proudly with Premium" },
 };
