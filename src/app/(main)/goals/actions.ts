@@ -15,6 +15,7 @@ import {
 } from "@/lib/constants";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge } from "@/lib/badges";
+import { FREE_LIMITS } from "@/lib/limits";
 
 async function awardFirstGoalBadge(userId: string) {
   const count = await prisma.goalLog.count({ where: { completed: true, goal: { userId } } });
@@ -101,6 +102,12 @@ async function ownedSubjectId(subjectId: string | null, userId: string): Promise
 
 export async function createGoal(formData: FormData) {
   const user = await getCurrentUser();
+
+  if (!user.isPremium) {
+    const activeCount = await prisma.goal.count({ where: { userId: user.id, active: true } });
+    if (activeCount >= FREE_LIMITS.GOALS) redirect("/goals/new?error=limit");
+  }
+
   const fields = readGoalFields(formData);
   fields.subjectId = await ownedSubjectId(fields.subjectId, user.id);
 

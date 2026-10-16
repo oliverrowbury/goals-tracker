@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/lib/user";
 import { isoToDate } from "@/lib/dates";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge } from "@/lib/badges";
+import { FREE_LIMITS } from "@/lib/limits";
 
 function readDeadlineFields(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -38,6 +39,12 @@ async function ownedSubjectId(subjectId: string | null, userId: string): Promise
 
 export async function createDeadline(formData: FormData) {
   const user = await getCurrentUser();
+
+  if (!user.isPremium) {
+    const activeCount = await prisma.deadline.count({ where: { userId: user.id, completed: false } });
+    if (activeCount >= FREE_LIMITS.DEADLINES) redirect("/deadlines/new?error=limit");
+  }
+
   const fields = readDeadlineFields(formData);
   fields.subjectId = await ownedSubjectId(fields.subjectId, user.id);
 

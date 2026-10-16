@@ -8,6 +8,7 @@ import { isoToDate, todayISO } from "@/lib/dates";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges, awardStudyHoursBadges, awardTimeOfDayBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
+import { FREE_LIMITS } from "@/lib/limits";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardStudyBadges(userId: string) {
@@ -266,6 +267,13 @@ export async function createSubject(_prev: CreateSubjectState, formData: FormDat
         ? `You already have a subject called "${existing.name}"`
         : `"${existing.name}" already exists but is archived, reactivate it from Settings instead of adding it again`,
     };
+  }
+
+  if (!user.isPremium) {
+    const activeCount = await prisma.subject.count({ where: { userId: user.id, active: true } });
+    if (activeCount >= FREE_LIMITS.SUBJECTS) {
+      return { error: `You've hit the free limit of ${FREE_LIMITS.SUBJECTS} subjects on Proudly Normal. Go Premium (Settings) for more.` };
+    }
   }
 
   // A validated categorical palette (see the dataviz color-formula six checks) —
