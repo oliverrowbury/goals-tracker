@@ -66,6 +66,8 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       />
       <Sidebar
         level={level}
+        name={user.name}
+        avatarUrl={user.avatarUrl}
         unreadMessageCount={unreadMessageCount}
         friendsNotificationCount={pendingFollowRequestCount + unseenLikesCount}
         notificationBell={<NotificationBell initialCount={notificationCount} />}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Wordmark } from "@/components/Wordmark";
+import { Avatar } from "@/components/Avatar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toggleSidebarCollapsed } from "@/lib/sidebarCollapsed";
 import {
@@ -20,7 +21,6 @@ import {
   MenuIcon,
   CloseIcon,
   ChevronDownIcon,
-  UserIcon,
 } from "@/components/Icons";
 
 // The collapsed sidebar's logo — the ascending-bars mark from Wordmark,
@@ -74,11 +74,15 @@ const ACTIVE_CLASSES: Record<(typeof LINKS)[number]["color"], string> = {
 
 export function Sidebar({
   level,
+  name,
+  avatarUrl,
   unreadMessageCount = 0,
   friendsNotificationCount = 0,
   notificationBell,
 }: {
   level: number;
+  name: string;
+  avatarUrl: string | null;
   unreadMessageCount?: number;
   friendsNotificationCount?: number;
   // Rendered in the mobile top bar's right slot (previously an empty
@@ -303,9 +307,11 @@ export function Sidebar({
           onClick={() => setMobileOpen(false)}
           aria-label="Your profile"
           title={`Level ${level}`}
-          className="fixed bottom-4 right-4 z-30 flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-lg transition hover:bg-accent-strong hover:shadow-xl"
+          className="fixed bottom-4 right-4 z-30 flex items-center gap-2 rounded-full bg-accent py-1.5 pl-1.5 pr-4 text-sm font-medium text-white shadow-lg transition hover:bg-accent-strong hover:shadow-xl"
         >
-          <UserIcon className="h-4 w-4" />
+          <span className="rounded-full ring-2 ring-white/70">
+            <Avatar name={name} avatarUrl={avatarUrl} size={26} />
+          </span>
           Lv {level}
         </Link>
       )}
