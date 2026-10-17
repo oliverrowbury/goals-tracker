@@ -16,6 +16,7 @@ import { uploadAvatarPhoto, deleteAvatarPhoto, deleteJournalPhoto, deleteWorkout
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { awardBadge } from "@/lib/badges";
 import { getStripe, PREMIUM_PRICING, type PremiumInterval } from "@/lib/stripe";
+import { restoreTrashedItem } from "@/lib/trash";
 
 const MIN_AGE = 13;
 
@@ -462,4 +463,17 @@ export async function createBillingPortalSession(): Promise<BillingPortalState> 
   }
 
   redirect(session.url);
+}
+
+export async function restoreDeletedItem(trashedItemId: string) {
+  const user = await getCurrentUser();
+  if (!user.isPremium) return;
+
+  await restoreTrashedItem(user.id, trashedItemId);
+
+  revalidatePath("/settings");
+  revalidatePath("/goals");
+  revalidatePath("/workout");
+  revalidatePath("/journal");
+  revalidatePath("/");
 }

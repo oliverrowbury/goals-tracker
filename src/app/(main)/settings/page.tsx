@@ -19,6 +19,8 @@ import { DeleteAccountForm } from "./DeleteAccountForm";
 import { ShareActivityToggle } from "../friends/ShareActivityToggle";
 import { toggleUserPremium } from "./actions";
 import { PremiumSection } from "./PremiumSection";
+import { TrashSection } from "./TrashSection";
+import { listTrashedItems } from "@/lib/trash";
 import {
   GearIcon,
   ClockIcon,
@@ -97,6 +99,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           })
         : Promise.resolve([]),
     ]);
+  const trashedItems = user.isPremium ? await listTrashedItems(user.id) : [];
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
   // Same "admin sees everyone's" reasoning as feedback above — a Report is
@@ -283,6 +286,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <PremiumSection isPremium={true} hasStripeSubscription={!!user.stripeSubscriptionId} justSubscribed={premium === "success"} />
         )}
       </section>
+
+      {user.isPremium && (
+        <section id="recently-deleted" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+          <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Recently deleted</h2>
+          <p className="mb-4 text-sm text-ink-muted">
+            Deleted goals and workouts stay here for 30 days before they&apos;re gone for good.
+          </p>
+          <TrashSection items={trashedItems} />
+        </section>
+      )}
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Badges</h2>

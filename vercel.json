@@ -119,6 +119,10 @@
     {
       "path": "/api/cron/monthly-recap",
       "schedule": "0 18 28-31 * *"
+    },
+    {
+      "path": "/api/cron/purge-trash",
+      "schedule": "0 4 * * *"
     }
   ]
 }

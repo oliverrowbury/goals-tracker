@@ -236,6 +236,7 @@ model User {
   deadlines         Deadline[]
   badges            UserBadge[]
   calendarEvents    CalendarEvent[]
+  trashedItems      TrashedItem[]
 
   following Follow[] @relation("Follower")
   followers Follow[] @relation("Following")
@@ -807,4 +808,36 @@ model ErrorLog {
   stack     String?
   path      String?
   createdAt DateTime @default(now())
+}
+
+enum TrashedItemKind {
+  GOAL
+  WORKOUT
+}
+
+// Premium's 30-day recovery window for deleted goals/workouts. Rather than
+// adding a nullable deletedAt to Goal/Workout themselves (which would need
+// every one of the many existing queries against those two models updated
+// to filter it out, to avoid a "deleted" row quietly reappearing in a
+// streak, badge count, feed, or export), a deleted item's full row — plus
+// its child rows (GoalLog/Reminder or WorkoutSet) — is snapshotted here as
+// JSON and the original hard-deleted as before. Restoring re-inserts from
+// the snapshot; free users skip this table entirely and keep the old
+// immediate hard delete.
+model TrashedItem {
+  id String @id @default(uuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  kind  TrashedItemKind
+  // Short display label for the recovery list — a goal's title, or a
+  // workout's label/date — so the UI doesn't need to parse payload.
+  label String
+
+  payload Json
+
+  deletedAt DateTime @default(now())
+
+  @@index([userId, deletedAt])
 }

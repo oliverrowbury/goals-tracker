@@ -16,6 +16,7 @@ import {
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge } from "@/lib/badges";
 import { FREE_LIMITS } from "@/lib/limits";
+import { trashGoal } from "@/lib/trash";
 
 async function awardFirstGoalBadge(userId: string) {
   const count = await prisma.goalLog.count({ where: { completed: true, goal: { userId } } });
@@ -145,13 +146,17 @@ export async function deleteGoal(goalId: string) {
   const goal = await prisma.goal.findFirst({ where: { id: goalId, userId: user.id } });
   if (!goal) return;
 
-  // GoalLog/Reminder rows reference this goal without cascade delete, so
-  // they have to go first or the delete hits a foreign-key error.
-  await prisma.$transaction([
-    prisma.goalLog.deleteMany({ where: { goalId } }),
-    prisma.reminder.deleteMany({ where: { goalId } }),
-    prisma.goal.delete({ where: { id: goalId } }),
-  ]);
+  if (user.isPremium) {
+    await trashGoal(goal);
+  } else {
+    // GoalLog/Reminder rows reference this goal without cascade delete, so
+    // they have to go first or the delete hits a foreign-key error.
+    await prisma.$transaction([
+      prisma.goalLog.deleteMany({ where: { goalId } }),
+      prisma.reminder.deleteMany({ where: { goalId } }),
+      prisma.goal.delete({ where: { id: goalId } }),
+    ]);
+  }
 
   revalidatePath("/goals");
   revalidatePath("/journal");

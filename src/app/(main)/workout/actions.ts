@@ -13,6 +13,7 @@ import { todayISO, isoToDate } from "@/lib/dates";
 import { uploadWorkoutPhoto as uploadWorkoutPhotoToStorage, deleteWorkoutPhoto } from "@/lib/storage";
 import { FREE_LIMITS, STREAK_FREEZES_PER_WINDOW, DAILY_AI_ADVICE_LIMIT } from "@/lib/limits";
 import { generateWorkoutAdvice } from "@/lib/ai";
+import { trashWorkout } from "@/lib/trash";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardWorkoutBadges(userId: string) {
@@ -318,10 +319,17 @@ export async function deleteWorkout(workoutId: string) {
   const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
   if (!workout) return;
 
-  await prisma.$transaction([
-    prisma.workoutSet.deleteMany({ where: { workoutId } }),
-    prisma.workout.delete({ where: { id: workoutId } }),
-  ]);
+  // Only a finished workout is worth recovering — an open session being
+  // discarded ("started by accident") isn't a deleted entry, it's a
+  // cancelled draft, so it skips the trash even for Premium.
+  if (user.isPremium && workout.endedAt) {
+    await trashWorkout(workout);
+  } else {
+    await prisma.$transaction([
+      prisma.workoutSet.deleteMany({ where: { workoutId } }),
+      prisma.workout.delete({ where: { id: workoutId } }),
+    ]);
+  }
   revalidateWorkoutViews();
 }
 
