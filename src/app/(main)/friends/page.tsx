@@ -20,6 +20,7 @@ import { computeStreak } from "@/lib/streaks";
 import { ownActivity } from "@/lib/friends";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
+import { PremiumBadge } from "@/components/PremiumBadge";
 import { ShareButton } from "@/components/ShareButton";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { UsersIcon, JournalIcon, ClockIcon, DumbbellIcon, TargetIcon } from "@/components/Icons";
@@ -275,6 +276,7 @@ export default async function FriendsPage() {
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-serif text-lg font-semibold text-ink">{user.name}</h2>
             {user.email === ADMIN_EMAIL && <OwnerBadge />}
+            {user.isPremium && <PremiumBadge />}
             <span className="rounded-full bg-calm-soft px-2.5 py-0.5 text-xs font-medium text-calm">Lv {level}</span>
           </div>
           <p className="text-sm text-ink-muted">

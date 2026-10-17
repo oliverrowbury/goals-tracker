@@ -22,6 +22,7 @@ import { levelForXp } from "@/lib/xp";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { Avatar } from "@/components/Avatar";
 import { OwnerBadge } from "@/components/OwnerBadge";
+import { PremiumBadge } from "@/components/PremiumBadge";
 import { JournalIcon, ClockIcon, DumbbellIcon, FlameIcon } from "@/components/Icons";
 import { FocusTagPills } from "../../FocusTagPills";
 import { ActivityCard, type ActivityCardItem } from "../../ActivityCard";
@@ -263,6 +264,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
         <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
           <h1 className="font-serif text-xl font-semibold text-ink">{target.name}</h1>
           {target.email === ADMIN_EMAIL && <OwnerBadge />}
+          {target.isPremium && <PremiumBadge />}
           <span className="rounded-full bg-calm-soft px-2.5 py-0.5 text-xs font-medium text-calm">Lv {level}</span>
         </div>
         <p className="text-sm text-ink-muted">
