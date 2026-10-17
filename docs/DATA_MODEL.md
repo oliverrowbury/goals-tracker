@@ -214,7 +214,7 @@ never double-sends the same one.
 |---|---|---|
 | id | uuid | |
 | deadline_id | uuid | |
-| kind | enum | `week_before` \| `day_before` \| `hour_before` |
+| kind | enum | `two_weeks_before` (Premium only) \| `week_before` \| `day_before` \| `hour_before` |
 | sent_at | timestamp | |
 
 Unique on `(deadline_id, kind)`.

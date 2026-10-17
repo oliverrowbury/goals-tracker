@@ -12,16 +12,22 @@ import type { DeadlineReminderKind } from "@/generated/prisma/enums";
 const WINDOW_MS = 65 * 60_000;
 
 const OFFSETS: Record<DeadlineReminderKind, number> = {
+  TWO_WEEKS_BEFORE: 14 * 24 * 60 * 60_000,
   WEEK_BEFORE: 7 * 24 * 60 * 60_000,
   DAY_BEFORE: 24 * 60 * 60_000,
   HOUR_BEFORE: 60 * 60_000,
 };
 
 const LABELS: Record<DeadlineReminderKind, string> = {
+  TWO_WEEKS_BEFORE: "in two weeks",
   WEEK_BEFORE: "in a week",
   DAY_BEFORE: "tomorrow",
   HOUR_BEFORE: "in an hour",
 };
+
+// Everyone gets week/day/hour-before; Premium gets an extra, earlier
+// heads-up on top of that rather than a different set entirely.
+const PREMIUM_ONLY_KINDS = new Set<DeadlineReminderKind>(["TWO_WEEKS_BEFORE"]);
 
 // dueDate is UTC-midnight for the calendar day; dueTime "HH:mm" is
 // interpreted directly as that same UTC day rather than converted through
@@ -44,7 +50,7 @@ export async function GET(request: Request) {
 
   const deadlines = await prisma.deadline.findMany({
     where: { completed: false },
-    include: { remindersSent: true },
+    include: { remindersSent: true, user: { select: { isPremium: true } } },
   });
 
   let sent = 0;
@@ -55,6 +61,7 @@ export async function GET(request: Request) {
 
       for (const kind of Object.keys(OFFSETS) as DeadlineReminderKind[]) {
         if (alreadySent.has(kind)) continue;
+        if (PREMIUM_ONLY_KINDS.has(kind) && !deadline.user.isPremium) continue;
         const target = dueAt - OFFSETS[kind];
         if (Math.abs(now - target) > WINDOW_MS / 2) continue;
 

@@ -560,6 +560,9 @@ model CalendarEvent {
 }
 
 enum DeadlineReminderKind {
+  // Premium-only — see api/cron/deadline-reminders, gated there rather
+  // than here since the enum has no notion of who gets which kind.
+  TWO_WEEKS_BEFORE
   WEEK_BEFORE
   DAY_BEFORE
   HOUR_BEFORE
