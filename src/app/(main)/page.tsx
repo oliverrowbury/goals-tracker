@@ -13,6 +13,7 @@ import { WeeklyRecap, getWeeklyRecapData } from "./WeeklyRecap";
 import { MonthlyRecap, getMonthlyRecapData } from "./MonthlyRecap";
 import { OnboardingChecklist } from "./OnboardingChecklist";
 import { MarkRecapSeen } from "./MarkRecapSeen";
+import { GeneratePersonalizedPrompt } from "./GeneratePersonalizedPrompt";
 
 export const metadata = { title: "Home" };
 export const dynamic = "force-dynamic";
@@ -33,6 +34,9 @@ export default async function HomePage({
   const user = await getCurrentUser();
   const today = todayISO();
   const { startISO, endISO } = weekRangeContaining(today);
+
+  const hasTodaysPersonalizedPrompt = !!user.personalizedPromptDate && dateToISO(user.personalizedPromptDate) === today;
+  const todaysPrompt = user.isPremium && hasTodaysPersonalizedPrompt ? user.personalizedPromptText! : promptForDate(today);
 
   const MOOD_WINDOW_DAYS = 30;
   const [entry, goals, weekSessions, nextDeadline, subjectCount, workoutCount, journalEntryCount, recapData, monthlyRecapData, recentMoods] =
@@ -133,7 +137,8 @@ export default async function HomePage({
         hasGoal={goals.length > 0}
       />
 
-      <PromptOfDayCard dateISO={today} prompt={promptForDate(today)} initialResponse={entry?.promptResponse ?? ""} />
+      <PromptOfDayCard dateISO={today} prompt={todaysPrompt} initialResponse={entry?.promptResponse ?? ""} />
+      {user.isPremium && !hasTodaysPersonalizedPrompt && <GeneratePersonalizedPrompt />}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Link

@@ -49,3 +49,43 @@ export async function generateWorkoutAdvice(input: WorkoutAdviceInput): Promise<
   const textBlock = response.content.find((b) => b.type === "text");
   return textBlock?.type === "text" ? textBlock.text.trim() : "";
 }
+
+export type PersonalizedPromptInput = {
+  // Last 7 days of mood check-ins, most recent first — no journal body
+  // text is sent, only the numeric mood scores, so a user's actual private
+  // writing never leaves the app.
+  recentMoods: number[];
+  journaledDaysThisWeek: number;
+  goalsCompletedThisWeek: number;
+  workoutsThisWeek: number;
+  studyMinutesThisWeek: number;
+};
+
+// A single reflective journaling question, tailored to how the last week's
+// actually gone rather than the fixed, date-cycling list everyone else
+// gets (lib/prompts.ts) — same terse, concrete style as that list, just
+// pointed at this one user's recent pattern instead of being generic.
+export async function generatePersonalizedPrompt(input: PersonalizedPromptInput): Promise<string> {
+  const lines: string[] = [];
+  if (input.recentMoods.length > 0) lines.push(`Mood check-ins this week (1=low, 5=great): ${input.recentMoods.join(", ")}`);
+  lines.push(`Journaled ${input.journaledDaysThisWeek} day(s) this week`);
+  lines.push(`Completed ${input.goalsCompletedThisWeek} goal check-in(s) this week`);
+  lines.push(`${input.workoutsThisWeek} workout(s) this week`);
+  if (input.studyMinutesThisWeek > 0) lines.push(`${input.studyMinutesThisWeek} minutes studied this week`);
+
+  const response = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: 100,
+    system:
+      "You write a single journaling prompt for today, for a user of a journal/goals app, based on a short summary of " +
+      "their last 7 days (mood check-ins, journaling, goals, workouts, study time). Respond with ONLY the question itself — " +
+      "no preamble, no quotes, no markdown. One sentence, concrete and specific to the pattern in the data given (e.g. a " +
+      "low-mood streak, a goal drought, a busy week), not a generic 'how are you feeling' question. If the data doesn't " +
+      "suggest anything specific, ask a warm, concrete reflective question in the same style. Never invent facts you " +
+      "weren't given.",
+    messages: [{ role: "user", content: lines.join("\n") }],
+  });
+
+  const textBlock = response.content.find((b) => b.type === "text");
+  return textBlock?.type === "text" ? textBlock.text.trim() : "";
+}

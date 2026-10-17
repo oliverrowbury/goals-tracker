@@ -206,6 +206,11 @@ model User {
   // permanent feature — null means "hasn't happened yet," set the first
   // time WeeklyRecap actually renders unlocked for a non-premium account.
   freeRecapShownAt DateTime?
+  // Premium's AI-personalized "Prompt of the Day", cached once generated —
+  // see (main)/actions.ts's generateTodaysPrompt. Date-only comparison (is
+  // this today's), text null until the first successful generation.
+  personalizedPromptDate DateTime?
+  personalizedPromptText String?
   // "I've seen the likes on my posts up to here" — the Friends nav badge's
   // unseen-likes count is Cheer rows toward me created after this, reset to
   // now() whenever /friends (where likes are visible) is opened. Null means

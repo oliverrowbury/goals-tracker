@@ -1,8 +1,10 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { daysAgo } from "@/lib/dates";
+import { daysAgo, todayISO, dateToISO } from "@/lib/dates";
+import { generatePersonalizedPrompt } from "@/lib/ai";
 import { resendVerificationCode } from "../signup/verify/actions";
 
 // Re-sends a fresh 6-digit code — for whoever missed the one signup sent,
@@ -25,6 +27,56 @@ export async function markFreeRecapSeen() {
   const user = await getCurrentUser();
   if (user.isPremium) return;
   await prisma.user.updateMany({ where: { id: user.id, freeRecapShownAt: null }, data: { freeRecapShownAt: new Date() } });
+}
+
+// Premium's AI-personalized Prompt of the Day. Called from a client effect
+// (see GeneratePersonalizedPrompt.tsx) rather than HomePage's own render
+// body — writing there would hit the exact same impure-render bug
+// markFreeRecapSeen's own comment above describes. Idempotent per day: a
+// second call once today's prompt is already cached is a no-op, so a
+// double-mounted effect (or a second tab) never burns two API calls.
+export async function generateTodaysPrompt() {
+  const user = await getCurrentUser();
+  if (!user.isPremium) return;
+  if (user.personalizedPromptDate && dateToISO(user.personalizedPromptDate) === todayISO()) return;
+
+  const windowStart = daysAgo(7);
+  const [moods, journaledDays, goalLogs, workouts, studySessions] = await Promise.all([
+    prisma.journalEntry.findMany({
+      where: { userId: user.id, date: { gte: windowStart }, mood: { not: null } },
+      orderBy: { date: "desc" },
+      select: { mood: true },
+    }),
+    prisma.journalEntry.count({ where: { userId: user.id, date: { gte: windowStart }, bodyText: { not: "" } } }),
+    prisma.goalLog.count({ where: { goal: { userId: user.id }, completed: true, date: { gte: windowStart } } }),
+    prisma.workout.count({ where: { userId: user.id, endedAt: { not: null }, date: { gte: windowStart } } }),
+    prisma.studySession.findMany({
+      where: { userId: user.id, endedAt: { not: null }, startedAt: { gte: windowStart } },
+      select: { durationMinutes: true },
+    }),
+  ]);
+  const studyMinutes = studySessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+
+  let text: string;
+  try {
+    text = await generatePersonalizedPrompt({
+      recentMoods: moods.map((m) => m.mood).filter((m): m is number => m != null),
+      journaledDaysThisWeek: journaledDays,
+      goalsCompletedThisWeek: goalLogs,
+      workoutsThisWeek: workouts,
+      studyMinutesThisWeek: studyMinutes,
+    });
+  } catch (err) {
+    // No ANTHROPIC_API_KEY, a rate limit, a network blip — the home page
+    // already has the fixed prompt-of-the-day as its fallback, so this
+    // just quietly skips the upgrade rather than surfacing an error.
+    console.error("Failed to generate personalized prompt:", err);
+    return;
+  }
+  if (!text) return;
+
+  await prisma.user.update({ where: { id: user.id }, data: { personalizedPromptDate: new Date(), personalizedPromptText: text } });
+  revalidatePath("/");
 }
 
 // Anything older just drops out of the bell/badges entirely (not deleted —
