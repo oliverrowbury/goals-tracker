@@ -12,3 +12,9 @@ export const FREE_LIMITS = {
 } as const;
 
 export const STREAK_FREEZES_PER_WINDOW = { FREE: 1, PREMIUM: 2 } as const;
+
+// Safety net against a bug or abuse driving up the Anthropic API bill, not
+// a cost-control measure in its own right — a Haiku request for this
+// feature costs a fraction of a penny, so the real risk is something
+// looping or spamming the button, not normal usage. Premium only.
+export const DAILY_AI_ADVICE_LIMIT = 5;

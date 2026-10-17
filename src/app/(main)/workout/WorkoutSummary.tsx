@@ -15,7 +15,8 @@ import { ShareButton } from "@/components/ShareButton";
 import { ConfirmButton } from "@/components/ConfirmButton";
 import { useCountUp } from "@/lib/time";
 import { RouteMap } from "./RouteMap";
-import { setWorkoutVisibility, setWorkoutNote, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto } from "./actions";
+import { setWorkoutVisibility, setWorkoutNote, deleteWorkout, uploadWorkoutPhoto, removeWorkoutPhoto, getAiWorkoutAdvice } from "./actions";
+import Link from "next/link";
 import { CaptionField } from "@/components/CaptionField";
 import type { WorkoutType, WeightUnit, DistanceUnit } from "@/lib/constants";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
@@ -116,6 +117,50 @@ function PhotoAttach({ workoutId }: { workoutId: string }) {
   );
 }
 
+function AiAdviceCard({ workoutId, isPremium }: { workoutId: string; isPremium: boolean }) {
+  const [advice, setAdvice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  if (!isPremium) {
+    return (
+      <div className="mt-5 border-t border-line pt-5 text-left">
+        <Link href="/settings#premium" className="text-sm text-ink-muted hover:text-accent">
+          ✨ Get AI advice on this workout (Premium) →
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 border-t border-line pt-5 text-left">
+      {advice ? (
+        <>
+          <p className="mb-1.5 text-xs font-medium text-ink-muted">✨ AI advice</p>
+          <p className="text-sm text-ink">{advice}</p>
+        </>
+      ) : (
+        <button
+          type="button"
+          disabled={isPending}
+          onClick={() => {
+            setError(null);
+            startTransition(async () => {
+              const result = await getAiWorkoutAdvice(workoutId);
+              if (result.error) setError(result.error);
+              else if (result.advice) setAdvice(result.advice);
+            });
+          }}
+          className="rounded-lg border border-dashed border-line px-4 py-2.5 text-sm text-ink-muted hover:border-workout hover:text-workout disabled:opacity-50"
+        >
+          {isPending ? "Thinking…" : "✨ Get AI advice"}
+        </button>
+      )}
+      {error && <p className="mt-1.5 text-sm text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 // A dedicated "just finished" screen — Strava's post-run recap (big hero
 // number, route map, pace, splits) crossed with Hevy's post-lift one
 // (exercise/set/volume breakdown) — rather than dropping straight back to
@@ -127,11 +172,13 @@ export function WorkoutSummary({
   workout,
   weightUnit,
   distanceUnit,
+  isPremium,
   onDone,
 }: {
   workout: JustFinishedWorkout;
   weightUnit: WeightUnit;
   distanceUnit: DistanceUnit;
+  isPremium: boolean;
   onDone: () => void;
 }) {
   const isCardio = workout.type === "CARDIO";
@@ -247,6 +294,8 @@ export function WorkoutSummary({
       )}
 
       <PhotoAttach workoutId={workout.id} />
+
+      <AiAdviceCard workoutId={workout.id} isPremium={isPremium} />
 
       <div className="mt-5 border-t border-line pt-5 text-left">
         <CaptionField

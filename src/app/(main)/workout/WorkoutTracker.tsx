@@ -719,6 +719,7 @@ function ExerciseSection({
 export function WorkoutTracker({
   weightUnit,
   distanceUnit,
+  isPremium,
   exercises,
   openWorkout,
   lastPerformed,
@@ -728,6 +729,7 @@ export function WorkoutTracker({
 }: {
   weightUnit: WeightUnit;
   distanceUnit: DistanceUnit;
+  isPremium: boolean;
   exercises: Exercise[];
   openWorkout: OpenWorkout;
   lastPerformed: LastPerformed;
@@ -801,6 +803,7 @@ export function WorkoutTracker({
           workout={justFinished}
           weightUnit={weightUnit}
           distanceUnit={distanceUnit}
+          isPremium={isPremium}
           onDone={() => setJustFinished(null)}
         />
       )}

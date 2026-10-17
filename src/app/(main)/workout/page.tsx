@@ -111,6 +111,7 @@ export default async function WorkoutPage() {
       <WorkoutTracker
         weightUnit={user.weightUnit}
         distanceUnit={user.distanceUnit}
+        isPremium={user.isPremium}
         exercises={exercises.map((e) => ({ id: e.id, name: e.name, category: e.category }))}
         serverNow={new Date().toISOString()}
         openWorkout={

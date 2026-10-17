@@ -11,7 +11,8 @@ import { awardBadge, awardStreakBadges, awardWorkoutCountBadges, awardTimeOfDayB
 import { computeStreak } from "@/lib/streaks";
 import { todayISO, isoToDate } from "@/lib/dates";
 import { uploadWorkoutPhoto as uploadWorkoutPhotoToStorage, deleteWorkoutPhoto } from "@/lib/storage";
-import { FREE_LIMITS, STREAK_FREEZES_PER_WINDOW } from "@/lib/limits";
+import { FREE_LIMITS, STREAK_FREEZES_PER_WINDOW, DAILY_AI_ADVICE_LIMIT } from "@/lib/limits";
+import { generateWorkoutAdvice } from "@/lib/ai";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardWorkoutBadges(userId: string) {
@@ -419,4 +420,51 @@ export async function createExercise(_prev: CreateExerciseState, formData: FormD
   const created = await prisma.exercise.create({ data: { userId: user.id, name, category, isCustom: true } });
   revalidatePath("/workout");
   return { exercise: { id: created.id, name: created.name, category: created.category } };
+}
+
+export async function getAiWorkoutAdvice(workoutId: string): Promise<{ advice?: string; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user.isPremium) return { error: "AI advice is a Premium feature." };
+
+  const workout = await prisma.workout.findFirst({
+    where: { id: workoutId, userId: user.id },
+    include: { sets: { include: { exercise: true }, orderBy: { setNumber: "asc" } } },
+  });
+  if (!workout) return { error: "Workout not found" };
+
+  // Cached from a previous request — never re-calls the API for the same
+  // workout, so repeat views of this screen cost nothing further.
+  if (workout.aiAdvice) return { advice: workout.aiAdvice };
+
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const recentCount = await prisma.workout.count({
+    where: { userId: user.id, aiAdviceGeneratedAt: { gte: oneDayAgo } },
+  });
+  if (recentCount >= DAILY_AI_ADVICE_LIMIT) {
+    return { error: `You've used all ${DAILY_AI_ADVICE_LIMIT} AI advice requests for today — try again tomorrow.` };
+  }
+
+  const exercisesById = new Map<string, { name: string; sets: { reps: number; weight: number; weightUnit: "KG" | "LB"; isWarmup: boolean }[] }>();
+  for (const s of workout.sets) {
+    const entry = exercisesById.get(s.exerciseId) ?? { name: s.exercise.name, sets: [] };
+    entry.sets.push({ reps: s.reps, weight: s.weight, weightUnit: s.weightUnit, isWarmup: s.isWarmup });
+    exercisesById.set(s.exerciseId, entry);
+  }
+
+  let advice: string;
+  try {
+    advice = await generateWorkoutAdvice({
+      label: workout.label,
+      type: workout.type,
+      durationMinutes: workout.durationMinutes,
+      distanceKm: workout.distanceKm,
+      exercises: Array.from(exercisesById.values()),
+    });
+  } catch {
+    return { error: "Couldn't get AI advice right now — try again in a moment." };
+  }
+  if (!advice) return { error: "Couldn't get AI advice right now — try again in a moment." };
+
+  await prisma.workout.update({ where: { id: workoutId }, data: { aiAdvice: advice, aiAdviceGeneratedAt: new Date() } });
+  return { advice };
 }

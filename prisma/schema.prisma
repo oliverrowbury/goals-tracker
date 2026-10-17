@@ -442,6 +442,14 @@ model Workout {
   // list on demand" escape hatch.
   archived Boolean @default(false)
 
+  // Premium AI advice (see workout/actions.ts's getAiWorkoutAdvice) — cached
+  // here once generated so re-viewing a workout never re-calls the API, and
+  // aiAdviceGeneratedAt doubles as the per-user daily rate-limit counter
+  // (count workouts with a timestamp in the trailing 24h) without a
+  // separate request-log table.
+  aiAdvice            String?
+  aiAdviceGeneratedAt DateTime?
+
   sets WorkoutSet[]
 
   // Same reasoning as StudySession's index — every query here filters by

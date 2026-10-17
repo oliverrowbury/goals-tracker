@@ -27,6 +27,8 @@ plus the other user's own per-category `share_*_streak` opt-in.
 | weight_kg | float, nullable | optional; canonical kg, converted to the user's `weight_unit` at the UI's edges same as Workout |
 | height_cm | float, nullable | optional; canonical cm, converted to cm/in based on `distance_unit` (km ⇒ cm, mi ⇒ in) at the UI's edges |
 | focus_tags | enum[] | `journaling` \| `goals` \| `study` \| `workouts` — not mutually exclusive, shown on the profile card |
+| is_premium | boolean | Proudly Premium — manually toggled by the admin in Settings (`toggleUserPremium`), no payment processing yet. Gates the free-tier caps in `lib/limits.ts`, the weekly recap lock, the second streak freeze, PDF export, premium-exclusive badges, and AI workout advice |
+| free_recap_shown_at | timestamp, nullable | free-tier users get the full weekly recap exactly once, ever — set the first time it's shown (via a client effect, not during the page's own render — see `MarkRecapSeen`), every recap after that is locked unless `is_premium` |
 | created_at | timestamp | |
 
 ## JournalEntry
@@ -40,9 +42,15 @@ combining this row with any `StudySession` / `Workout` rows on the same date.
 | user_id | uuid | |
 | date | date | unique per user |
 | body_text | text | freeform, no structure enforced |
+| notes | text, nullable | a separate open freewrite, no set prompt — distinct from `body_text`'s own "what are you proud of" prompt |
+| photo_url | text, nullable | optional photo attached from the journal editor — capped at 3 per user on the free tier (`FREE_LIMITS.PHOTOS_PER_CATEGORY`), Premium unlimited |
 | created_at / updated_at | timestamp | |
 
 ## Goal
+Free tier is capped at `FREE_LIMITS.GOALS` active goals — the cap only
+blocks creating a new one past the limit, never touches existing goals.
+Premium is unlimited.
+
 | field | type | notes |
 |---|---|---|
 | id | uuid | |
@@ -74,7 +82,8 @@ counter to keep in sync.
 | note | text | optional |
 
 ## Subject
-For the study tracker.
+For the study tracker. Free tier is capped at `FREE_LIMITS.SUBJECTS` active
+subjects (new-creation only, same as Goal); Premium is unlimited.
 
 | field | type | notes |
 |---|---|---|
@@ -122,8 +131,10 @@ Pre-loaded library plus user-added custom exercises.
 | distance_km | number, nullable | cardio only |
 | route | json, nullable | cardio only — tracked GPS points `{lat, lng, t?, alt?}[]`; splits and elevation gain are derived from this at render time (see `lib/workout.ts`), not stored |
 | visibility | enum | `private` \| `friends` — chosen on the post-finish summary screen; combines with the user's `share_workout_streak` to gate the friend feed |
-| photo_url | text, nullable | optional photo attached on the post-finish summary screen |
+| photo_url | text, nullable | optional photo attached on the post-finish summary screen — capped at 3 per user on the free tier (`FREE_LIMITS.PHOTOS_PER_CATEGORY`), Premium unlimited |
 | note | text | optional — free text about the workout, editable both while it's open (WorkoutNoteField) and afterwards from the log (updateWorkoutDetails) |
+| ai_advice | text, nullable | Premium only — short AI-generated note on this workout (`getAiWorkoutAdvice`), generated once and cached here so re-viewing never re-calls the API |
+| ai_advice_generated_at | timestamp, nullable | set alongside `ai_advice`; also doubles as the per-user daily rate-limit counter (`DAILY_AI_ADVICE_LIMIT`) without a separate request-log table |
 
 For `type = strength`, has `WorkoutSet` rows. For `type = cardio`, `distance_km` +
 `duration_minutes` are the whole record — no sets.
@@ -176,7 +187,9 @@ jobs instead of an arbitrary time — see `vercel.json` and
 
 ## Deadline
 A specific date to hit (an exam, an assignment) — distinct from `Goal`, which
-is a recurring habit rather than a one-off with a due date.
+is a recurring habit rather than a one-off with a due date. Free tier is
+capped at `FREE_LIMITS.DEADLINES` active (not-yet-completed) deadlines at
+once (new-creation only); Premium is unlimited.
 
 | field | type | notes |
 |---|---|---|
@@ -293,6 +306,32 @@ action already triggers.
 | earned_at | timestamp | |
 
 Unique on `(user_id, badge)`.
+
+A handful of badges are Premium-exclusive extended tiers sitting further out
+on the same milestone ladders (e.g. a 365-day streak, level 100, 250
+lifetime workouts) rather than a separate badge pool — gated by `is_premium`
+at award time in `lib/badges.ts`, so a free user who hits the same number
+just doesn't unlock the badge for it. `PREMIUM_SUPPORTER` is awarded once,
+automatically, when Premium is turned on for a user.
+
+## CalendarEvent
+A manual, Notion/Google-Calendar-style entry a user adds to a specific day —
+distinct from the calendar's other dots (journal/goal/study/deadline),
+which are all derived live from their own tables, not stored here. Shown
+and managed from the day page (`calendar/[date]`), any day past, today, or
+future.
+
+| field | type | notes |
+|---|---|---|
+| id | uuid | |
+| user_id | uuid | |
+| title | text | |
+| date | date | the day this event is on |
+| time | text, nullable | freeform, e.g. "14:30" — not combined with `date` into a single timestamp |
+| notes | text, nullable | |
+| created_at | timestamp | |
+
+Indexed on `(user_id, date)`.
 
 ## Relationships
 
