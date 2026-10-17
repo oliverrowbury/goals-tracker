@@ -15,6 +15,7 @@ import { ageInYears } from "@/lib/dates";
 import { uploadAvatarPhoto, deleteAvatarPhoto, deleteJournalPhoto, deleteWorkoutPhoto } from "@/lib/storage";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { awardBadge } from "@/lib/badges";
+import type Stripe from "stripe";
 import { getStripe, PREMIUM_PRICING, type PremiumInterval } from "@/lib/stripe";
 import { restoreTrashedItem } from "@/lib/trash";
 
@@ -432,6 +433,12 @@ export async function createCheckoutSession(interval: PremiumInterval): Promise<
       cancel_url: `${origin}/settings#premium`,
       metadata: { userId: user.id },
       subscription_data: { metadata: { userId: user.id } },
+      // Stripe's newer "Managed Payments" (on by default for new accounts)
+      // requires every line item's product to carry a tax code, which these
+      // inline price_data items never do — without this, checkout fails
+      // outright with "the product tax code is missing". Not in the
+      // installed SDK's types yet, hence the cast; the API itself accepts it.
+      ...({ managed_payments: { enabled: false } } as Partial<Stripe.Checkout.SessionCreateParams>),
     });
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't start checkout — try again in a moment." };
