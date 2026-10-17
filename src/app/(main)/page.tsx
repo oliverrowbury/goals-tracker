@@ -176,9 +176,9 @@ export default async function HomePage({
       </div>
 
       {!weeklyRecapLocked && !user.isPremium && <MarkRecapSeen />}
-      <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} locked={weeklyRecapLocked} />
+      <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} locked={weeklyRecapLocked} isPremium={user.isPremium} />
 
-      <MonthlyRecap data={monthlyRecapData} distanceUnit={user.distanceUnit} />
+      <MonthlyRecap data={monthlyRecapData} distanceUnit={user.distanceUnit} isPremium={user.isPremium} />
 
       {averageMood != null && (
         <Link

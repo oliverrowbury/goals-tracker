@@ -116,7 +116,15 @@ export async function getMonthlyRecapData(userId: string, anchorMonthISO: string
   };
 }
 
-export function MonthlyRecap({ data, distanceUnit }: { data: MonthlyRecapData; distanceUnit: DistanceUnit }) {
+export function MonthlyRecap({
+  data,
+  distanceUnit,
+  isPremium,
+}: {
+  data: MonthlyRecapData;
+  distanceUnit: DistanceUnit;
+  isPremium?: boolean;
+}) {
   const { monthISO, isCurrentMonth, goalSummaries, subjectMinutes, totalMinutes, workoutSessionCount, workoutMinutes, cardioKm } = data;
 
   return (
@@ -127,6 +135,14 @@ export function MonthlyRecap({ data, distanceUnit }: { data: MonthlyRecapData; d
           <h2 className="font-serif text-xl font-semibold text-ink">{formatMonth(monthISO)}</h2>
         </div>
         <div className="flex items-center gap-2 text-sm">
+          {isPremium && (
+            <a
+              href={`/api/export/recap/monthly?month=${monthISO}`}
+              className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
+            >
+              📄 PDF
+            </a>
+          )}
           <Link
             href={`/?month=${shiftMonth(monthISO, -1)}`}
             className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"

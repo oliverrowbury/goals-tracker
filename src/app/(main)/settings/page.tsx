@@ -257,6 +257,13 @@ export default async function SettingsPage() {
             Browse past monthly recaps →
           </Link>
         </p>
+        {user.isPremium && (
+          <p className="mt-1 text-xs">
+            <a href={`/api/export/recap/yearly?year=${today.slice(0, 4)}`} className="text-accent hover:underline">
+              📄 Download this year&apos;s recap (PDF) →
+            </a>
+          </p>
+        )}
       </div>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">

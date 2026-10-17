@@ -119,10 +119,12 @@ export function WeeklyRecap({
   data,
   distanceUnit,
   locked,
+  isPremium,
 }: {
   data: WeeklyRecapData;
   distanceUnit: DistanceUnit;
   locked?: boolean;
+  isPremium?: boolean;
 }) {
   const { startISO, endISO, isCurrentWeek, goalSummaries, subjectMinutes, totalMinutes, workouts, workoutSessionCount, workoutMinutes, cardioKm } =
     data;
@@ -139,6 +141,14 @@ export function WeeklyRecap({
           <h2 className="font-serif text-xl font-semibold text-ink">Week of {formatWeekRange(startISO, endISO)}</h2>
         </div>
         <div className="flex items-center gap-2 text-sm">
+          {isPremium && !locked && (
+            <a
+              href={`/api/export/recap/weekly?week=${startISO}`}
+              className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
+            >
+              📄 PDF
+            </a>
+          )}
           <Link
             href={`/?week=${shiftISO(startISO, -7)}`}
             className="rounded-lg border border-line px-3 py-1.5 text-ink-muted hover:border-accent hover:text-accent"
