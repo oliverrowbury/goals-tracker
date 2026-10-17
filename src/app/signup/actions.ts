@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, generateVerificationCode } from "@/lib/password";
+import { passwordRequirementErrors } from "@/lib/passwordPolicy";
 import { sendWelcomeEmail, sendVerificationCodeEmail } from "@/lib/email";
 import { USERNAME_RE, EMAIL_RE } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
@@ -51,7 +52,8 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   }
   if (!email) fieldErrors.email = "Enter your email.";
   else if (!EMAIL_RE.test(email)) fieldErrors.email = "That doesn't look like a valid email address.";
-  if (password.length < 6) fieldErrors.password = "Needs to be at least 6 characters.";
+  const missing = passwordRequirementErrors(password);
+  if (missing.length > 0) fieldErrors.password = `Needs: ${missing.join(", ").toLowerCase()}.`;
   if (confirmPassword !== password) fieldErrors.confirmPassword = "Doesn't match your password.";
   if (!agreeToTerms) fieldErrors.agreeToTerms = "You need to agree to the Terms and Privacy Policy to continue.";
 

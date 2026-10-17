@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Wordmark } from "@/components/Wordmark";
 import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { signup } from "./actions";
 
 const inputClass =
@@ -18,7 +19,11 @@ function Field({
   autoFocus,
   error,
   defaultValue,
+  value,
+  onChange,
   hint,
+  placeholder,
+  meter,
 }: {
   id: "name" | "username" | "email" | "password" | "confirmPassword";
   label: string;
@@ -27,7 +32,13 @@ function Field({
   autoFocus?: boolean;
   error?: string;
   defaultValue?: string;
+  // Only the password field needs live tracking (for the strength meter
+  // below it) — every other field stays uncontrolled via defaultValue.
+  value?: string;
+  onChange?: (value: string) => void;
   hint?: string;
+  placeholder?: string;
+  meter?: boolean;
 }) {
   const fieldClassName = `${inputClass} ${error ? "border-accent" : "border-line focus:border-accent"}`;
 
@@ -43,6 +54,8 @@ function Field({
           autoFocus={autoFocus}
           required
           defaultValue={defaultValue}
+          value={value}
+          onChange={onChange}
           ariaInvalid={!!error}
           className={fieldClassName}
         />
@@ -55,11 +68,13 @@ function Field({
           autoFocus={autoFocus}
           required
           defaultValue={defaultValue}
+          placeholder={placeholder}
           aria-invalid={!!error}
           className={fieldClassName}
         />
       )}
       {error ? <p className="text-xs text-accent-strong">{error}</p> : hint && <p className="text-xs text-ink-muted">{hint}</p>}
+      {meter && <PasswordStrengthMeter password={value ?? ""} />}
     </div>
   );
 }
@@ -80,6 +95,7 @@ function SubmitButton() {
 export function SignupForm() {
   const [state, formAction] = useActionState(signup, null);
   const errors = state?.fieldErrors ?? {};
+  const [password, setPassword] = useState("");
 
   return (
     <form
@@ -114,8 +130,25 @@ export function SignupForm() {
           defaultValue={state?.values.username}
           hint="Your public @handle, check it's what you want (your browser may have filled it in). You can change it later in Settings."
         />
-        <Field id="email" label="Email" type="email" autoComplete="email" error={errors.email} defaultValue={state?.values.email} />
-        <Field id="password" label="Password" type="password" autoComplete="new-password" error={errors.password} />
+        <Field
+          id="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          error={errors.email}
+          defaultValue={state?.values.email}
+          placeholder="you@example.com"
+        />
+        <Field
+          id="password"
+          label="Password"
+          type="password"
+          autoComplete="new-password"
+          error={errors.password}
+          value={password}
+          onChange={setPassword}
+          meter
+        />
         <Field
           id="confirmPassword"
           label="Confirm password"

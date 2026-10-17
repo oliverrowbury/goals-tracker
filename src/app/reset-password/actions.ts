@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, generateSessionToken } from "@/lib/password";
+import { passwordRequirementErrors } from "@/lib/passwordPolicy";
 import { sendPasswordChangedEmail } from "@/lib/email";
 
 export type ResetPasswordState = { error?: string } | null;
@@ -15,7 +16,8 @@ export async function resetPassword(_prev: ResetPasswordState, formData: FormDat
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
   if (!token) return { error: "That reset link is invalid, request a new one." };
-  if (password.length < 6) return { error: "Needs to be at least 6 characters." };
+  const missing = passwordRequirementErrors(password);
+  if (missing.length > 0) return { error: `Needs: ${missing.join(", ").toLowerCase()}.` };
   if (password !== confirmPassword) return { error: "Passwords don't match." };
 
   const user = await prisma.user.findUnique({ where: { resetToken: token } });

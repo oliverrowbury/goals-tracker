@@ -66,6 +66,7 @@ export function LoginForm({ error, verified }: { error?: string; verified?: bool
           autoComplete="username"
           autoFocus
           required
+          placeholder="you@example.com or username"
           className="mb-4 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
 

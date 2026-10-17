@@ -53,6 +53,7 @@ export function ForgotPasswordForm() {
               autoComplete="email"
               autoFocus
               required
+              placeholder="you@example.com"
               className="mb-5 w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
             />
 

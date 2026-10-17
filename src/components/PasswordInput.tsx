@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { EyeIcon, EyeOffIcon } from "@/components/Icons";
 
 // Same visual footprint as a plain text input everywhere it replaces one —
 // callers pass their usual input classes and this adds the reveal toggle
 // plus right padding so the icon never overlaps typed text.
+//
+// Uncontrolled by default (defaultValue), same as before — a caller only
+// needs value+onChange when something else on the page has to react to
+// every keystroke (PasswordStrengthMeter), so most callers (login, a
+// confirm-password field, an auth-check password) stay untouched.
 export function PasswordInput({
   id,
   name,
@@ -14,6 +19,8 @@ export function PasswordInput({
   required,
   minLength,
   defaultValue,
+  value,
+  onChange,
   className,
   ariaInvalid,
 }: {
@@ -24,6 +31,8 @@ export function PasswordInput({
   required?: boolean;
   minLength?: number;
   defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
   className?: string;
   ariaInvalid?: boolean;
 }) {
@@ -39,7 +48,7 @@ export function PasswordInput({
         autoFocus={autoFocus}
         required={required}
         minLength={minLength}
-        defaultValue={defaultValue}
+        {...(onChange ? { value: value ?? "", onChange: (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value) } : { defaultValue })}
         aria-invalid={ariaInvalid}
         className={`${className ?? ""} pr-10`}
       />

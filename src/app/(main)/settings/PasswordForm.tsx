@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { PasswordInput } from "@/components/PasswordInput";
+import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
 import { changePassword } from "./actions";
 
 export function PasswordForm() {
   const [state, formAction, isPending] = useActionState(changePassword, null);
+  const [newPassword, setNewPassword] = useState("");
 
   return (
     <form action={formAction} className="max-w-sm space-y-3">
@@ -36,9 +38,11 @@ export function PasswordForm() {
           id="newPassword"
           autoComplete="new-password"
           required
-          minLength={6}
+          value={newPassword}
+          onChange={setNewPassword}
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
+        <PasswordStrengthMeter password={newPassword} />
       </div>
 
       <div>
@@ -49,7 +53,7 @@ export function PasswordForm() {
           id="confirmPassword"
           autoComplete="new-password"
           required
-          minLength={6}
+          minLength={8}
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
       </div>

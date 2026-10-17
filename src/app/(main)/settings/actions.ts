@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { AUTH_COOKIE } from "@/lib/auth";
 import { hashPassword, verifyPassword, generateSessionToken } from "@/lib/password";
+import { passwordRequirementErrors } from "@/lib/passwordPolicy";
 import { sendPasswordChangedEmail, sendEmailChangedEmail } from "@/lib/email";
 import { USERNAME_RE, EMAIL_RE, GENDERS, type Gender, FOCUS_TAGS, type FocusTag } from "@/lib/constants";
 import { containsProfanity } from "@/lib/profanity";
@@ -32,7 +33,8 @@ export async function changePassword(_prev: SettingsActionState, formData: FormD
   const currentOk = await verifyPassword(currentPassword, user.passwordHash);
   if (!currentOk) return { error: "Current password is wrong." };
 
-  if (newPassword.length < 6) return { error: "New password needs to be at least 6 characters." };
+  const missing = passwordRequirementErrors(newPassword);
+  if (missing.length > 0) return { error: `New password needs: ${missing.join(", ").toLowerCase()}.` };
   if (newPassword !== confirmPassword) return { error: "New password and confirmation don't match." };
 
   const passwordHash = await hashPassword(newPassword);

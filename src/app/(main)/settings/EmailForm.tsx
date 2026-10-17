@@ -23,6 +23,7 @@ export function EmailForm({ current }: { current: string }) {
           autoComplete="email"
           required
           defaultValue={current}
+          placeholder="you@example.com"
           className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
       </div>
