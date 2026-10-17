@@ -187,11 +187,21 @@ model User {
   // mutually exclusive, same reasoning as Goal.targetDays being an array
   // rather than a single enum: no reason someone can't be here for all of it.
   focusTags FocusTag[] @default([])
-  // Manually toggled (admin-only, see settings/page.tsx's Users section) —
-  // there's no payment processor wired up yet, so this is the whole
-  // mechanism for now, including comping every account that existed before
-  // Premium launched. Gates the free-tier caps in lib/limits.ts.
+  // The source of truth the whole app checks everywhere — set either by a
+  // Stripe subscription webhook (see api/webhooks/stripe) or by the
+  // admin-only manual toggle in settings/page.tsx's Users section, which
+  // is how every account that existed before Premium/Stripe launched got
+  // comped, and remains for support/goodwill cases. Gates the free-tier
+  // caps in lib/limits.ts.
   isPremium Boolean @default(false)
+  // Null until the user's first Checkout session — created once, reused
+  // for every later subscription/portal session so Stripe sees one
+  // customer per user rather than a new one each time.
+  stripeCustomerId String? @unique
+  // Null for an admin-comped user with no real subscription (nothing to
+  // manage/cancel via the billing portal), set from checkout.session.completed
+  // and cleared on customer.subscription.deleted.
+  stripeSubscriptionId String? @unique
   // Free tier gets one full weekly recap ever, a teaser rather than a
   // permanent feature — null means "hasn't happened yet," set the first
   // time WeeklyRecap actually renders unlocked for a non-premium account.

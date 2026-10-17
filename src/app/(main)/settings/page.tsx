@@ -18,6 +18,7 @@ import { ProfileForm } from "./ProfileForm";
 import { DeleteAccountForm } from "./DeleteAccountForm";
 import { ShareActivityToggle } from "../friends/ShareActivityToggle";
 import { toggleUserPremium } from "./actions";
+import { PremiumSection } from "./PremiumSection";
 import {
   GearIcon,
   ClockIcon,
@@ -43,7 +44,8 @@ import { PageHeader } from "@/components/PageHeader";
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ premium?: string }> }) {
+  const { premium } = await searchParams;
   const user = await getCurrentUser();
   const isAdmin = user.email === ADMIN_EMAIL;
   const [subjects, feedback, journalDates, subjectMinutes, studyDates, workoutDates, completedGoalDates, earnedBadges, allUsers] =
@@ -265,6 +267,22 @@ export default async function SettingsPage() {
           </p>
         )}
       </div>
+
+      <section id="premium" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Proudly Premium</h2>
+        {!user.isPremium && (
+          <>
+            <p className="mb-4 text-sm text-ink-muted">
+              Unlimited goals, deadlines, subjects and photos, the full weekly recap every week, a second streak
+              freeze, exclusive badges, PDF exports of your recaps, and AI advice on your workouts.
+            </p>
+            <PremiumSection isPremium={false} hasStripeSubscription={false} justSubscribed={false} />
+          </>
+        )}
+        {user.isPremium && (
+          <PremiumSection isPremium={true} hasStripeSubscription={!!user.stripeSubscriptionId} justSubscribed={premium === "success"} />
+        )}
+      </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Badges</h2>

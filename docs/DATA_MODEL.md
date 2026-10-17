@@ -27,7 +27,9 @@ plus the other user's own per-category `share_*_streak` opt-in.
 | weight_kg | float, nullable | optional; canonical kg, converted to the user's `weight_unit` at the UI's edges same as Workout |
 | height_cm | float, nullable | optional; canonical cm, converted to cm/in based on `distance_unit` (km ⇒ cm, mi ⇒ in) at the UI's edges |
 | focus_tags | enum[] | `journaling` \| `goals` \| `study` \| `workouts` — not mutually exclusive, shown on the profile card |
-| is_premium | boolean | Proudly Premium — manually toggled by the admin in Settings (`toggleUserPremium`), no payment processing yet. Gates the free-tier caps in `lib/limits.ts`, the weekly recap lock, the second streak freeze, PDF export, premium-exclusive badges, and AI workout advice |
+| is_premium | boolean | Proudly Premium — the source of truth everywhere, set either by a Stripe subscription webhook (`api/webhooks/stripe`) or the admin-only manual toggle in Settings (`toggleUserPremium`, how every pre-Stripe account got comped, and still used for support/goodwill cases). Gates the free-tier caps in `lib/limits.ts`, the weekly recap lock, the second streak freeze, PDF export, premium-exclusive badges, and AI workout advice |
+| stripe_customer_id | text, nullable, unique | null until the user's first Checkout session; reused for every later subscription/billing-portal session |
+| stripe_subscription_id | text, nullable, unique | null for an admin-comped user with no real subscription; set on `checkout.session.completed`, cleared on `customer.subscription.deleted` |
 | free_recap_shown_at | timestamp, nullable | free-tier users get the full weekly recap exactly once, ever — set the first time it's shown (via a client effect, not during the page's own render — see `MarkRecapSeen`), every recap after that is locked unless `is_premium` |
 | created_at | timestamp | |
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +15,7 @@ import { ageInYears } from "@/lib/dates";
 import { uploadAvatarPhoto, deleteAvatarPhoto, deleteJournalPhoto, deleteWorkoutPhoto } from "@/lib/storage";
 import { ADMIN_EMAIL } from "@/lib/auth";
 import { awardBadge } from "@/lib/badges";
+import { getStripe, PREMIUM_PRICING, type PremiumInterval } from "@/lib/stripe";
 
 const MIN_AGE = 13;
 
@@ -361,10 +362,14 @@ export async function sendFeedback(_prev: SettingsActionState, formData: FormDat
   return { success: "Thanks, feedback sent." };
 }
 
-// Manual — no payment processor exists yet, so this *is* how someone
-// becomes Premium for now, including comping every account that existed
-// before Premium launched. Admin-only, same ADMIN_EMAIL gate the Users
-// list itself is already shown behind.
+// Admin override, independent of Stripe — comped every account that
+// existed before Premium/Stripe launched, and stays for support/goodwill
+// cases (e.g. a refund handled outside Stripe). Admin-only, same
+// ADMIN_EMAIL gate the Users list itself is already shown behind. Doesn't
+// touch stripeSubscriptionId — toggling a Stripe subscriber off here
+// doesn't cancel their actual subscription, so the next renewal webhook
+// would just turn isPremium back on. Not a substitute for cancelling via
+// the billing portal.
 export async function toggleUserPremium(targetUserId: string) {
   const admin = await getCurrentUser();
   if (admin.email !== ADMIN_EMAIL) return;
@@ -377,4 +382,84 @@ export async function toggleUserPremium(targetUserId: string) {
   if (nextIsPremium) await awardBadge(targetUserId, "PREMIUM_SUPPORTER");
 
   revalidatePath("/settings");
+}
+
+// Absolute origin for Stripe's success_url/cancel_url/return_url, which
+// can't be relative — derived from the request rather than a hardcoded
+// env var, so it's automatically correct on every Vercel preview/
+// production URL and in local dev alike.
+async function siteOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+export type CreateCheckoutState = { error: string } | null;
+
+// Starts a Stripe Checkout session for a new Premium subscription.
+// price_data (inline) rather than a pre-created Stripe Price object —
+// one less thing to configure in the Stripe dashboard, and the price
+// lives in one place (lib/stripe.ts's PREMIUM_PRICING) instead of two.
+export async function createCheckoutSession(interval: PremiumInterval): Promise<CreateCheckoutState> {
+  const user = await getCurrentUser();
+  if (user.isPremium) return { error: "You already have Premium." };
+
+  const origin = await siteOrigin();
+  const pricing = PREMIUM_PRICING[interval];
+
+  let session;
+  try {
+    const stripe = getStripe();
+    session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: user.stripeCustomerId ?? undefined,
+      customer_email: user.stripeCustomerId ? undefined : user.email,
+      client_reference_id: user.id,
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            product_data: { name: `Proudly Premium (${interval === "month" ? "monthly" : "yearly"})` },
+            unit_amount: pricing.amountPence,
+            recurring: { interval },
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${origin}/settings?premium=success#premium`,
+      cancel_url: `${origin}/settings#premium`,
+      metadata: { userId: user.id },
+      subscription_data: { metadata: { userId: user.id } },
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't start checkout — try again in a moment." };
+  }
+
+  if (!session.url) return { error: "Couldn't start checkout — try again in a moment." };
+  redirect(session.url);
+}
+
+export type BillingPortalState = { error: string } | null;
+
+// Stripe's hosted billing portal — lets a real subscriber update their
+// card, see invoices, or cancel, without any of that needing building or
+// maintaining here. Only meaningful for someone with an actual Stripe
+// subscription; an admin-comped user has nothing there to manage.
+export async function createBillingPortalSession(): Promise<BillingPortalState> {
+  const user = await getCurrentUser();
+  if (!user.stripeCustomerId) return { error: "No subscription to manage." };
+
+  const origin = await siteOrigin();
+  let session;
+  try {
+    session = await getStripe().billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${origin}/settings#premium`,
+    });
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Couldn't open billing portal — try again in a moment." };
+  }
+
+  redirect(session.url);
 }
