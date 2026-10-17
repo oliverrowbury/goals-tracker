@@ -11,6 +11,7 @@ import { awardBadge, awardStreakBadges, awardWorkoutCountBadges, awardTimeOfDayB
 import { computeStreak } from "@/lib/streaks";
 import { todayISO, isoToDate } from "@/lib/dates";
 import { uploadWorkoutPhoto as uploadWorkoutPhotoToStorage, deleteWorkoutPhoto } from "@/lib/storage";
+import { FREE_LIMITS } from "@/lib/limits";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardWorkoutBadges(userId: string) {
@@ -356,6 +357,15 @@ export async function uploadWorkoutPhoto(workoutId: string, formData: FormData):
 
   const workout = await prisma.workout.findFirst({ where: { id: workoutId, userId: user.id } });
   if (!workout) return { error: "Workout not found" };
+
+  // Only a workout getting its FIRST photo counts against the cap —
+  // replacing an existing photo isn't a new slot.
+  if (!user.isPremium && !workout.photoUrl) {
+    const photoCount = await prisma.workout.count({ where: { userId: user.id, photoUrl: { not: null } } });
+    if (photoCount >= FREE_LIMITS.PHOTOS_PER_CATEGORY) {
+      return { error: `You've hit the free limit of ${FREE_LIMITS.PHOTOS_PER_CATEGORY} workout photos on Proudly Normal. Go Premium (Settings) for more.` };
+    }
+  }
 
   // Upload the new photo before deleting the old one — uploadWorkoutPhoto's
   // path is always unique (Date.now()-suffixed), so there's no collision

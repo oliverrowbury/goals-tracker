@@ -8,6 +8,7 @@ import { uploadJournalPhoto, deleteJournalPhoto } from "@/lib/storage";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges } from "@/lib/badges";
 import { computeStreak } from "@/lib/streaks";
+import { FREE_LIMITS } from "@/lib/limits";
 
 export async function saveJournalEntry(dateISO: string, bodyText: string, improveText: string, notes: string) {
   if (isFutureISO(dateISO)) return;
@@ -81,6 +82,15 @@ export async function uploadEntryPhoto(dateISO: string, formData: FormData): Pro
 
   const date = isoToDate(dateISO);
   const existing = await prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } });
+
+  // Only a day getting its FIRST photo counts against the cap — replacing
+  // a day's existing photo isn't a new slot.
+  if (!user.isPremium && !existing?.photoUrl) {
+    const photoCount = await prisma.journalEntry.count({ where: { userId: user.id, photoUrl: { not: null } } });
+    if (photoCount >= FREE_LIMITS.PHOTOS_PER_CATEGORY) {
+      return { error: `You've hit the free limit of ${FREE_LIMITS.PHOTOS_PER_CATEGORY} journal photos on Proudly Normal. Go Premium (Settings) for more.` };
+    }
+  }
 
   // Upload the new photo before deleting the old one — uploadJournalPhoto's
   // path is always unique (Date.now()-suffixed), so there's no collision
