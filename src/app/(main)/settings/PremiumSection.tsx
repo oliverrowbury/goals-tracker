@@ -103,7 +103,7 @@ export function PremiumSection({
   return (
     <div className="flex flex-col gap-3 sm:flex-row">
       <SubscribeButton interval="month" label="£3.99/month" />
-      <SubscribeButton interval="year" label="£30/year" sublabel="save ~£18 a year" highlight />
+      <SubscribeButton interval="year" label="£29.99/year" sublabel="save ~£18 a year" highlight />
     </div>
   );
 }

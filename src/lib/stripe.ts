@@ -16,7 +16,7 @@ export function getStripe(): Stripe {
 // displays. Amounts are in pence (Stripe's minor-unit convention).
 export const PREMIUM_PRICING = {
   month: { amountPence: 399, label: "£3.99/month" },
-  year: { amountPence: 3000, label: "£30/year" },
+  year: { amountPence: 2999, label: "£29.99/year" },
 } as const;
 
 export type PremiumInterval = keyof typeof PREMIUM_PRICING;
