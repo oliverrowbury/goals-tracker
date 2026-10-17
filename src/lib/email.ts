@@ -40,7 +40,17 @@ function layout(bodyHtml: string): string {
 </html>`.trim();
 }
 
-export async function sendEmail({ to, subject, html }: { to: string; subject: string; html: string }): Promise<void> {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  attachments,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: { filename: string; content: Buffer }[];
+}): Promise<void> {
   const resend = getClient();
   if (!resend) {
     console.log(`[email:not-configured] to=${to} subject="${subject}"`);
@@ -48,7 +58,7 @@ export async function sendEmail({ to, subject, html }: { to: string; subject: st
   }
 
   try {
-    await resend.emails.send({ from: EMAIL_FROM, to, subject, html });
+    await resend.emails.send({ from: EMAIL_FROM, to, subject, html, attachments });
   } catch (err) {
     // Never let an email provider outage take down the flow that triggered
     // it (signup, password change, …) — log and move on.
@@ -174,5 +184,34 @@ export async function sendPasswordChangedEmail(to: string, name: string): Promis
         right away.
       </p>
     `),
+  });
+}
+
+// Premium only — the free tier's own weekly/monthly recap stays a push
+// notification (see api/cron/weekly-recap and monthly-recap), this is an
+// addition for Premium, not a replacement; both can land for the same
+// user. The PDF itself is generated the same way as the on-demand
+// api/export/recap/* routes (RecapDocument), just attached here instead
+// of downloaded.
+export async function sendRecapPdfEmail(
+  to: string,
+  name: string,
+  { periodLabel, pdf, filename }: { periodLabel: string; pdf: Buffer; filename: string },
+): Promise<void> {
+  const firstName = name.trim().split(/\s+/)[0] || name;
+  await sendEmail({
+    to,
+    subject: `Your ${periodLabel} recap, ready to go`,
+    html: layout(`
+      <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">Hi ${firstName},</p>
+      <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#242b29;">
+        Your ${periodLabel} recap is attached as a PDF — a Premium perk, generated automatically so
+        you don't have to remember to download it yourself.
+      </p>
+      <p style="margin:0;font-size:13px;line-height:1.6;color:#7c8a86;">
+        You can always get this (and past recaps) from Settings in the app too.
+      </p>
+    `),
+    attachments: [{ filename, content: pdf }],
   });
 }

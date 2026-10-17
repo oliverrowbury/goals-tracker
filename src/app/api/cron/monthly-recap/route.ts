@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUser } from "@/lib/push";
+import { sendRecapPdfEmail } from "@/lib/email";
+import { buildMonthlyRecapPdf } from "@/lib/pdf/buildRecapPdf";
 import { todayISO, shiftISO, monthRangeContaining, monthISOOf } from "@/lib/dates";
 import { formatMinutes } from "@/lib/study";
 
@@ -73,5 +75,27 @@ export async function GET(request: Request) {
     }),
   );
 
-  return NextResponse.json({ sent, checkedUsers: users.length });
+  // Premium perk, additive to the push above — see weekly-recap's own
+  // version of this for the full reasoning.
+  const premiumUsers = await prisma.user.findMany({
+    where: { isPremium: true },
+    select: { id: true, email: true, name: true, distanceUnit: true },
+  });
+
+  let emailed = 0;
+  await Promise.all(
+    premiumUsers.map(async ({ id: userId, email, name, distanceUnit }) => {
+      const { pdf, filename, isEmpty } = await buildMonthlyRecapPdf(userId, monthISOOf(today), distanceUnit);
+      if (isEmpty) return;
+
+      try {
+        await sendRecapPdfEmail(email, name, { periodLabel: "monthly", pdf, filename });
+        emailed++;
+      } catch (err) {
+        console.error("Failed to send monthly recap PDF email:", err);
+      }
+    }),
+  );
+
+  return NextResponse.json({ sent, checkedUsers: users.length, emailed, premiumUsers: premiumUsers.length });
 }

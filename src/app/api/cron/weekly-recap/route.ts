@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUser } from "@/lib/push";
+import { sendRecapPdfEmail } from "@/lib/email";
+import { buildWeeklyRecapPdf } from "@/lib/pdf/buildRecapPdf";
 import { todayISO, shiftISO } from "@/lib/dates";
 import { formatMinutes } from "@/lib/study";
 
@@ -65,5 +67,28 @@ export async function GET(request: Request) {
     }),
   );
 
-  return NextResponse.json({ sent, checkedUsers: users.length });
+  // Premium perk, additive to the push above — independent of push
+  // subscription (a Premium user with push off still gets this), so a
+  // separate query and loop rather than branching inside the one above.
+  const premiumUsers = await prisma.user.findMany({
+    where: { isPremium: true },
+    select: { id: true, email: true, name: true, distanceUnit: true },
+  });
+
+  let emailed = 0;
+  await Promise.all(
+    premiumUsers.map(async ({ id: userId, email, name, distanceUnit }) => {
+      const { pdf, filename, isEmpty } = await buildWeeklyRecapPdf(userId, today, distanceUnit);
+      if (isEmpty) return;
+
+      try {
+        await sendRecapPdfEmail(email, name, { periodLabel: "weekly", pdf, filename });
+        emailed++;
+      } catch (err) {
+        console.error("Failed to send weekly recap PDF email:", err);
+      }
+    }),
+  );
+
+  return NextResponse.json({ sent, checkedUsers: users.length, emailed, premiumUsers: premiumUsers.length });
 }
