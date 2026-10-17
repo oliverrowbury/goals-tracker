@@ -34,7 +34,7 @@ export async function saveJournalEntry(dateISO: string, bodyText: string, improv
     if (journaledDates.length === 1) await awardBadge(user.id, "FIRST_JOURNAL_ENTRY");
     const maxFreezes = user.isPremium ? STREAK_FREEZES_PER_WINDOW.PREMIUM : STREAK_FREEZES_PER_WINDOW.FREE;
     const streak = computeStreak(new Set(journaledDates.map((e) => e.date.toISOString().slice(0, 10))), todayISO(), maxFreezes);
-    await awardStreakBadges(user.id, "JOURNAL", streak);
+    await awardStreakBadges(user.id, "JOURNAL", streak, user.isPremium);
   }
 
   revalidatePath("/journal");

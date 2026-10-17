@@ -20,10 +20,10 @@ async function awardWorkoutBadges(userId: string) {
     prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isPremium: true } }),
   ]);
   if (workouts.length === 1) await awardBadge(userId, "FIRST_WORKOUT");
-  await awardWorkoutCountBadges(userId, workouts.length);
+  await awardWorkoutCountBadges(userId, workouts.length, user.isPremium);
   const maxFreezes = user.isPremium ? STREAK_FREEZES_PER_WINDOW.PREMIUM : STREAK_FREEZES_PER_WINDOW.FREE;
   const streak = computeStreak(new Set(workouts.map((w) => w.date.toISOString().slice(0, 10))), todayISO(), maxFreezes);
-  await awardStreakBadges(userId, "WORKOUT", streak);
+  await awardStreakBadges(userId, "WORKOUT", streak, user.isPremium);
   await awardTimeOfDayBadges(userId, new Date());
 }
 

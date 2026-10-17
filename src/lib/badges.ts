@@ -17,37 +17,45 @@ export async function awardBadge(userId: string, badge: Badge) {
   }
 }
 
-export async function awardStreakBadges(userId: string, kind: "JOURNAL" | "STUDY" | "WORKOUT", streak: number) {
+// isPremium gates the extended tiers only (see the Badge enum's own
+// comment) — the original free-tier thresholds below are unaffected.
+export async function awardStreakBadges(userId: string, kind: "JOURNAL" | "STUDY" | "WORKOUT", streak: number, isPremium: boolean) {
   if (kind === "JOURNAL") {
     if (streak >= 7) await awardBadge(userId, "JOURNAL_STREAK_7");
     if (streak >= 30) await awardBadge(userId, "JOURNAL_STREAK_30");
     if (streak >= 100) await awardBadge(userId, "JOURNAL_STREAK_100");
+    if (isPremium && streak >= 365) await awardBadge(userId, "JOURNAL_STREAK_365");
   } else if (kind === "STUDY") {
     if (streak >= 7) await awardBadge(userId, "STUDY_STREAK_7");
     if (streak >= 30) await awardBadge(userId, "STUDY_STREAK_30");
+    if (isPremium && streak >= 100) await awardBadge(userId, "STUDY_STREAK_100");
   } else if (kind === "WORKOUT") {
     if (streak >= 7) await awardBadge(userId, "WORKOUT_STREAK_7");
     if (streak >= 30) await awardBadge(userId, "WORKOUT_STREAK_30");
+    if (isPremium && streak >= 100) await awardBadge(userId, "WORKOUT_STREAK_100");
   }
 }
 
-export async function awardLevelBadges(userId: string, level: number) {
+export async function awardLevelBadges(userId: string, level: number, isPremium: boolean) {
   if (level >= 5) await awardBadge(userId, "LEVEL_5");
   if (level >= 10) await awardBadge(userId, "LEVEL_10");
   if (level >= 20) await awardBadge(userId, "LEVEL_20");
   if (level >= 50) await awardBadge(userId, "LEVEL_50");
+  if (isPremium && level >= 100) await awardBadge(userId, "LEVEL_100");
 }
 
-export async function awardWorkoutCountBadges(userId: string, totalFinishedWorkouts: number) {
+export async function awardWorkoutCountBadges(userId: string, totalFinishedWorkouts: number, isPremium: boolean) {
   if (totalFinishedWorkouts >= 10) await awardBadge(userId, "TOTAL_WORKOUTS_10");
   if (totalFinishedWorkouts >= 50) await awardBadge(userId, "TOTAL_WORKOUTS_50");
   if (totalFinishedWorkouts >= 100) await awardBadge(userId, "TOTAL_WORKOUTS_100");
+  if (isPremium && totalFinishedWorkouts >= 250) await awardBadge(userId, "TOTAL_WORKOUTS_250");
 }
 
-export async function awardStudyHoursBadges(userId: string, totalStudyMinutes: number) {
+export async function awardStudyHoursBadges(userId: string, totalStudyMinutes: number, isPremium: boolean) {
   const hours = totalStudyMinutes / 60;
   if (hours >= 10) await awardBadge(userId, "TOTAL_STUDY_HOURS_10");
   if (hours >= 50) await awardBadge(userId, "TOTAL_STUDY_HOURS_50");
+  if (isPremium && hours >= 200) await awardBadge(userId, "TOTAL_STUDY_HOURS_200");
 }
 
 // Server-time-of-day badges — same UTC-as-calendar-day convention the rest

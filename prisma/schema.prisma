@@ -751,6 +751,17 @@ enum Badge {
   EARLY_BIRD
   NIGHT_OWL
   PREMIUM_SUPPORTER
+
+  // Premium-exclusive — extend the existing milestone ladders further out,
+  // gated by isPremium at award time rather than copying the free tiers
+  // into a separate badge "pool." Free users can hit these same underlying
+  // numbers; they just don't unlock the badge for it without Premium.
+  JOURNAL_STREAK_365
+  STUDY_STREAK_100
+  WORKOUT_STREAK_100
+  LEVEL_100
+  TOTAL_WORKOUTS_250
+  TOTAL_STUDY_HOURS_200
 }
 
 model UserBadge {

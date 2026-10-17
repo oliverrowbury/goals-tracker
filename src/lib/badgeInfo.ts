@@ -33,4 +33,12 @@ export const BADGE_INFO: Record<Badge, { emoji: string; label: string; descripti
   EARLY_BIRD: { emoji: "🌅", label: "Early bird", description: "Finished a workout or study session before 7am" },
   NIGHT_OWL: { emoji: "🦉", label: "Night owl", description: "Finished a workout or study session after 10pm" },
   PREMIUM_SUPPORTER: { emoji: "💛", label: "Premium", description: "Supporting Proudly with Premium" },
+
+  // Premium-exclusive extended tiers — see the Badge enum's own comment.
+  JOURNAL_STREAK_365: { emoji: "🏔️", label: "Year of writing", description: "365-day journal streak (Premium)" },
+  STUDY_STREAK_100: { emoji: "🧠", label: "100 days of study", description: "100-day study streak (Premium)" },
+  WORKOUT_STREAK_100: { emoji: "🏅", label: "100 days of training", description: "100-day workout streak (Premium)" },
+  LEVEL_100: { emoji: "💠", label: "Level 100", description: "Reached level 100 (Premium)" },
+  TOTAL_WORKOUTS_250: { emoji: "🎖️", label: "250 workouts", description: "Finished 250 workouts total (Premium)" },
+  TOTAL_STUDY_HOURS_200: { emoji: "📘", label: "200 hours studied", description: "Racked up 200 hours of study time total (Premium)" },
 };

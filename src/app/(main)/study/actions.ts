@@ -21,10 +21,10 @@ async function awardStudyBadges(userId: string) {
   ]);
   if (sessions.length === 1) await awardBadge(userId, "FIRST_STUDY_SESSION");
   const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
-  await awardStudyHoursBadges(userId, totalMinutes);
+  await awardStudyHoursBadges(userId, totalMinutes, user.isPremium);
   const maxFreezes = user.isPremium ? STREAK_FREEZES_PER_WINDOW.PREMIUM : STREAK_FREEZES_PER_WINDOW.FREE;
   const streak = computeStreak(new Set(sessions.map((s) => s.startedAt.toISOString().slice(0, 10))), todayISO(), maxFreezes);
-  await awardStreakBadges(userId, "STUDY", streak);
+  await awardStreakBadges(userId, "STUDY", streak, user.isPremium);
 }
 
 function revalidateStudyViews() {

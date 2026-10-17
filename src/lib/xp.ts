@@ -31,10 +31,10 @@ export function levelForXp(xp: number): { level: number; xpIntoLevel: number; xp
 // write rather than part of the same atomic step, which is fine: it only
 // ever sets xp to exactly 0, so two of them racing still lands on 0.
 export async function awardXp(userId: string, amount: number) {
-  const { xp } = await prisma.user.update({
+  const { xp, isPremium } = await prisma.user.update({
     where: { id: userId },
     data: { xp: { increment: amount } },
-    select: { xp: true },
+    select: { xp: true, isPremium: true },
   });
 
   if (xp < 0) {
@@ -42,5 +42,5 @@ export async function awardXp(userId: string, amount: number) {
   }
 
   const { level } = levelForXp(Math.max(xp, 0));
-  await awardLevelBadges(userId, level);
+  await awardLevelBadges(userId, level, isPremium);
 }
