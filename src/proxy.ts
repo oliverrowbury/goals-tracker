@@ -49,6 +49,15 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Root is the one page a signed-out visitor should actually see instead
+  // of being bounced straight to /login with nothing to explain the app —
+  // a rewrite (not a redirect) keeps the browser's URL bar on the bare
+  // domain, which is what's going in social bio links. /welcome itself is
+  // also excluded from this matcher below, so it's reachable directly too.
+  if (request.nextUrl.pathname === "/") {
+    return NextResponse.rewrite(new URL("/welcome", request.url));
+  }
+
   // The login URL itself stays plain (no `?from=`) — see LOGIN_REDIRECT_COOKIE's
   // comment in lib/auth.ts for why that matters for Safari's saved passwords.
   const response = NextResponse.redirect(new URL("/login", request.url));
@@ -68,18 +77,20 @@ export const config = {
   // runs as a server action under this same route, so there's no separate
   // api/signup or api/verify-email anymore), forgot/reset-password (also
   // reachable by someone who isn't logged in yet, by definition), the
-  // legal pages (readable without an account, like any privacy policy/
-  // terms page), Next.js internals, the service worker, the cron route
-  // (called by Vercel Cron, no session cookie — checks CRON_SECRET
-  // itself), the Stripe webhook route (called by Stripe, no session
-  // cookie either — verified by its own signature check against
-  // STRIPE_WEBHOOK_SECRET instead), and the manifest/icon/robots/sitemap/OG-image routes a
+  // public marketing page at /welcome (rewritten to from "/" above for
+  // signed-out visitors, but also reachable directly), the legal pages
+  // (readable without an account, like any privacy policy/terms page),
+  // Next.js internals, the service worker, the cron route (called by
+  // Vercel Cron, no session cookie — checks CRON_SECRET itself), the
+  // Stripe webhook route (called by Stripe, no session cookie either —
+  // verified by its own signature check against STRIPE_WEBHOOK_SECRET
+  // instead), and the manifest/icon/robots/sitemap/OG-image routes a
   // browser or crawler fetches on its own before any cookie exchange
   // happens (Add to Home Screen, tab favicon, a link preview) — gating
   // those behind login would silently turn every one of them into a
   // redirect to /login instead of the actual file (a broken social
   // preview being the most visible way that'd show up).
   matcher: [
-    "/((?!login|signup|forgot-password|reset-password|privacy|terms|api/login|api/cron|api/webhooks|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|opengraph-image|robots.txt|sitemap.xml).*)",
+    "/((?!login|signup|forgot-password|reset-password|welcome|privacy|terms|api/login|api/cron|api/webhooks|sw\\.js|_next/static|_next/image|favicon.ico|manifest.webmanifest|icon|apple-icon|opengraph-image|robots.txt|sitemap.xml).*)",
   ],
 };
