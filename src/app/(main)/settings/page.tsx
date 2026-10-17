@@ -33,6 +33,7 @@ import {
 } from "@/components/Icons";
 import { formatLong, todayISO, shiftISO, daysBetween, shiftMonth, monthISOOf } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
+import { STREAK_FREEZES_PER_WINDOW } from "@/lib/limits";
 import { levelForXp } from "@/lib/xp";
 import { BADGE_INFO } from "@/lib/badges";
 import { ADMIN_EMAIL } from "@/lib/auth";
@@ -113,12 +114,13 @@ export default async function SettingsPage() {
   const usernameCooldownDaysLeft = user.usernameChangedAt
     ? Math.max(0, 7 - daysBetween(user.usernameChangedAt.toISOString().slice(0, 10), today))
     : 0;
+  const maxFreezes = user.isPremium ? STREAK_FREEZES_PER_WINDOW.PREMIUM : STREAK_FREEZES_PER_WINDOW.FREE;
   const journaledDateSet = new Set(journalDates.map((e) => e.date.toISOString().slice(0, 10)));
-  const journalStreak = computeStreak(journaledDateSet, today);
+  const journalStreak = computeStreak(journaledDateSet, today, maxFreezes);
   const totalEntries = journaledDateSet.size;
-  const studyStreak = computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today);
-  const workoutStreak = computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today);
-  const goalsStreak = computeStreak(new Set(completedGoalDates.map((g) => g.date.toISOString().slice(0, 10))), today);
+  const studyStreak = computeStreak(new Set(studyDates.map((s) => s.startedAt.toISOString().slice(0, 10))), today, maxFreezes);
+  const workoutStreak = computeStreak(new Set(workoutDates.map((w) => w.date.toISOString().slice(0, 10))), today, maxFreezes);
+  const goalsStreak = computeStreak(new Set(completedGoalDates.map((g) => g.date.toISOString().slice(0, 10))), today, maxFreezes);
   const { level, xpIntoLevel, xpForNextLevel } = levelForXp(user.xp);
   const earnedBadgeSet = new Set(earnedBadges.map((b) => b.badge));
 
@@ -231,6 +233,17 @@ export default async function SettingsPage() {
         </div>
 
         <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-muted">
+          ❄️ Streak freeze: miss {maxFreezes} day{maxFreezes === 1 ? "" : "s"} every 7 without losing a streak
+          {!user.isPremium && (
+            <>
+              {" · "}
+              <Link href="/settings#premium" className="font-medium text-accent hover:underline">
+                Premium gets {STREAK_FREEZES_PER_WINDOW.PREMIUM}
+              </Link>
+            </>
+          )}
+        </p>
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted">
           <FlameIcon className="h-3.5 w-3.5 text-accent" />
           {totalEntries} journal {totalEntries === 1 ? "entry" : "entries"} written in total
         </p>

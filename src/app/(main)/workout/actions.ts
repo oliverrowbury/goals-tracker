@@ -11,14 +11,18 @@ import { awardBadge, awardStreakBadges, awardWorkoutCountBadges, awardTimeOfDayB
 import { computeStreak } from "@/lib/streaks";
 import { todayISO, isoToDate } from "@/lib/dates";
 import { uploadWorkoutPhoto as uploadWorkoutPhotoToStorage, deleteWorkoutPhoto } from "@/lib/storage";
-import { FREE_LIMITS } from "@/lib/limits";
+import { FREE_LIMITS, STREAK_FREEZES_PER_WINDOW } from "@/lib/limits";
 import type { ActivityVisibility } from "@/generated/prisma/enums";
 
 async function awardWorkoutBadges(userId: string) {
-  const workouts = await prisma.workout.findMany({ where: { userId, endedAt: { not: null } }, select: { date: true } });
+  const [workouts, user] = await Promise.all([
+    prisma.workout.findMany({ where: { userId, endedAt: { not: null } }, select: { date: true } }),
+    prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { isPremium: true } }),
+  ]);
   if (workouts.length === 1) await awardBadge(userId, "FIRST_WORKOUT");
   await awardWorkoutCountBadges(userId, workouts.length);
-  const streak = computeStreak(new Set(workouts.map((w) => w.date.toISOString().slice(0, 10))), todayISO());
+  const maxFreezes = user.isPremium ? STREAK_FREEZES_PER_WINDOW.PREMIUM : STREAK_FREEZES_PER_WINDOW.FREE;
+  const streak = computeStreak(new Set(workouts.map((w) => w.date.toISOString().slice(0, 10))), todayISO(), maxFreezes);
   await awardStreakBadges(userId, "WORKOUT", streak);
   await awardTimeOfDayBadges(userId, new Date());
 }
