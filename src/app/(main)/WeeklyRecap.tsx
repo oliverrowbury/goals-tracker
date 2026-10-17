@@ -115,7 +115,15 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
   };
 }
 
-export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; distanceUnit: DistanceUnit }) {
+export function WeeklyRecap({
+  data,
+  distanceUnit,
+  locked,
+}: {
+  data: WeeklyRecapData;
+  distanceUnit: DistanceUnit;
+  locked?: boolean;
+}) {
   const { startISO, endISO, isCurrentWeek, goalSummaries, subjectMinutes, totalMinutes, workouts, workoutSessionCount, workoutMinutes, cardioKm } =
     data;
 
@@ -151,10 +159,18 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
         </div>
       </div>
 
-      {/* One panel with three divided sections rather than three separate
+      {locked ? (
+        <div className="rounded-2xl border border-accent/30 bg-accent-soft p-6 text-center">
+          <p className="text-sm text-accent-strong">
+            Your one free weekly recap has been used. <Link href="/settings#premium" className="font-medium underline">Go Premium</Link> to see a
+            full recap every week.
+          </p>
+        </div>
+      ) : (
+      /* One panel with three divided sections rather than three separate
           bordered/shadowed cards — the repeated chrome was reading as
           template-y busyness rather than structure; a hairline between
-          sections carries the same separation with far less visual noise. */}
+          sections carries the same separation with far less visual noise. */
       <div className="divide-y divide-line rounded-2xl border border-line bg-card shadow-sm">
         <section className="p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
@@ -229,6 +245,7 @@ export function WeeklyRecap({ data, distanceUnit }: { data: WeeklyRecapData; dis
           )}
         </section>
       </div>
+      )}
     </div>
   );
 }

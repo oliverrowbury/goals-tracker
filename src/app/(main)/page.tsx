@@ -12,6 +12,7 @@ import { PromptOfDayCard } from "./PromptOfDayCard";
 import { WeeklyRecap, getWeeklyRecapData } from "./WeeklyRecap";
 import { MonthlyRecap, getMonthlyRecapData } from "./MonthlyRecap";
 import { OnboardingChecklist } from "./OnboardingChecklist";
+import { MarkRecapSeen } from "./MarkRecapSeen";
 
 export const metadata = { title: "Home" };
 export const dynamic = "force-dynamic";
@@ -64,6 +65,11 @@ export default async function HomePage({
     ]);
 
   const averageMood = recentMoods.length > 0 ? recentMoods.reduce((sum, e) => sum + (e.mood ?? 0), 0) / recentMoods.length : null;
+
+  // Free tier gets exactly one full weekly recap, ever — this view is it
+  // if they haven't had one yet. Every recap after this one is locked
+  // until Premium, whichever week they're looking at.
+  const weeklyRecapLocked = !user.isPremium && !!user.freeRecapShownAt;
 
   const dueToday = goals.filter((g) => isGoalDueOn(g, today) && g.frequencyType !== "WEEKLY_TARGET");
   const doneToday = dueToday.filter((g) => g.logs.some((l) => l.date.toISOString().slice(0, 10) === today && l.completed));
@@ -169,7 +175,8 @@ export default async function HomePage({
         </Link>
       </div>
 
-      <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} />
+      {!weeklyRecapLocked && !user.isPremium && <MarkRecapSeen />}
+      <WeeklyRecap data={recapData} distanceUnit={user.distanceUnit} locked={weeklyRecapLocked} />
 
       <MonthlyRecap data={monthlyRecapData} distanceUnit={user.distanceUnit} />
 

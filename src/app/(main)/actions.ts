@@ -14,6 +14,19 @@ export async function resendVerificationEmail() {
   await resendVerificationCode(user.email);
 }
 
+// Marks a free-tier user's one-time full weekly recap as used. Called from
+// a client effect once the full recap has actually rendered — not from the
+// page's own render body, which Next.js may invoke more than once per
+// request in dev to catch impure renders, and did: writing here straight
+// from HomePage flipped the lock on before the first (real) response ever
+// reached the browser. updateMany + the freeRecapShownAt: null guard makes
+// a duplicate call from a double-mounted effect harmless.
+export async function markFreeRecapSeen() {
+  const user = await getCurrentUser();
+  if (user.isPremium) return;
+  await prisma.user.updateMany({ where: { id: user.id, freeRecapShownAt: null }, data: { freeRecapShownAt: new Date() } });
+}
+
 // Anything older just drops out of the bell/badges entirely (not deleted —
 // the underlying like/comment/follow-request still exists and still shows
 // up wherever that data actually lives, e.g. old follow requests on
