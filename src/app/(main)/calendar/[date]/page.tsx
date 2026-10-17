@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
 import { todayISO, isoToDate, shiftISO, formatLong, monthISOOf, isFutureISO } from "@/lib/dates";
@@ -10,6 +10,7 @@ import { JournalIcon, ClockIcon, DumbbellIcon, TargetIcon, AlarmIcon, ActivityIc
 import { PageHeader } from "@/components/PageHeader";
 import { NavPill } from "@/components/NavPill";
 import { EmptyState } from "@/components/EmptyState";
+import { CalendarEvents } from "../CalendarEvents";
 
 // A read-only "what happened this day" summary — what tapping a past day
 // on the calendar opens into, instead of dropping straight into the
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
 export default async function CalendarDayPage({ params }: { params: Promise<{ date: string }> }) {
   const { date: dateISO } = await params;
   const today = todayISO();
-  if (isFutureISO(dateISO)) redirect("/calendar");
+  const isFuture = isFutureISO(dateISO);
 
   const date = isoToDate(dateISO);
   if (Number.isNaN(date.getTime())) notFound();
@@ -33,7 +34,7 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
 
   const user = await getCurrentUser();
 
-  const [entry, workouts, studySessions, goalLogs, deadlines] = await Promise.all([
+  const [entry, workouts, studySessions, goalLogs, completedDeadlines, pendingDeadlines, events] = await Promise.all([
     prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } }),
     prisma.workout.findMany({
       where: { userId: user.id, endedAt: { not: null }, date: { gte: date, lte: rangeEnd } },
@@ -50,6 +51,15 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
     prisma.deadline.findMany({
       where: { userId: user.id, completed: true, dueDate: { gte: date, lte: rangeEnd } },
     }),
+    // Still-pending deadlines due this exact day — relevant mainly on a
+    // future day, which has nothing "completed" yet to show.
+    prisma.deadline.findMany({
+      where: { userId: user.id, completed: false, dueDate: { gte: date, lte: rangeEnd } },
+    }),
+    prisma.calendarEvent.findMany({
+      where: { userId: user.id, date: { gte: date, lte: rangeEnd } },
+      orderBy: { time: "asc" },
+    }),
   ]);
 
   const hasAnything =
@@ -59,7 +69,9 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
     workouts.length > 0 ||
     studySessions.length > 0 ||
     goalLogs.length > 0 ||
-    deadlines.length > 0;
+    completedDeadlines.length > 0 ||
+    pendingDeadlines.length > 0 ||
+    events.length > 0;
 
   const prevISO = shiftISO(dateISO, -1);
   const nextISO = shiftISO(dateISO, 1);
@@ -77,13 +89,13 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
           <div className="flex items-center gap-2">
             <NavPill href={`/calendar?month=${monthISOOf(dateISO)}`}>← Calendar</NavPill>
             <NavPill href={`/calendar/${prevISO}`}>← Prev</NavPill>
-            {!isFutureISO(nextISO) && <NavPill href={`/calendar/${nextISO}`}>Next →</NavPill>}
+            <NavPill href={`/calendar/${nextISO}`}>Next →</NavPill>
           </div>
         }
       />
 
       {!hasAnything && (
-        <EmptyState icon={JournalIcon} message="Nothing logged this day." />
+        <EmptyState icon={JournalIcon} message={isFuture ? "Nothing planned for this day yet." : "Nothing logged this day."} />
       )}
 
       {entry?.mood != null && (
@@ -187,11 +199,11 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
         </div>
       )}
 
-      {deadlines.length > 0 && (
+      {completedDeadlines.length > 0 && (
         <div className="mb-6">
           <h2 className="mb-2 text-sm font-medium text-ink-muted">Deadlines completed</h2>
           <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
-            {deadlines.map((d) => (
+            {completedDeadlines.map((d) => (
               <li key={d.id} className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-ink">
                 <AlarmIcon className="h-4 w-4 shrink-0 text-accent" />
                 <span className="flex-1">{d.title}</span>
@@ -202,7 +214,39 @@ export default async function CalendarDayPage({ params }: { params: Promise<{ da
         </div>
       )}
 
-      {!entry?.mood && !entry?.bodyText.trim() && !entry?.photoUrl && (
+      {pendingDeadlines.length > 0 && (
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-ink-muted">Deadlines due</h2>
+            <Link href={`/deadlines/new?date=${dateISO}`} className="text-xs font-medium text-accent hover:underline">
+              + Add deadline
+            </Link>
+          </div>
+          <ul className="divide-y divide-line rounded-2xl border border-line bg-card">
+            {pendingDeadlines.map((d) => (
+              <li key={d.id} className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-ink">
+                <AlarmIcon className="h-4 w-4 shrink-0 text-deadline" />
+                <span className="flex-1">{d.title}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {pendingDeadlines.length === 0 && (
+        <p className="mb-6 text-xs text-ink-muted">
+          <Link href={`/deadlines/new?date=${dateISO}`} className="text-accent hover:underline">
+            + Add a deadline for this day
+          </Link>
+        </p>
+      )}
+
+      <CalendarEvents
+        dateISO={dateISO}
+        events={events.map((e) => ({ id: e.id, title: e.title, time: e.time, notes: e.notes }))}
+      />
+
+      {!isFuture && !entry?.mood && !entry?.bodyText.trim() && !entry?.photoUrl && (
         <p className="mt-2 text-xs text-ink-muted">
           <ClockIcon className="mr-1 inline h-3.5 w-3.5 align-text-bottom" />
           No journal entry for this day;{" "}

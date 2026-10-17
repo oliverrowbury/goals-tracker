@@ -29,7 +29,7 @@ export default async function CalendarPage({
   const rangeStart = isoToDate(gridStartISO);
   const rangeEnd = new Date(`${gridEndISO}T23:59:59.999Z`);
 
-  const [entries, goalLogs, sessions, deadlines] = await Promise.all([
+  const [entries, goalLogs, sessions, deadlines, events] = await Promise.all([
     prisma.journalEntry.findMany({
       where: { userId: user.id, date: { gte: rangeStart, lte: rangeEnd } },
       select: { date: true, bodyText: true, mood: true },
@@ -46,6 +46,10 @@ export default async function CalendarPage({
       where: { userId: user.id, dueDate: { gte: rangeStart, lte: rangeEnd } },
       select: { dueDate: true },
     }),
+    prisma.calendarEvent.findMany({
+      where: { userId: user.id, date: { gte: rangeStart, lte: rangeEnd } },
+      select: { date: true },
+    }),
   ]);
 
   const journalDays = new Set(
@@ -54,6 +58,7 @@ export default async function CalendarPage({
   const goalDays = new Set(goalLogs.map((g) => g.date.toISOString().slice(0, 10)));
   const studyDays = new Set(sessions.map((s) => s.startedAt.toISOString().slice(0, 10)));
   const deadlineDays = new Set(deadlines.map((d) => d.dueDate.toISOString().slice(0, 10)));
+  const eventDays = new Set(events.map((e) => e.date.toISOString().slice(0, 10)));
   const moodByDay = new Map(
     entries.filter((e) => e.mood != null).map((e) => [e.date.toISOString().slice(0, 10), e.mood as number]),
   );
@@ -90,42 +95,40 @@ export default async function CalendarPage({
           const hasGoal = goalDays.has(dayISO);
           const hasStudy = studyDays.has(dayISO);
           const hasDeadline = deadlineDays.has(dayISO);
+          const hasEvent = eventDays.has(dayISO);
           const dayNum = Number(dayISO.slice(8, 10));
           const mood = moodByDay.get(dayISO);
 
-          const dots = (hasJournal || hasGoal || hasStudy || hasDeadline) && (
+          const dots = (hasJournal || hasGoal || hasStudy || hasDeadline || hasEvent) && (
             <span className="mt-auto flex items-center gap-0.5 pb-1.5">
               {hasJournal && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
               {hasGoal && <span className="h-1.5 w-1.5 rounded-full bg-goals" />}
               {hasStudy && <span className="h-1.5 w-1.5 rounded-full bg-study" />}
               {hasDeadline && <span className="h-1.5 w-1.5 rounded-full bg-deadline" />}
+              {hasEvent && <span className="h-1.5 w-1.5 rounded-full bg-ink-muted" />}
             </span>
           );
 
           // A future day has nothing to look back on, but it's exactly
-          // where you'd want to add a deadline for something coming up —
-          // links into a prefilled "new deadline" instead of the dead,
-          // unclickable cell this used to be.
+          // where you'd want to put a deadline or a manual event for
+          // something coming up — opens the same day page as a past day,
+          // just without any logged-activity sections.
           if (isFuture) {
             return (
               <Link
                 key={dayISO}
-                href={`/deadlines/new?date=${dayISO}`}
-                className={`group flex aspect-square flex-col items-center gap-1 rounded-xl border pt-2 text-sm transition hover:-translate-y-0.5 hover:border-deadline hover:shadow-md ${
+                href={`/calendar/${dayISO}`}
+                className={`group flex aspect-square flex-col items-center gap-1 rounded-xl border pt-2 text-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md ${
                   inMonth ? "border-transparent text-ink-muted/40" : "border-transparent text-ink-muted/20"
                 }`}
               >
                 <span className="relative">
                   {dayNum}
-                  <span className="absolute -right-2.5 -top-0.5 text-[10px] text-deadline opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="absolute -right-2.5 -top-0.5 text-[10px] text-accent opacity-0 transition-opacity group-hover:opacity-100">
                     +
                   </span>
                 </span>
-                {hasDeadline && (
-                  <span className="mt-auto flex items-center pb-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-deadline" />
-                  </span>
-                )}
+                {dots}
               </Link>
             );
           }
@@ -159,8 +162,11 @@ export default async function CalendarPage({
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-deadline" /> Deadline
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-ink-muted" /> Event
+        </span>
       </div>
-      <p className="mt-2 text-xs text-ink-muted">Tap a day coming up to add a deadline for it.</p>
+      <p className="mt-2 text-xs text-ink-muted">Tap any day to see what&apos;s on it, or add an event or deadline for it.</p>
     </div>
   );
 }
