@@ -20,7 +20,9 @@ import { ShareActivityToggle } from "../friends/ShareActivityToggle";
 import { toggleUserPremium } from "./actions";
 import { PremiumSection } from "./PremiumSection";
 import { TrashSection } from "./TrashSection";
+import { ScrollToHash } from "./ScrollToHash";
 import { listTrashedItems } from "@/lib/trash";
+import { getStripe, PREMIUM_PRICING } from "@/lib/stripe";
 import {
   GearIcon,
   ClockIcon,
@@ -33,6 +35,9 @@ import {
   TargetIcon,
   MoonIcon,
   UsersIcon,
+  UserIcon,
+  TrophyIcon,
+  ChartIcon,
 } from "@/components/Icons";
 import { formatLong, todayISO, shiftISO, daysBetween, shiftMonth, monthISOOf } from "@/lib/dates";
 import { computeStreak } from "@/lib/streaks";
@@ -102,6 +107,28 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const trashedItems = user.isPremium ? await listTrashedItems(user.id) : [];
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
+  // Live plan details for the "manage plan" card — best-effort: a Stripe
+  // outage or an unexpected response shape just means the renewal date is
+  // omitted, not that the page breaks. Nothing here is persisted; it's
+  // read fresh on every settings visit rather than cached, since this is
+  // the one place it's shown.
+  let planLabel: string | null = null;
+  let renewsOn: string | null = null;
+  let cancelAtPeriodEnd = false;
+  if (user.isPremium && user.stripeSubscriptionId) {
+    try {
+      const subscription = await getStripe().subscriptions.retrieve(user.stripeSubscriptionId);
+      const item = subscription.items.data[0];
+      const interval = item?.price.recurring?.interval;
+      const matchedPricing = interval === "year" ? PREMIUM_PRICING.year : interval === "month" ? PREMIUM_PRICING.month : null;
+      planLabel = matchedPricing?.label ?? null;
+      if (item?.current_period_end) renewsOn = formatLong(new Date(item.current_period_end * 1000).toISOString().slice(0, 10));
+      cancelAtPeriodEnd = subscription.cancel_at_period_end;
+    } catch (err) {
+      console.error("Failed to fetch Stripe subscription details:", err);
+    }
+  }
+
   // Same "admin sees everyone's" reasoning as feedback above — a Report is
   // useless sitting invisible in the reporter's own account.
   const reports = isAdmin
@@ -132,10 +159,32 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="space-y-8">
       <PageHeader icon={GearIcon} iconClassName="text-ink-muted" title="Settings" className="" />
+      <ScrollToHash />
 
-      <section id="account" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
-        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Account</h2>
-        <p className="mb-4 text-sm text-ink-muted">Your name, photo, profile, password, and a copy of your data.</p>
+      <section id="premium" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <TrophyIcon className="h-4 w-4 text-accent" />
+          Proudly Premium
+        </h2>
+        {!user.isPremium && (
+          <p className="mb-4 text-sm text-ink-muted">Everything below, unlocked — cancel any time.</p>
+        )}
+        <PremiumSection
+          isPremium={user.isPremium}
+          hasStripeSubscription={!!user.stripeSubscriptionId}
+          justSubscribed={premium === "success"}
+          planLabel={planLabel}
+          renewsOn={renewsOn}
+          cancelAtPeriodEnd={cancelAtPeriodEnd}
+        />
+      </section>
+
+      <section id="profile" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <UserIcon className="h-4 w-4 text-ink-muted" />
+          Profile
+        </h2>
+        <p className="mb-4 text-sm text-ink-muted">Your photo, name, username, and what shows on your public profile.</p>
 
         <AvatarUpload name={user.name} initialAvatarUrl={user.avatarUrl} />
 
@@ -148,12 +197,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </div>
 
         <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-3 text-sm font-medium text-ink">Email</p>
-          <EmailForm current={user.email} />
-        </div>
-
-        <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-3 text-sm font-medium text-ink">Profile</p>
           <ProfileForm
             birthdayISO={user.birthday ? user.birthday.toISOString().slice(0, 10) : null}
             gender={user.gender}
@@ -167,30 +210,28 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             distanceUnit={user.distanceUnit}
           />
         </div>
+      </section>
+
+      <section id="account" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Account &amp; Security</h2>
+        <p className="mb-4 text-sm text-ink-muted">Your login email and password.</p>
+
+        <div>
+          <p className="mb-3 text-sm font-medium text-ink">Email</p>
+          <EmailForm current={user.email} />
+        </div>
 
         <div className="mt-6 border-t border-line pt-6">
           <p className="mb-3 text-sm font-medium text-ink">Password</p>
           <PasswordForm />
         </div>
-
-        <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-2 text-sm font-medium text-ink">Your data</p>
-          <a
-            href="/api/export"
-            download
-            className="inline-block rounded-lg border border-line px-4 py-2 text-sm text-ink-muted hover:border-accent hover:text-accent"
-          >
-            Download my data (JSON)
-          </a>
-        </div>
-
-        <div className="mt-6 border-t border-line pt-6">
-          <p className="mb-2 text-sm font-medium text-ink">Delete account</p>
-          <DeleteAccountForm />
-        </div>
       </section>
 
       <div className="rounded-2xl border border-line bg-card p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <ChartIcon className="h-4 w-4 text-ink-muted" />
+          <h2 className="font-serif text-lg font-semibold text-ink">Your progress</h2>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-serif text-lg font-semibold text-ink">Level {level}</p>
@@ -271,32 +312,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         )}
       </div>
 
-      <section id="premium" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
-        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Proudly Premium</h2>
-        {!user.isPremium && (
-          <>
-            <p className="mb-4 text-sm text-ink-muted">
-              Unlimited goals, deadlines, subjects and photos, the full weekly recap every week, a second streak
-              freeze, exclusive badges, PDF exports of your recaps, and AI advice on your workouts.
-            </p>
-            <PremiumSection isPremium={false} hasStripeSubscription={false} justSubscribed={false} />
-          </>
-        )}
-        {user.isPremium && (
-          <PremiumSection isPremium={true} hasStripeSubscription={!!user.stripeSubscriptionId} justSubscribed={premium === "success"} />
-        )}
-      </section>
-
-      {user.isPremium && (
-        <section id="recently-deleted" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
-          <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Recently deleted</h2>
-          <p className="mb-4 text-sm text-ink-muted">
-            Deleted goals and workouts stay here for 30 days before they&apos;re gone for good.
-          </p>
-          <TrashSection items={trashedItems} />
-        </section>
-      )}
-
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
         <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Badges</h2>
         <p className="mb-4 text-sm text-ink-muted">
@@ -322,30 +337,56 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </div>
       </section>
 
+      {user.isPremium && (
+        <section id="recently-deleted" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+          <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Recently deleted</h2>
+          <p className="mb-4 text-sm text-ink-muted">
+            Deleted goals and workouts stay here for 30 days before they&apos;re gone for good.
+          </p>
+          <TrashSection items={trashedItems} />
+        </section>
+      )}
+
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
-          <MoonIcon className="h-4 w-4 text-ink-muted" />
-          Appearance
-        </h2>
-        <p className="mb-4 text-sm text-ink-muted">Light or dark, no other color options. That&apos;s the whole picker.</p>
-        <DarkModeSwitch />
+        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Preferences</h2>
+        <p className="mb-4 text-sm text-ink-muted">Appearance, notifications, and display units.</p>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <MoonIcon className="h-4 w-4 text-ink-muted" />
+            <p className="text-sm font-medium text-ink">Appearance</p>
+          </div>
+          <DarkModeSwitch />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <div className="mb-3 flex items-center gap-2">
+            <BellIcon className="h-4 w-4 text-accent" />
+            <p className="text-sm font-medium text-ink">Notifications</p>
+          </div>
+          <p className="mb-3 text-sm text-ink-muted">Reminders for individual goals, sent as a browser push.</p>
+          <NotificationsForm />
+        </div>
+
+        <div className="mt-6 border-t border-line pt-6">
+          <div className="mb-3 flex items-center gap-2">
+            <DumbbellIcon className="h-4 w-4 text-workout" />
+            <p className="text-sm font-medium text-ink">Workout units</p>
+          </div>
+          <p className="mb-3 text-sm text-ink-muted">What weight and distance are shown in on the Workout page.</p>
+          <UnitsForm weightUnit={user.weightUnit} distanceUnit={user.distanceUnit} />
+        </div>
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
-          <BellIcon className="h-4 w-4 text-accent" />
-          Notifications
-        </h2>
-        <p className="mb-4 text-sm text-ink-muted">Reminders for individual goals, sent as a browser push.</p>
-        <NotificationsForm />
-      </section>
+        <h2 className="mb-1 font-serif text-lg font-semibold text-ink">Privacy &amp; Data</h2>
+        <p className="mb-4 text-sm text-ink-muted">What friends can see, and a copy of everything you&apos;ve stored here.</p>
 
-      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+        <div className="flex items-center gap-2">
           <UsersIcon className="h-4 w-4 text-calm" />
-          Sharing
-        </h2>
-        <p className="mb-4 text-sm text-ink-muted">
+          <p className="text-sm font-medium text-ink">Sharing</p>
+        </div>
+        <p className="mb-3 text-sm text-ink-muted">
           Your journal is never visible to anyone, followers included. These only ever cover streaks, never content.
         </p>
         <ShareActivityToggle
@@ -355,6 +396,17 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             workout: user.shareWorkoutStreak,
           }}
         />
+
+        <div className="mt-6 border-t border-line pt-6">
+          <p className="mb-2 text-sm font-medium text-ink">Your data</p>
+          <a
+            href="/api/export"
+            download
+            className="inline-block rounded-lg border border-line px-4 py-2 text-sm text-ink-muted hover:border-accent hover:text-accent"
+          >
+            Download my data (JSON)
+          </a>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
@@ -377,15 +429,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </ul>
 
         <NewSubjectForm />
-      </section>
-
-      <section className="rounded-2xl border border-line bg-card p-6 shadow-sm">
-        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
-          <DumbbellIcon className="h-4 w-4 text-workout" />
-          Workout units
-        </h2>
-        <p className="mb-4 text-sm text-ink-muted">What weight and distance are shown in on the Workout page.</p>
-        <UnitsForm weightUnit={user.weightUnit} distanceUnit={user.distanceUnit} />
       </section>
 
       {isAdmin && (
@@ -494,6 +537,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           Terms of Service
         </Link>
       </p>
+
+      <section className="rounded-2xl border border-workout/30 bg-card p-6 shadow-sm">
+        <h2 className="mb-1 font-serif text-lg font-semibold text-workout">Danger Zone</h2>
+        <p className="mb-4 text-sm text-ink-muted">Permanently delete your account and everything in it.</p>
+        <DeleteAccountForm />
+      </section>
     </div>
   );
 }

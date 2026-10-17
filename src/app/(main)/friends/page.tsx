@@ -359,7 +359,7 @@ export default async function FriendsPage() {
       </div>
 
       <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-xs">
-        <Link href="/settings#account" className="text-accent hover:underline">
+        <Link href="/settings#profile" className="text-accent hover:underline">
           Edit your profile →
         </Link>
         <ShareButton
