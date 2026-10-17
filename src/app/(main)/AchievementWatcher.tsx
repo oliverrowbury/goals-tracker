@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BADGE_INFO } from "@/lib/badgeInfo";
+import { Confetti } from "./Confetti";
 import type { Badge } from "@/generated/prisma/enums";
 
 type EarnedBadge = { badge: Badge; earnedAtMs: number };
@@ -58,7 +59,7 @@ function writeSeenLevel(level: number) {
 // data. Badges and level-ups share one toast queue (was badge-only,
 // renamed) since they're the same kind of "you just achieved something"
 // moment and shouldn't stack as separate UI.
-export function AchievementWatcher({ badges, level }: { badges: EarnedBadge[]; level: number }) {
+export function AchievementWatcher({ badges, level, isPremium }: { badges: EarnedBadge[]; level: number; isPremium: boolean }) {
   const [queue, setQueue] = useState<ToastItem[]>([]);
 
   useEffect(() => {
@@ -114,6 +115,7 @@ export function AchievementWatcher({ badges, level }: { badges: EarnedBadge[]; l
       role="status"
       className="fixed left-1/2 top-4 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 animate-[badge-in_0.3s_ease-out] rounded-2xl border border-line bg-card px-4 py-3 shadow-lg"
     >
+      {isPremium && <Confetti key={current.kind === "level" ? `level-${current.level}` : current.badge} />}
       <button
         type="button"
         onClick={() => setQueue((q) => q.slice(1))}

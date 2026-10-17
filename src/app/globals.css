@@ -419,6 +419,26 @@ textarea {
   }
 }
 
+/* One confetti piece falling from the top of the achievement toast —
+   Premium-only flourish on top of the existing badge-in/icon-pop (see
+   Confetti.tsx). --x and --r are randomized per-piece inline so a burst of
+   these doesn't look like one repeated sprite; the piece spins throughout
+   and fades only right at the end so it reads as falling away, not
+   disappearing mid-air. */
+@keyframes confetti-fall {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--x), 140px) rotate(var(--r));
+    opacity: 0;
+  }
+}
+
 /* The heart that pops up over a photo on double-tap-to-like — scales past
    full size then settles and fades, same "overshoot" shape as icon-pop
    above but bigger and ending in a fade since this one doesn't stay on

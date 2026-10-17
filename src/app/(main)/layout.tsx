@@ -63,6 +63,7 @@ export default async function MainLayout({ children }: { children: React.ReactNo
       <AchievementWatcher
         badges={badges.map((b) => ({ badge: b.badge, earnedAtMs: b.earnedAt.getTime() }))}
         level={level}
+        isPremium={user.isPremium}
       />
       <Sidebar
         level={level}
