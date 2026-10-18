@@ -250,6 +250,18 @@ textarea {
   }
 }
 
+/* The reverse of card-in — played on /welcome's card right before
+   navigating to /login or /signup, so the handoff reads as one motion
+   (this card leaving, that one's own card-in entrance arriving) rather
+   than an abrupt cut to a blank page mid-navigation. */
+@keyframes card-out {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+    filter: blur(6px);
+  }
+}
+
 /* AchievementWatcher's toast — already horizontally centered via the
    -translate-x-1/2 utility, so the animation's own transform keeps that
    -50% throughout (an animation's transform fully replaces the element's
