@@ -1,26 +1,33 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { todayISO, shiftISO, isoToDate, formatWeekRange } from "@/lib/dates";
+import { todayISO, shiftISO, isoToDate, formatWeekRange, weekdayShort } from "@/lib/dates";
 import { weekRangeContaining, isGoalDueOn } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance, formatPace } from "@/lib/workout";
 import { ChartIcon } from "@/components/Icons";
+import { moodFace } from "@/lib/mood";
 import type { DistanceUnit } from "@/lib/constants";
 
-type GoalSummary = { id: string; title: string; hit: boolean; detail: string };
+type GoalSummary = { id: string; title: string; hit: boolean; detail: string; progress: number };
 type WorkoutSummary = { id: string; label: string; type: string; distanceKm: number | null; durationMinutes: number | null };
+type DayMinutes = { dateISO: string; minutes: number };
 
 export type WeeklyRecapData = {
   startISO: string;
   endISO: string;
   isCurrentWeek: boolean;
   goalSummaries: GoalSummary[];
+  goalsHitCount: number;
+  goalsTotalCount: number;
   subjectMinutes: { subjectId: string; name: string; color: string; minutes: number }[];
   totalMinutes: number;
+  dailyStudyMinutes: DayMinutes[];
   workouts: WorkoutSummary[];
   workoutSessionCount: number;
   workoutMinutes: number;
   cardioKm: number;
+  journalEntryCount: number;
+  averageMood: number | null;
 };
 
 // Split from the WeeklyRecap component itself so its queries can run in the
@@ -37,7 +44,7 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
   const rangeStart = isoToDate(startISO);
   const rangeEnd = new Date(`${endISO}T23:59:59.999Z`);
 
-  const [goals, sessions, subjects, workouts] = await Promise.all([
+  const [goals, sessions, subjects, workouts, journalEntries] = await Promise.all([
     prisma.goal.findMany({ where: { userId, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
       where: { userId, endedAt: { not: null }, startedAt: { gte: rangeStart, lte: rangeEnd } },
@@ -47,14 +54,26 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
       where: { userId, endedAt: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
       orderBy: { date: "asc" },
     }),
+    prisma.journalEntry.findMany({
+      where: { userId, date: { gte: rangeStart, lte: rangeEnd } },
+      select: { date: true, mood: true, bodyText: true },
+    }),
   ]);
 
   const subjectById = new Map(subjects.map((s) => [s.id, s]));
   const minutesBySubject = new Map<string, number>();
+  const minutesByDay = new Map<string, number>();
   for (const session of sessions) {
     minutesBySubject.set(session.subjectId, (minutesBySubject.get(session.subjectId) ?? 0) + (session.durationMinutes ?? 0));
+    const dayISO = session.startedAt.toISOString().slice(0, 10);
+    minutesByDay.set(dayISO, (minutesByDay.get(dayISO) ?? 0) + (session.durationMinutes ?? 0));
   }
   const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+  const dailyStudyMinutes: DayMinutes[] = days.map((d) => ({ dateISO: d, minutes: minutesByDay.get(d) ?? 0 }));
+
+  const journalEntryCount = journalEntries.filter((e) => e.bodyText.trim()).length;
+  const moods = journalEntries.map((e) => e.mood).filter((m): m is number => m != null);
+  const averageMood = moods.length > 0 ? moods.reduce((sum, m) => sum + m, 0) / moods.length : null;
 
   const workoutSessionCount = workouts.length;
   const workoutMinutes = workouts.reduce((sum, w) => sum + (w.durationMinutes ?? 0), 0);
@@ -77,20 +96,31 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
           .filter((l) => days.includes(l.date.toISOString().slice(0, 10)))
           .reduce((sum, l) => sum + (l.value ?? 0), 0);
         const total = autoPart + manualPart;
+        const target = goal.targetValue ?? 0;
         return {
           id: goal.id,
           title: goal.title,
-          hit: total >= (goal.targetValue ?? 0),
+          hit: total >= target,
           detail: `${total}/${goal.targetValue} ${goal.unit ?? ""}`,
+          progress: target > 0 ? Math.min(1, total / target) : 0,
         };
       }
       const dueDays = days.filter((d) => isGoalDueOn(goal, d) && d <= today);
       if (dueDays.length === 0) return null;
       const completedDates = new Set(goal.logs.filter((l) => l.completed).map((l) => l.date.toISOString().slice(0, 10)));
       const doneCount = dueDays.filter((d) => completedDates.has(d)).length;
-      return { id: goal.id, title: goal.title, hit: doneCount === dueDays.length, detail: `${doneCount}/${dueDays.length} days` };
+      return {
+        id: goal.id,
+        title: goal.title,
+        hit: doneCount === dueDays.length,
+        detail: `${doneCount}/${dueDays.length} days`,
+        progress: dueDays.length > 0 ? doneCount / dueDays.length : 0,
+      };
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
+
+  const goalsHitCount = goalSummaries.filter((g) => g.hit).length;
+  const goalsTotalCount = goalSummaries.length;
 
   const subjectMinutes = Array.from(minutesBySubject.entries())
     .map(([subjectId, minutes]) => ({
@@ -106,12 +136,17 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
     endISO,
     isCurrentWeek: startISO === weekRangeContaining(today).startISO,
     goalSummaries,
+    goalsHitCount,
+    goalsTotalCount,
     subjectMinutes,
     totalMinutes,
+    dailyStudyMinutes,
     workouts: workouts.map((w) => ({ id: w.id, label: w.label, type: w.type, distanceKm: w.distanceKm, durationMinutes: w.durationMinutes })),
     workoutSessionCount,
     workoutMinutes,
     cardioKm,
+    journalEntryCount,
+    averageMood,
   };
 }
 
@@ -126,8 +161,24 @@ export function WeeklyRecap({
   locked?: boolean;
   isPremium?: boolean;
 }) {
-  const { startISO, endISO, isCurrentWeek, goalSummaries, subjectMinutes, totalMinutes, workouts, workoutSessionCount, workoutMinutes, cardioKm } =
-    data;
+  const {
+    startISO,
+    endISO,
+    isCurrentWeek,
+    goalSummaries,
+    goalsHitCount,
+    goalsTotalCount,
+    subjectMinutes,
+    totalMinutes,
+    dailyStudyMinutes,
+    workouts,
+    workoutSessionCount,
+    workoutMinutes,
+    cardioKm,
+    journalEntryCount,
+    averageMood,
+  } = data;
+  const maxDayMinutes = Math.max(1, ...dailyStudyMinutes.map((d) => d.minutes));
 
   return (
     <div id="recap" className="mt-10 scroll-mt-6">
@@ -177,10 +228,41 @@ export function WeeklyRecap({
           </p>
         </div>
       ) : (
-      /* One panel with three divided sections rather than three separate
+      <>
+      {/* Glanceable headline numbers before the detail panel — the single
+          most-asked-for thing: "what happened this week" at a glance,
+          before scrolling into three lists to add it up yourself. */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-goals-soft text-lg">🎯</span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">
+            {goalsTotalCount === 0 ? "—" : `${goalsHitCount}/${goalsTotalCount}`}
+          </p>
+          <p className="text-xs text-ink-muted">Goals hit</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-study-soft text-lg">📚</span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">{formatMinutes(totalMinutes)}</p>
+          <p className="text-xs text-ink-muted">Study time</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-workout-soft text-lg">🏋️</span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">{workoutSessionCount}</p>
+          <p className="text-xs text-ink-muted">Workout{workoutSessionCount === 1 ? "" : "s"}</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-soft text-lg">
+            {averageMood != null ? moodFace(Math.round(averageMood)) : "📔"}
+          </span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">{averageMood != null ? averageMood.toFixed(1) : journalEntryCount}</p>
+          <p className="text-xs text-ink-muted">{averageMood != null ? "Average mood" : "Entries written"}</p>
+        </div>
+      </div>
+
+      {/* One panel with three divided sections rather than three separate
           bordered/shadowed cards — the repeated chrome was reading as
           template-y busyness rather than structure; a hairline between
-          sections carries the same separation with far less visual noise. */
+          sections carries the same separation with far less visual noise. */}
       <div className="divide-y divide-line rounded-2xl border border-line bg-card shadow-sm">
         <section className="p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
@@ -191,9 +273,17 @@ export function WeeklyRecap({
           ) : (
             <ul className="-mx-5 divide-y divide-line">
               {goalSummaries.map((g) => (
-                <li key={g.id} className="flex items-center justify-between px-5 py-2 text-sm">
-                  <span className={g.hit ? "text-ink" : "text-ink-muted"}>{g.title}</span>
-                  <span className={g.hit ? "font-medium text-goals" : "text-ink-muted"}>{g.detail}</span>
+                <li key={g.id} className="px-5 py-2.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className={g.hit ? "text-ink" : "text-ink-muted"}>{g.title}</span>
+                    <span className={g.hit ? "font-medium text-goals" : "text-ink-muted"}>{g.detail}</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+                    <div
+                      className="h-full rounded-full bg-goals transition-all duration-500 ease-out"
+                      style={{ width: `${g.progress * 100}%` }}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -208,6 +298,21 @@ export function WeeklyRecap({
             <p className="text-sm text-ink-muted">No study time logged this week.</p>
           ) : (
             <>
+              {/* Single-hue magnitude bars (one series: minutes per day), not
+                  a multi-category comparison — no categorical palette needed,
+                  so this stays the brand's one --study color throughout. */}
+              <div className="mb-4 flex items-end justify-between gap-1.5 px-1" style={{ height: "64px" }}>
+                {dailyStudyMinutes.map((d) => (
+                  <div key={d.dateISO} className="flex flex-1 flex-col items-center justify-end gap-1.5" style={{ height: "100%" }}>
+                    <div
+                      title={`${weekdayShort(d.dateISO)}: ${formatMinutes(d.minutes)}`}
+                      className={`w-full rounded-t-[4px] ${d.minutes > 0 ? "bg-study" : "bg-line/50"}`}
+                      style={{ height: `${Math.max(4, (d.minutes / maxDayMinutes) * 44)}px` }}
+                    />
+                    <span className="text-[0.65rem] font-medium text-ink-muted">{weekdayShort(d.dateISO)[0]}</span>
+                  </div>
+                ))}
+              </div>
               <ul className="-mx-5 divide-y divide-line">
                 {subjectMinutes.map((s) => (
                   <li key={s.subjectId} className="flex items-center justify-between px-5 py-2 text-sm">
@@ -255,6 +360,7 @@ export function WeeklyRecap({
           )}
         </section>
       </div>
+      </>
       )}
     </div>
   );

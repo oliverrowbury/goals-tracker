@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { todayISO, shiftISO, isoToDate, daysBetween, monthISOOf, shiftMonth, formatMonth, monthRangeContaining } from "@/lib/dates";
+import { todayISO, shiftISO, isoToDate, daysBetween, monthISOOf, shiftMonth, formatMonth, monthRangeContaining, shortDayMonth } from "@/lib/dates";
 import { isGoalDueOn } from "@/lib/goals";
 import { formatMinutes } from "@/lib/study";
 import { formatDistance } from "@/lib/workout";
 import { ChartIcon } from "@/components/Icons";
+import { moodFace } from "@/lib/mood";
 import type { DistanceUnit } from "@/lib/constants";
 
-type GoalSummary = { id: string; title: string; hit: boolean; detail: string };
+type GoalSummary = { id: string; title: string; hit: boolean; detail: string; progress: number };
+type WeekMinutes = { startISO: string; minutes: number };
 
 export type MonthlyRecapData = {
   monthISO: string;
@@ -15,11 +17,16 @@ export type MonthlyRecapData = {
   endISO: string;
   isCurrentMonth: boolean;
   goalSummaries: GoalSummary[];
+  goalsHitCount: number;
+  goalsTotalCount: number;
   subjectMinutes: { subjectId: string; name: string; color: string; minutes: number }[];
   totalMinutes: number;
+  weeklyStudyMinutes: WeekMinutes[];
   workoutSessionCount: number;
   workoutMinutes: number;
   cardioKm: number;
+  journalEntryCount: number;
+  averageMood: number | null;
 };
 
 // Mirrors getWeeklyRecapData (see WeeklyRecap.tsx) but rolled up over a
@@ -38,7 +45,7 @@ export async function getMonthlyRecapData(userId: string, anchorMonthISO: string
   const rangeStart = isoToDate(startISO);
   const rangeEnd = new Date(`${endISO}T23:59:59.999Z`);
 
-  const [goals, sessions, subjects, workouts] = await Promise.all([
+  const [goals, sessions, subjects, workouts, journalEntries] = await Promise.all([
     prisma.goal.findMany({ where: { userId, active: true }, include: { logs: true } }),
     prisma.studySession.findMany({
       where: { userId, endedAt: { not: null }, startedAt: { gte: rangeStart, lte: rangeEnd } },
@@ -47,14 +54,35 @@ export async function getMonthlyRecapData(userId: string, anchorMonthISO: string
     prisma.workout.findMany({
       where: { userId, endedAt: { not: null }, date: { gte: rangeStart, lte: rangeEnd } },
     }),
+    prisma.journalEntry.findMany({
+      where: { userId, date: { gte: rangeStart, lte: rangeEnd } },
+      select: { date: true, mood: true, bodyText: true },
+    }),
   ]);
 
   const subjectById = new Map(subjects.map((s) => [s.id, s]));
   const minutesBySubject = new Map<string, number>();
+  const minutesByDay = new Map<string, number>();
   for (const session of sessions) {
     minutesBySubject.set(session.subjectId, (minutesBySubject.get(session.subjectId) ?? 0) + (session.durationMinutes ?? 0));
+    const dayISO = session.startedAt.toISOString().slice(0, 10);
+    minutesByDay.set(dayISO, (minutesByDay.get(dayISO) ?? 0) + (session.durationMinutes ?? 0));
   }
   const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes ?? 0), 0);
+
+  // Rolled up into ~7-day chunks from the 1st (not calendar weeks — the
+  // month doesn't start on a Monday most of the time) purely so the chart
+  // has 4-5 bars instead of up to 31 razor-thin ones.
+  const weeklyStudyMinutes: WeekMinutes[] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    const chunk = days.slice(i, i + 7);
+    const minutes = chunk.reduce((sum, d) => sum + (minutesByDay.get(d) ?? 0), 0);
+    weeklyStudyMinutes.push({ startISO: chunk[0], minutes });
+  }
+
+  const journalEntryCount = journalEntries.filter((e) => e.bodyText.trim()).length;
+  const moods = journalEntries.map((e) => e.mood).filter((m): m is number => m != null);
+  const averageMood = moods.length > 0 ? moods.reduce((sum, m) => sum + m, 0) / moods.length : null;
 
   const workoutSessionCount = workouts.length;
   const workoutMinutes = workouts.reduce((sum, w) => sum + (w.durationMinutes ?? 0), 0);
@@ -83,15 +111,25 @@ export async function getMonthlyRecapData(userId: string, anchorMonthISO: string
           title: goal.title,
           hit: total >= monthlyTarget,
           detail: `${total}/${monthlyTarget} ${goal.unit ?? ""} this month`,
+          progress: monthlyTarget > 0 ? Math.min(1, total / monthlyTarget) : 0,
         };
       }
       const dueDays = days.filter((d) => isGoalDueOn(goal, d) && d <= today);
       if (dueDays.length === 0) return null;
       const completedDates = new Set(goal.logs.filter((l) => l.completed).map((l) => l.date.toISOString().slice(0, 10)));
       const doneCount = dueDays.filter((d) => completedDates.has(d)).length;
-      return { id: goal.id, title: goal.title, hit: doneCount === dueDays.length, detail: `${doneCount}/${dueDays.length} days` };
+      return {
+        id: goal.id,
+        title: goal.title,
+        hit: doneCount === dueDays.length,
+        detail: `${doneCount}/${dueDays.length} days`,
+        progress: dueDays.length > 0 ? doneCount / dueDays.length : 0,
+      };
     })
     .filter((g): g is NonNullable<typeof g> => g !== null);
+
+  const goalsHitCount = goalSummaries.filter((g) => g.hit).length;
+  const goalsTotalCount = goalSummaries.length;
 
   const subjectMinutes = Array.from(minutesBySubject.entries())
     .map(([subjectId, minutes]) => ({
@@ -108,11 +146,16 @@ export async function getMonthlyRecapData(userId: string, anchorMonthISO: string
     endISO,
     isCurrentMonth: monthISO === monthISOOf(today),
     goalSummaries,
+    goalsHitCount,
+    goalsTotalCount,
     subjectMinutes,
     totalMinutes,
+    weeklyStudyMinutes,
     workoutSessionCount,
     workoutMinutes,
     cardioKm,
+    journalEntryCount,
+    averageMood,
   };
 }
 
@@ -125,7 +168,22 @@ export function MonthlyRecap({
   distanceUnit: DistanceUnit;
   isPremium?: boolean;
 }) {
-  const { monthISO, isCurrentMonth, goalSummaries, subjectMinutes, totalMinutes, workoutSessionCount, workoutMinutes, cardioKm } = data;
+  const {
+    monthISO,
+    isCurrentMonth,
+    goalSummaries,
+    goalsHitCount,
+    goalsTotalCount,
+    subjectMinutes,
+    totalMinutes,
+    weeklyStudyMinutes,
+    workoutSessionCount,
+    workoutMinutes,
+    cardioKm,
+    journalEntryCount,
+    averageMood,
+  } = data;
+  const maxWeekMinutes = Math.max(1, ...weeklyStudyMinutes.map((w) => w.minutes));
 
   return (
     <div id="monthly-recap" className="mt-10 scroll-mt-6">
@@ -163,6 +221,33 @@ export function MonthlyRecap({
         </div>
       </div>
 
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-goals-soft text-lg">🎯</span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">
+            {goalsTotalCount === 0 ? "—" : `${goalsHitCount}/${goalsTotalCount}`}
+          </p>
+          <p className="text-xs text-ink-muted">Goals hit</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-study-soft text-lg">📚</span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">{formatMinutes(totalMinutes)}</p>
+          <p className="text-xs text-ink-muted">Study time</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-workout-soft text-lg">🏋️</span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">{workoutSessionCount}</p>
+          <p className="text-xs text-ink-muted">Workout{workoutSessionCount === 1 ? "" : "s"}</p>
+        </div>
+        <div className="rounded-2xl border border-line bg-card p-4 shadow-sm">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent-soft text-lg">
+            {averageMood != null ? moodFace(Math.round(averageMood)) : "📔"}
+          </span>
+          <p className="mt-2 font-serif text-xl font-semibold text-ink">{averageMood != null ? averageMood.toFixed(1) : journalEntryCount}</p>
+          <p className="text-xs text-ink-muted">{averageMood != null ? "Average mood" : "Entries written"}</p>
+        </div>
+      </div>
+
       <div className="divide-y divide-line rounded-2xl border border-line bg-card shadow-sm">
         <section className="p-5">
           <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-ink-muted">
@@ -173,9 +258,17 @@ export function MonthlyRecap({
           ) : (
             <ul className="-mx-5 divide-y divide-line">
               {goalSummaries.map((g) => (
-                <li key={g.id} className="flex items-center justify-between px-5 py-2 text-sm">
-                  <span className={g.hit ? "text-ink" : "text-ink-muted"}>{g.title}</span>
-                  <span className={g.hit ? "font-medium text-goals" : "text-ink-muted"}>{g.detail}</span>
+                <li key={g.id} className="px-5 py-2.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className={g.hit ? "text-ink" : "text-ink-muted"}>{g.title}</span>
+                    <span className={g.hit ? "font-medium text-goals" : "text-ink-muted"}>{g.detail}</span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-line/50">
+                    <div
+                      className="h-full rounded-full bg-goals transition-all duration-500 ease-out"
+                      style={{ width: `${g.progress * 100}%` }}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -190,6 +283,18 @@ export function MonthlyRecap({
             <p className="text-sm text-ink-muted">No study time logged this month.</p>
           ) : (
             <>
+              <div className="mb-4 flex items-end justify-between gap-2 px-1" style={{ height: "64px" }}>
+                {weeklyStudyMinutes.map((w, i) => (
+                  <div key={w.startISO} className="flex flex-1 flex-col items-center justify-end gap-1.5" style={{ height: "100%" }}>
+                    <div
+                      title={`${shortDayMonth(w.startISO)} onward: ${formatMinutes(w.minutes)}`}
+                      className={`w-full rounded-t-[4px] ${w.minutes > 0 ? "bg-study" : "bg-line/50"}`}
+                      style={{ height: `${Math.max(4, (w.minutes / maxWeekMinutes) * 44)}px` }}
+                    />
+                    <span className="text-[0.65rem] font-medium text-ink-muted">W{i + 1}</span>
+                  </div>
+                ))}
+              </div>
               <ul className="-mx-5 divide-y divide-line">
                 {subjectMinutes.map((s) => (
                   <li key={s.subjectId} className="flex items-center justify-between px-5 py-2 text-sm">
