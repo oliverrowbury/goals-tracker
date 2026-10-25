@@ -40,6 +40,7 @@ function readGoalFields(formData: FormData) {
   const targetValueRaw = String(formData.get("targetValue") ?? "").trim();
   const unit = String(formData.get("unit") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const emoji = String(formData.get("emoji") ?? "").trim().slice(0, 8);
 
   // One select covers both auto-track sources ("subject:<id>" or
   // "workout:SESSIONS"/"workout:MINUTES") — a goal only ever links to one.
@@ -57,6 +58,7 @@ function readGoalFields(formData: FormData) {
   return {
     title,
     description: description || null,
+    emoji: emoji || null,
     frequencyType: frequencyType as GoalFrequencyType,
     targetDays: frequencyType === "SPECIFIC_DAYS" ? targetDays : [],
     targetValue: targetValueRaw ? Number(targetValueRaw) : null,

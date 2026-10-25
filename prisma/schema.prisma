@@ -316,6 +316,7 @@ model Goal {
 
   title       String
   description String?
+  emoji       String? // small freeform icon shown next to the title, e.g. "🎯"; null falls back to a default in the UI
 
   frequencyType GoalFrequencyType
   targetDays    Weekday[] // only used when frequencyType = SPECIFIC_DAYS

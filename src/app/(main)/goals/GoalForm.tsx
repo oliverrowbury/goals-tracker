@@ -5,9 +5,12 @@ import { useFormStatus } from "react-dom";
 import { WEEKDAYS, REMINDER_SLOTS, REMINDER_SLOT_LABELS } from "@/lib/constants";
 import { Select } from "@/components/Select";
 
+const EMOJI_PRESETS = ["🎯", "🔥", "💪", "📚", "🏃", "🧘", "💧", "🎨", "🎸", "🥗"] as const;
+
 type GoalFormValues = {
   title: string;
   description: string;
+  emoji: string;
   frequencyType: string;
   targetDays: string[];
   targetValue: string;
@@ -22,6 +25,7 @@ type GoalFormValues = {
 const DEFAULTS: GoalFormValues = {
   title: "",
   description: "",
+  emoji: "",
   frequencyType: "DAILY",
   targetDays: [],
   targetValue: "",
@@ -69,6 +73,7 @@ export function GoalForm({
   const values = { ...DEFAULTS, ...initialValues };
   const [frequencyType, setFrequencyType] = useState(values.frequencyType);
   const [reminderEnabled, setReminderEnabled] = useState(values.reminderEnabled);
+  const [emoji, setEmoji] = useState(values.emoji);
 
   return (
     <form action={action} className="space-y-4 rounded-2xl border border-line bg-card p-6 shadow-sm">
@@ -76,14 +81,41 @@ export function GoalForm({
         <label className={labelClass} htmlFor="title">
           Title
         </label>
-        <input
-          id="title"
-          name="title"
-          defaultValue={values.title}
-          required
-          placeholder="e.g. Gym 3x a week"
-          className={inputClass}
-        />
+        <div className="flex gap-2">
+          <input
+            id="emoji"
+            name="emoji"
+            value={emoji}
+            onChange={(e) => setEmoji(e.target.value)}
+            maxLength={8}
+            placeholder="🎯"
+            aria-label="Icon"
+            className={`${inputClass} w-14 text-center text-lg`}
+          />
+          <input
+            id="title"
+            name="title"
+            defaultValue={values.title}
+            required
+            placeholder="e.g. Gym 3x a week"
+            className={`${inputClass} flex-1`}
+          />
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {EMOJI_PRESETS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onClick={() => setEmoji(e)}
+              aria-label={`Use ${e} as the icon`}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg border text-base transition ${
+                emoji === e ? "border-goals bg-goals-soft" : "border-line hover:border-goals"
+              }`}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div>

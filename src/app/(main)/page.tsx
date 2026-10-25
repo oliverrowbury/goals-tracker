@@ -145,8 +145,8 @@ export default async function HomePage({
           href="/journal"
           className="group relative animate-[fade-up_0.5s_ease-out_0.05s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-accent hover:shadow-md"
         >
-          <span className="absolute inset-x-0 top-0 h-1 bg-accent" />
-          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-xl">📔</span>
+          <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-ink-muted">
             <JournalIcon className="h-3.5 w-3.5 text-accent" /> Journal
           </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{journalStatus}</p>
@@ -157,8 +157,8 @@ export default async function HomePage({
           href="/goals"
           className="group relative animate-[fade-up_0.5s_ease-out_0.1s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-goals hover:shadow-md"
         >
-          <span className="absolute inset-x-0 top-0 h-1 bg-goals" />
-          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-goals-soft text-xl">🎯</span>
+          <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-ink-muted">
             <TargetIcon className="h-3.5 w-3.5 text-goals" /> Goals
           </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">
@@ -171,8 +171,8 @@ export default async function HomePage({
           href="/study"
           className="group relative animate-[fade-up_0.5s_ease-out_0.15s_both] overflow-hidden rounded-2xl border border-line bg-card p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-study hover:shadow-md"
         >
-          <span className="absolute inset-x-0 top-0 h-1 bg-study" />
-          <p className="flex items-center gap-1.5 text-sm font-medium text-ink-muted">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-study-soft text-xl">⏱️</span>
+          <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-ink-muted">
             <ClockIcon className="h-3.5 w-3.5 text-study" /> Study
           </p>
           <p className="mt-1 font-serif text-xl font-semibold text-ink">{formatMinutes(weekMinutes)} this week</p>

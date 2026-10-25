@@ -45,6 +45,7 @@ export default async function EditGoalPage({ params }: { params: Promise<{ id: s
         initialValues={{
           title: goal.title,
           description: goal.description ?? "",
+          emoji: goal.emoji ?? "",
           frequencyType: goal.frequencyType,
           targetDays: goal.targetDays,
           targetValue: goal.targetValue?.toString() ?? "",

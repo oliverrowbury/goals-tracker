@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { todayISO, shiftISO } from "@/lib/dates";
+import { todayISO, shiftISO, weekdayShort } from "@/lib/dates";
 import { computeStreak, describeFrequency, isGoalDueOn, weekRangeContaining } from "@/lib/goals";
 import { DeleteGoalButton } from "./DeleteGoalButton";
 import { GoalTodayCheckbox } from "./GoalTodayCheckbox";
@@ -123,10 +123,15 @@ export default async function GoalsPage() {
           return (
             <div key={goal.id} className="rounded-2xl border border-line bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-                <div className="min-w-0">
-                  <h2 className="font-medium text-ink break-words">{goal.title}</h2>
-                  <p className="text-sm text-ink-muted">{describeFrequency(goal)}</p>
-                  {goal.description && <p className="mt-1 text-sm text-ink-muted">{goal.description}</p>}
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-goals-soft text-lg">
+                    {goal.emoji || "🎯"}
+                  </span>
+                  <div className="min-w-0">
+                    <h2 className="font-medium text-ink break-words">{goal.title}</h2>
+                    <p className="text-sm text-ink-muted">{describeFrequency(goal)}</p>
+                    {goal.description && <p className="mt-1 text-sm text-ink-muted">{goal.description}</p>}
+                  </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3 text-sm">
                   {dueToday && (
@@ -168,13 +173,32 @@ export default async function GoalsPage() {
 
               {goal.frequencyType !== "WEEKLY_TARGET" && weekDueTotal > 0 && (
                 <div className="mt-3">
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-line/50">
-                    <div
-                      className="h-full rounded-full bg-goals transition-all duration-500 ease-out"
-                      style={{ width: `${(weekDoneTotal / weekDueTotal) * 100}%` }}
-                    />
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {weekDays.map((d) => {
+                      const due = isGoalDueOn(goal, d);
+                      const done = completedDates.has(d);
+                      const isToday = d === today;
+                      return (
+                        <div key={d} className="flex flex-col items-center gap-1">
+                          <span className="text-[0.65rem] font-medium text-ink-muted">{weekdayShort(d)[0]}</span>
+                          <span
+                            className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition ${
+                              done
+                                ? "bg-goals text-white"
+                                : due
+                                  ? isToday
+                                    ? "border-2 border-goals text-goals"
+                                    : "border-2 border-line text-transparent"
+                                  : "bg-line/30 text-transparent"
+                            }`}
+                          >
+                            {done ? "✓" : "·"}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="mt-1.5 text-xs text-ink-muted">
+                  <p className="mt-2 text-xs text-ink-muted">
                     {weekDoneTotal}/{weekDueTotal} day{weekDueTotal === 1 ? "" : "s"} this week
                   </p>
                 </div>
