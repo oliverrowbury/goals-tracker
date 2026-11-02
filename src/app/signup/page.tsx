@@ -2,7 +2,8 @@ import { SignupForm } from "./SignupForm";
 
 export const metadata = { title: "Sign up" };
 
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
+  const { ref } = await searchParams;
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
       {/* Same ambient glow as login, for consistency across both entry
@@ -15,7 +16,7 @@ export default function SignupPage() {
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-1/2 -z-0 h-64 w-64 -translate-x-[65%] -translate-y-[35%] rounded-[45%] bg-calm opacity-0 blur-2xl [animation:glow-in-soft_2.6s_ease-out_0.5s_forwards,glow-drift-reverse_26s_ease-in-out_infinite_3.1s]"
       />
-      <SignupForm />
+      <SignupForm referralCode={ref} />
     </main>
   );
 }

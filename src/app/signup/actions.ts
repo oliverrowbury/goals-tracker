@@ -39,6 +39,7 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
   const agreeToTerms = formData.get("agreeToTerms") === "on";
+  const referralCode = String(formData.get("referralCode") ?? "").trim();
   const values = { name, username, email };
 
   const fieldErrors: NonNullable<SignupState>["fieldErrors"] = {};
@@ -66,12 +67,17 @@ export async function signup(_prev: SignupState, formData: FormData): Promise<Si
   if (existingEmail) return { fieldErrors: { email: "That email already has an account, sign in instead." }, values };
   if (existingUsername) return { fieldErrors: { username: "That username is taken." }, values };
 
+  // An unrecognized/stale code is silently ignored rather than an error —
+  // someone's invite link having gone bad shouldn't block them signing up
+  // at all, just means neither side gets the referral reward.
+  const referrer = referralCode ? await prisma.user.findUnique({ where: { referralCode }, select: { id: true } }) : null;
+
   const passwordHash = await hashPassword(password);
   const verifyToken = generateVerificationCode();
   const verifyTokenExpiresAt = new Date(Date.now() + VERIFY_CODE_TTL_MS);
   try {
     await prisma.user.create({
-      data: { name, username, email, passwordHash, verifyToken, verifyTokenExpiresAt },
+      data: { name, username, email, passwordHash, verifyToken, verifyTokenExpiresAt, referredByUserId: referrer?.id ?? null },
     });
   } catch (err) {
     // The findUnique checks above can't fully close this — two concurrent

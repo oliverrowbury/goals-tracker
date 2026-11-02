@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { Wordmark } from "@/components/Wordmark";
 import { PasswordInput } from "@/components/PasswordInput";
 import { PasswordStrengthMeter } from "@/components/PasswordStrengthMeter";
+import { REFERRAL_REWARD_DAYS } from "@/lib/constants";
 import { signup } from "./actions";
 
 const inputClass =
@@ -92,7 +93,7 @@ function SubmitButton() {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({ referralCode }: { referralCode?: string }) {
   const [state, formAction] = useActionState(signup, null);
   const errors = state?.fieldErrors ?? {};
   const [password, setPassword] = useState("");
@@ -102,6 +103,7 @@ export function SignupForm() {
       action={formAction}
       className="relative z-10 w-full max-w-sm animate-[card-in_0.75s_cubic-bezier(0.16,1,0.3,1)_both] rounded-2xl border border-line bg-card p-7 shadow-lg"
     >
+      {referralCode && <input type="hidden" name="referralCode" value={referralCode} />}
       {/* Same staged entrance as login — the card settles, then the
           wordmark, then everything else once that's mostly done. */}
       <h1 className="mb-1 text-3xl text-ink">
@@ -109,7 +111,14 @@ export function SignupForm() {
       </h1>
 
       <div className="animate-[fade-up_0.6s_cubic-bezier(0.16,1,0.3,1)_both] [animation-delay:1s]">
-        <p className="mb-6 text-sm text-ink-muted">Create your own account. Your data stays yours alone.</p>
+        {referralCode ? (
+          <p className="mb-6 text-sm text-ink-muted">
+            You&apos;ve been invited — sign up and you&apos;ll both get{" "}
+            <span className="font-medium text-accent">{REFERRAL_REWARD_DAYS} days of Premium</span>, free.
+          </p>
+        ) : (
+          <p className="mb-6 text-sm text-ink-muted">Create your own account. Your data stays yours alone.</p>
+        )}
 
         <Field
           id="name"

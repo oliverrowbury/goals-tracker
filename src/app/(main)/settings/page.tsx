@@ -19,10 +19,12 @@ import { DeleteAccountForm } from "./DeleteAccountForm";
 import { ShareActivityToggle } from "../friends/ShareActivityToggle";
 import { toggleUserPremium } from "./actions";
 import { PremiumSection } from "./PremiumSection";
+import { ReferralSection } from "./ReferralSection";
 import { TrashSection } from "./TrashSection";
 import { ScrollToHash } from "./ScrollToHash";
 import { listTrashedItems } from "@/lib/trash";
 import { getStripe, PREMIUM_PRICING } from "@/lib/stripe";
+import { getOrCreateReferralCode } from "@/lib/referral";
 import {
   GearIcon,
   ClockIcon,
@@ -107,6 +109,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const trashedItems = user.isPremium ? await listTrashedItems(user.id) : [];
   const minutesBySubject = new Map(subjectMinutes.map((s) => [s.subjectId, s._sum.durationMinutes ?? 0]));
 
+  // Lazily allocates a code on first visit (see lib/referral.ts) — a
+  // write, so kept out of the read-only Promise.all above. referralCount
+  // only counts people who actually finished onboarding (where the reward
+  // was paid out), not everyone who merely signed up with the link.
+  const [referralCode, referralCount] = await Promise.all([
+    getOrCreateReferralCode(user.id, user.referralCode),
+    prisma.user.count({ where: { referredByUserId: user.id, referralRewardGrantedAt: { not: null } } }),
+  ]);
+
   // Live plan details for the "manage plan" card — best-effort: a Stripe
   // outage or an unexpected response shape just means the renewal date is
   // omitted, not that the page breaks. Nothing here is persisted; it's
@@ -177,6 +188,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           renewsOn={renewsOn}
           cancelAtPeriodEnd={cancelAtPeriodEnd}
         />
+      </section>
+
+      <section id="invite" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">
+        <h2 className="mb-1 flex items-center gap-2 font-serif text-lg font-semibold text-ink">
+          <span aria-hidden="true">🎁</span>
+          Invite friends
+        </h2>
+        <ReferralSection code={referralCode} referralCount={referralCount} activeBonusUntil={user.bonusPremiumUntil} />
       </section>
 
       <section id="profile" className="rounded-2xl border border-line bg-card p-6 shadow-sm scroll-mt-6">

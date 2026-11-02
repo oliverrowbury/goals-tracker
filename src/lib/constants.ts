@@ -63,3 +63,10 @@ export const USERNAME_RE = /^[a-z][a-z0-9_]{2,19}$/;
 // Not a full RFC 5322 validator — just enough to reject an obviously
 // malformed address. Shared between signup and the Settings email field.
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// How many days of Premium each side of an invite-a-friend referral gets
+// once the referred account finishes onboarding (see lib/referral.ts).
+// Kept here (plain, no server-only imports) rather than in lib/referral.ts
+// itself so SignupForm — a client component — can reference it without
+// pulling node:crypto/Prisma into the browser bundle.
+export const REFERRAL_REWARD_DAYS = 7;

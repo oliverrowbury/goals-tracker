@@ -230,6 +230,35 @@ model User {
   typingWithUserId String?
   typingAt         DateTime?
 
+  // Invite-a-friend. referralCode is lazily generated the first time
+  // Settings' "Invite friends" section is opened (see lib/referral.ts),
+  // not at signup — most accounts will never need one. ?ref=<code> on
+  // /signup resolves to referredByUserId at account creation.
+  referralCode String? @unique
+
+  // Who gets credit once this account finishes onboarding (see
+  // completeProfile) — a self-relation, not cascading: deleting the
+  // referrer shouldn't be blocked by someone they once referred, so
+  // deleteAccount nulls this out explicitly for anyone pointing at the
+  // account being deleted before the user row itself is removed.
+  referredByUserId String?
+  referredBy       User?  @relation("Referrals", fields: [referredByUserId], references: [id], onDelete: SetNull)
+  referrals        User[] @relation("Referrals")
+
+  // Set once the signup+onboarding reward has actually been paid out to
+  // both sides, so a resubmitted/retried completeProfile can't grant it
+  // twice. Null forever for anyone who wasn't referred.
+  referralRewardGrantedAt DateTime?
+
+  // Premium granted by a referral reward rather than a real Stripe
+  // subscription or admin comp — isPremium (above) is still the one field
+  // every gate in the app actually checks; this only exists so the daily
+  // cron (api/cron/expire-referral-premium) knows when to flip isPremium
+  // back off, and it never touches a row with a real stripeSubscriptionId.
+  // Stacks (extends, never overwrites down) if someone banks more than
+  // one reward.
+  bonusPremiumUntil DateTime?
+
   journalEntries    JournalEntry[]
   goals             Goal[]
   subjects          Subject[]

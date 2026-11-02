@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/user";
 import { toKg, toCm } from "@/lib/workout";
 import { ageInYears } from "@/lib/dates";
 import { GENDERS, type Gender } from "@/lib/constants";
+import { grantReferralReward } from "@/lib/referral";
 
 export type OnboardingState = { error: string } | null;
 
@@ -46,6 +47,15 @@ export async function completeProfile(_prev: OnboardingState, formData: FormData
       heightCm: height != null && Number.isFinite(height) && height > 0 ? toCm(height, user.distanceUnit) : null,
     },
   });
+
+  // Onboarding completing (not signup itself) is what actually pays out an
+  // invite-a-friend reward — ties it to someone genuinely setting up their
+  // profile rather than a free-to-fake throwaway account. Gated on
+  // referralRewardGrantedAt so this can't double-grant if completeProfile
+  // somehow runs twice for the same account.
+  if (user.referredByUserId && !user.referralRewardGrantedAt) {
+    await grantReferralReward(user.id, user.referredByUserId);
+  }
 
   redirect("/");
 }
