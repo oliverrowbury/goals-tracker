@@ -1014,18 +1014,41 @@ export function WorkoutTracker({
           Study's own StudyStats/WeeklyStudyChart) — this used to be a bare
           label over a separately-bordered box, with its own hand-rolled
           empty state instead of the plain muted-text one those other
-          summary cards use when there's nothing to show yet. */}
+          summary cards use when there's nothing to show yet. Now a small
+          stat-tile strip (same pattern as the dashboard and the weekly/
+          monthly recaps) instead of one dense sentence — glanceable at a
+          glance instead of needing to be read. */}
       <div className="rounded-2xl border border-line bg-card p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-medium text-ink-muted">This week</h2>
         {weekSummary.sessions === 0 ? (
           <p className="text-sm text-ink-muted">No workouts logged yet this week.</p>
         ) : (
-          <p className="text-sm text-ink-muted">
-            {weekSummary.sessions} session{weekSummary.sessions === 1 ? "" : "s"} · {formatMinutes(weekSummary.minutes)}
-            {weekSummary.strengthCount > 0 && ` · ${weekSummary.strengthCount} strength`}
-            {weekSummary.cardioCount > 0 &&
-              ` · ${weekSummary.cardioCount} cardio (${formatDistance(weekSummary.cardioKm, distanceUnit)})`}
-          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-workout-soft text-lg">🏋️</span>
+              <p className="mt-2 font-serif text-xl font-semibold text-ink">{weekSummary.sessions}</p>
+              <p className="text-xs text-ink-muted">Session{weekSummary.sessions === 1 ? "" : "s"}</p>
+            </div>
+            <div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-workout-soft text-lg">⏱️</span>
+              <p className="mt-2 font-serif text-xl font-semibold text-ink">{formatMinutes(weekSummary.minutes)}</p>
+              <p className="text-xs text-ink-muted">Time trained</p>
+            </div>
+            {weekSummary.strengthCount > 0 && (
+              <div>
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-workout-soft text-lg">💪</span>
+                <p className="mt-2 font-serif text-xl font-semibold text-ink">{weekSummary.strengthCount}</p>
+                <p className="text-xs text-ink-muted">Strength</p>
+              </div>
+            )}
+            {weekSummary.cardioCount > 0 && (
+              <div>
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-workout-soft text-lg">🏃</span>
+                <p className="mt-2 font-serif text-xl font-semibold text-ink">{formatDistance(weekSummary.cardioKm, distanceUnit)}</p>
+                <p className="text-xs text-ink-muted">{weekSummary.cardioCount} cardio</p>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

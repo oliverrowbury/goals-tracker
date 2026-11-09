@@ -19,7 +19,7 @@ export type WeeklyRecapData = {
   goalSummaries: GoalSummary[];
   goalsHitCount: number;
   goalsTotalCount: number;
-  subjectMinutes: { subjectId: string; name: string; color: string; minutes: number }[];
+  subjectMinutes: { subjectId: string; name: string; color: string; emoji: string | null; minutes: number }[];
   totalMinutes: number;
   dailyStudyMinutes: DayMinutes[];
   workouts: WorkoutSummary[];
@@ -127,6 +127,7 @@ export async function getWeeklyRecapData(userId: string, anchorISO: string): Pro
       subjectId,
       name: subjectById.get(subjectId)?.name ?? "Unknown subject",
       color: subjectById.get(subjectId)?.color ?? "#999",
+      emoji: subjectById.get(subjectId)?.emoji ?? null,
       minutes,
     }))
     .sort((a, b) => b.minutes - a.minutes);
@@ -317,7 +318,11 @@ export function WeeklyRecap({
                 {subjectMinutes.map((s) => (
                   <li key={s.subjectId} className="flex items-center justify-between px-5 py-2 text-sm">
                     <span className="flex items-center gap-2 text-ink">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                      {s.emoji ? (
+                        <span className="text-sm leading-none">{s.emoji}</span>
+                      ) : (
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
+                      )}
                       {s.name}
                     </span>
                     <span className="text-ink-muted">{formatMinutes(s.minutes)}</span>
