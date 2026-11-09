@@ -48,6 +48,7 @@ type ActivityEntry = {
   stats: Stat[];
   exercises?: ExerciseBreakdown[];
   subjectColor?: string;
+  subjectEmoji?: string | null;
   note?: string | null;
   photoUrl?: string | null;
 };
@@ -206,6 +207,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
           when: s.endedAt!,
           title: s.subject.name,
           subjectColor: s.subject.color,
+          subjectEmoji: s.subject.emoji,
           note: s.note,
           stats: [
             { label: "Time studied", value: formatMinutes(s.durationMinutes ?? 0) },
@@ -404,6 +406,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
               stats: item.stats,
               exercises: item.exercises,
               subjectColor: item.subjectColor,
+              subjectEmoji: item.subjectEmoji,
               weightUnit: user.weightUnit,
               likeCount: likeCountMap.get(item.id) ?? 0,
               likedByMe: likedByMeSet.has(item.id),

@@ -178,6 +178,7 @@ export default async function PostDetailPage({ params }: { params: Promise<{ kin
     when: session.endedAt,
     title: session.subject.name,
     subjectColor: session.subject.color,
+    subjectEmoji: session.subject.emoji,
     note: session.note,
     stats: [
       { label: "Time studied", value: formatMinutes(session.durationMinutes ?? 0) },

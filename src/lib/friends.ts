@@ -60,6 +60,7 @@ export type OwnActivityEntry = {
   stats: Stat[];
   exercises?: ExerciseBreakdown[];
   subjectColor?: string;
+  subjectEmoji?: string | null;
   note?: string | null;
   photoUrl?: string | null;
 };
@@ -175,6 +176,7 @@ export async function ownActivity(userId: string, weightUnit: WeightUnit, distan
         when: s.endedAt!,
         title: s.subject.name,
         subjectColor: s.subject.color,
+        subjectEmoji: s.subject.emoji,
         note: s.note,
         stats: [
           { label: "Time studied", value: formatMinutes(s.durationMinutes ?? 0) },

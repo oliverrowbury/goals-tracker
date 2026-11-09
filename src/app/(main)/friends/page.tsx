@@ -45,6 +45,7 @@ type FeedItem = {
   stats: Stat[];
   exercises?: ExerciseBreakdown[];
   subjectColor?: string;
+  subjectEmoji?: string | null;
   note?: string | null;
   photoUrl?: string | null;
 };
@@ -225,6 +226,7 @@ export default async function FriendsPage() {
         note: s.note,
         title: s.subject.name,
         subjectColor: s.subject.color,
+        subjectEmoji: s.subject.emoji,
         stats: [
           { label: "Time studied", value: formatMinutes(s.durationMinutes ?? 0) },
           ...(streak > 0 ? [{ label: "Streak", value: `${streak} day${streak === 1 ? "" : "s"}` }] : []),
@@ -404,6 +406,7 @@ export default async function FriendsPage() {
               stats: item.stats,
               exercises: item.exercises,
               subjectColor: item.subjectColor,
+              subjectEmoji: item.subjectEmoji,
               weightUnit: user.weightUnit,
               likeCount: likeCountMap.get(item.id) ?? 0,
               likedByMe: likedByMeSet.has(item.id),
@@ -509,6 +512,7 @@ export default async function FriendsPage() {
                   stats: item.stats,
                   exercises: item.exercises,
                   subjectColor: item.subjectColor,
+              subjectEmoji: item.subjectEmoji,
                   weightUnit: user.weightUnit,
                   likeCount: likeCountMap.get(item.id) ?? 0,
                   likedByMe: likedByMeSet.has(item.id),

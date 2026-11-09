@@ -20,11 +20,13 @@ export type ActivityCardItem = {
   stats: Stat[];
   exercises?: ExerciseBreakdown[];
   weightUnit?: "KG" | "LB";
-  // A study post's own subject color (already used everywhere else the
-  // subject shows up — the timer, the weekly chart) rather than one flat
-  // teal for every subject, so Chemistry and French don't look identical
-  // in the feed. Undefined for workouts, which use the fixed workout accent.
+  // A study post's own subject color/emoji (already used everywhere else
+  // the subject shows up — the timer, the weekly chart, the journal) rather
+  // than one flat teal for every subject, so Chemistry and French don't
+  // look identical in the feed. Undefined for workouts, which use the
+  // fixed workout accent.
   subjectColor?: string;
+  subjectEmoji?: string | null;
   likeCount: number;
   likedByMe: boolean;
   commentCount: number;
@@ -66,7 +68,11 @@ export function ActivityCard({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        {item.subjectColor && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.subjectColor }} />}
+        {item.subjectEmoji ? (
+          <span className="shrink-0 text-sm leading-none">{item.subjectEmoji}</span>
+        ) : (
+          item.subjectColor && <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.subjectColor }} />
+        )}
         <h3 className="font-serif text-lg font-semibold text-ink">{item.title}</h3>
         {hasPR && (
           <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-accent-strong">
