@@ -395,6 +395,12 @@ model Subject {
   user   User    @relation(fields: [userId], references: [id])
   name   String
   color  String
+  // Picked by keyword match on the name at creation (see study/actions.ts's
+  // pickSubjectEmoji) — same "no picker UI, just a sensible default"
+  // treatment color already got above. Null for any subject created before
+  // this field existed; the UI falls back to a generic default rather than
+  // backfilling guesses onto names nobody chose an emoji for.
+  emoji  String?
   active Boolean @default(true)
 
   studySessions StudySession[]

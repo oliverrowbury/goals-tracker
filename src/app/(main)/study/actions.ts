@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/user";
-import { minutesBetween } from "@/lib/study";
+import { minutesBetween, pickSubjectEmoji } from "@/lib/study";
 import { isoToDate, todayISO } from "@/lib/dates";
 import { awardXp, XP_AWARDS } from "@/lib/xp";
 import { awardBadge, awardStreakBadges, awardStudyHoursBadges, awardTimeOfDayBadges } from "@/lib/badges";
@@ -289,7 +289,7 @@ export async function createSubject(_prev: CreateSubjectState, formData: FormDat
   const count = await prisma.subject.count({ where: { userId: user.id } });
 
   await prisma.subject.create({
-    data: { userId: user.id, name, color: colors[count % colors.length] },
+    data: { userId: user.id, name, color: colors[count % colors.length], emoji: pickSubjectEmoji(name, count) },
   });
 
   revalidatePath("/study");

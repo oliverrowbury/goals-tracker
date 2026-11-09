@@ -18,7 +18,7 @@ import { ConfirmButton } from "@/components/ConfirmButton";
 import { Select } from "@/components/Select";
 import { StudySummary, type JustFinishedSession } from "./StudySummary";
 
-type Subject = { id: string; name: string; color: string };
+type Subject = { id: string; name: string; color: string; emoji: string | null };
 
 function ManualEntryForm({ subjects, onDone }: { subjects: Subject[]; onDone: () => void }) {
   const [state, formAction, isPending] = useActionState(logManualSession, null);
@@ -511,13 +511,13 @@ export function StudyTimer({
                   style={{ borderLeftColor: subject.color, borderLeftWidth: 4 }}
                 >
                   <span
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-base transition ${
                       selectedSubjectId === subject.id
                         ? "bg-study text-white"
                         : "bg-study-soft text-study group-hover:bg-study group-hover:text-white"
                     }`}
                   >
-                    <PlayIcon className="h-3.5 w-3.5" />
+                    {subject.emoji ?? <PlayIcon className="h-3.5 w-3.5" />}
                   </span>
                   {subject.name}
                 </button>
@@ -573,7 +573,11 @@ export function StudyTimer({
               return (
                 <li key={subject.id} className="flex items-center justify-between px-3.5 py-2 text-sm">
                   <span className="flex items-center gap-2 text-ink">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }} />
+                    {subject.emoji ? (
+                      <span className="text-sm leading-none">{subject.emoji}</span>
+                    ) : (
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: subject.color }} />
+                    )}
                     {subject.name}
                   </span>
                   <span className={isActive ? "font-medium text-study" : "text-ink-muted"}>

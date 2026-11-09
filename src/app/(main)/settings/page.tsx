@@ -440,7 +440,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <ul className="mb-4 space-y-2">
           {subjects.map((subject) => (
             <li key={subject.id} className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subject.color }} />
+              {subject.emoji ? (
+                <span className="shrink-0 text-sm leading-none">{subject.emoji}</span>
+              ) : (
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: subject.color }} />
+              )}
               <RenameSubjectForm subjectId={subject.id} name={subject.name} />
               <DeleteSubjectButton subjectId={subject.id} name={subject.name} minutes={minutesBySubject.get(subject.id) ?? 0} />
             </li>

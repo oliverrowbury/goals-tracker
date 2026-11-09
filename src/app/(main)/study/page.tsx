@@ -129,7 +129,7 @@ export default async function StudyPage() {
     <div>
       <PageHeader icon={ClockIcon} iconClassName="text-study" title="Study" />
       <StudyTimer
-        subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color }))}
+        subjects={subjects.map((s) => ({ id: s.id, name: s.name, color: s.color, emoji: s.emoji }))}
         serverNow={new Date().toISOString()}
         openSession={
           openSession
