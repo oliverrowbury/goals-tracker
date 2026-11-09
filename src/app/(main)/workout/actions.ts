@@ -243,12 +243,19 @@ export async function finishStrengthWorkout(workoutId: string) {
   }
 
   const endedAt = new Date();
-  await prisma.workout.update({
-    where: { id: workoutId },
+  // Conditional on endedAt: null, same "only the request that actually
+  // causes the transition gets to award XP" pattern goals/actions.ts uses
+  // (see toggleGoalCompletion's own comment) — without it, a double-tap or
+  // client retry on Finish can both pass the findFirst above before either
+  // writes, and both award XP for the same workout.
+  const { count } = await prisma.workout.updateMany({
+    where: { id: workoutId, userId: user.id, endedAt: null },
     data: { endedAt, durationMinutes: minutesBetween(workout.startedAt ?? endedAt, endedAt) },
   });
-  await awardXp(workout.userId, XP_AWARDS.WORKOUT);
-  await awardWorkoutBadges(workout.userId);
+  if (count > 0) {
+    await awardXp(workout.userId, XP_AWARDS.WORKOUT);
+    await awardWorkoutBadges(workout.userId);
+  }
 
   revalidateWorkoutViews();
 }
@@ -294,14 +301,16 @@ export async function finishCardioWorkout(workoutId: string, formData: FormData)
   const distanceKm = Number.isFinite(enteredDistance) && enteredDistance > 0 ? toKm(enteredDistance, user.distanceUnit) : null;
   const durationMinutes = minutesBetween(workout.startedAt ?? endedAt, endedAt);
 
-  await prisma.workout.update({
-    where: { id: workoutId },
+  // Conditional on endedAt: null — same double-finish guard as
+  // finishStrengthWorkout above.
+  const { count } = await prisma.workout.updateMany({
+    where: { id: workoutId, userId: user.id, endedAt: null },
     data: { endedAt, durationMinutes, distanceKm, route },
   });
 
   // Same sub-minute guard as a study session — not worth awarding, and
   // guards against an instant start/finish to farm XP.
-  if (durationMinutes >= 1) {
+  if (count > 0 && durationMinutes >= 1) {
     await awardXp(user.id, XP_AWARDS.WORKOUT);
     await awardWorkoutBadges(user.id);
   }
@@ -452,6 +461,14 @@ export async function getAiWorkoutAdvice(workoutId: string): Promise<{ advice?: 
     return { error: `You've used all ${DAILY_AI_ADVICE_LIMIT} AI advice requests for today — try again tomorrow.` };
   }
 
+  // Reserved before calling the (slow, costly) API rather than after —
+  // narrows the window where two concurrent requests for two different
+  // workouts both read the same under-the-limit count above and both
+  // proceed, each burning a real Anthropic API call past the daily cap.
+  // Cleared back to null below if generation fails, so a failed attempt
+  // doesn't cost the user part of their daily allowance.
+  await prisma.workout.update({ where: { id: workoutId }, data: { aiAdviceGeneratedAt: new Date() } });
+
   const exercisesById = new Map<string, { name: string; sets: { reps: number; weight: number; weightUnit: "KG" | "LB"; isWarmup: boolean }[] }>();
   for (const s of workout.sets) {
     const entry = exercisesById.get(s.exerciseId) ?? { name: s.exercise.name, sets: [] };
@@ -469,10 +486,14 @@ export async function getAiWorkoutAdvice(workoutId: string): Promise<{ advice?: 
       exercises: Array.from(exercisesById.values()),
     });
   } catch {
+    await prisma.workout.update({ where: { id: workoutId }, data: { aiAdviceGeneratedAt: null } });
     return { error: "Couldn't get AI advice right now — try again in a moment." };
   }
-  if (!advice) return { error: "Couldn't get AI advice right now — try again in a moment." };
+  if (!advice) {
+    await prisma.workout.update({ where: { id: workoutId }, data: { aiAdviceGeneratedAt: null } });
+    return { error: "Couldn't get AI advice right now — try again in a moment." };
+  }
 
-  await prisma.workout.update({ where: { id: workoutId }, data: { aiAdvice: advice, aiAdviceGeneratedAt: new Date() } });
+  await prisma.workout.update({ where: { id: workoutId }, data: { aiAdvice: advice } });
   return { advice };
 }

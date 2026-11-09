@@ -48,28 +48,47 @@ export async function POST(request: Request) {
     // Covers renewals, upgrades/downgrades, a failed-payment pause, and a
     // scheduled cancellation taking effect — isPremium always tracks
     // whether the subscription is currently in a paying/trialing state.
+    //
+    // Except it's not the *only* thing that can grant Premium — an invite-a-
+    // friend reward (see lib/referral.ts) sets isPremium directly with no
+    // Stripe subscription behind it. Someone can have an active referral
+    // bonus and separately start (then cancel, or fail to pay for) a real
+    // subscription attempt that still got far enough to attach a
+    // stripeCustomerId. Without the bonusPremiumUntil check below, this
+    // event would force isPremium back to false and silently erase days of
+    // unexpired referral Premium that belongs to a completely different
+    // feature — one write undoing the other.
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
       const isActive = subscription.status === "active" || subscription.status === "trialing";
 
-      await prisma.user.updateMany({
-        where: { stripeCustomerId: customerId },
-        data: { isPremium: isActive, stripeSubscriptionId: subscription.id },
+      const user = await prisma.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, bonusPremiumUntil: true } });
+      if (!user) break;
+      const hasActiveBonus = !!user.bonusPremiumUntil && user.bonusPremiumUntil > new Date();
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isPremium: isActive || hasActiveBonus, stripeSubscriptionId: subscription.id },
       });
       break;
     }
 
     // The subscription itself is gone (cancelled and the period ended, or
     // deleted outright) — unlike "updated" with a cancelled-but-still-
-    // active status, there's nothing left to track.
+    // active status, there's nothing left to track. Same referral-bonus
+    // carve-out as "updated" above, for the same reason.
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
       const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
 
-      await prisma.user.updateMany({
-        where: { stripeCustomerId: customerId },
-        data: { isPremium: false, stripeSubscriptionId: null },
+      const user = await prisma.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, bonusPremiumUntil: true } });
+      if (!user) break;
+      const hasActiveBonus = !!user.bonusPremiumUntil && user.bonusPremiumUntil > new Date();
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isPremium: hasActiveBonus, stripeSubscriptionId: null },
       });
       break;
     }

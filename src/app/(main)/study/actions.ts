@@ -93,14 +93,19 @@ export async function finishStudySession(sessionId: string) {
   const endedAt = session.pausedAt ?? new Date();
   const durationMinutes = minutesBetween(session.startedAt, endedAt);
 
-  await prisma.studySession.update({
-    where: { id: sessionId },
+  // Conditional on endedAt: null — same "only the request that actually
+  // causes the transition gets to award XP" pattern goals/actions.ts uses
+  // (see toggleGoalCompletion's own comment), closing the same double-tap/
+  // client-retry double-award race finishStrengthWorkout/
+  // finishCardioWorkout now also guard against.
+  const { count } = await prisma.studySession.updateMany({
+    where: { id: sessionId, userId: user.id, endedAt: null },
     data: { endedAt, pausedAt: null, durationMinutes },
   });
 
   // A sub-minute session isn't worth awarding — mainly guards against
   // immediately starting and finishing a timer to farm XP.
-  if (durationMinutes >= 1) {
+  if (count > 0 && durationMinutes >= 1) {
     await awardXp(session.userId, XP_AWARDS.STUDY_SESSION);
     await awardStudyBadges(session.userId);
     await awardTimeOfDayBadges(session.userId, endedAt);

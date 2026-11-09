@@ -15,16 +15,33 @@ export async function saveJournalEntry(dateISO: string, bodyText: string, improv
   const user = await getCurrentUser();
   const date = isoToDate(dateISO);
 
-  const existing = await prisma.journalEntry.findUnique({ where: { userId_date: { userId: user.id, date } } });
-  await prisma.journalEntry.upsert({
-    where: { userId_date: { userId: user.id, date } },
-    update: { bodyText, improveText, notes },
-    create: { userId: user.id, date, bodyText, improveText, notes },
-  });
+  // Same atomic-transition idea as goals/actions.ts's toggleGoalCompletion
+  // (see its own comment): whether THIS request gets credit for "today's
+  // entry just went from empty to written" is decided by a conditional
+  // write keyed off the row's existing content, not a separate read
+  // beforehand — a plain findUnique-then-upsert let two near-simultaneous
+  // saves (an autosave debounce firing twice, a client retry) both read
+  // the same "still empty" state and both award XP for what should be a
+  // single transition.
+  let justWrittenFirstTime = false;
+  try {
+    await prisma.journalEntry.create({ data: { userId: user.id, date, bodyText, improveText, notes } });
+    justWrittenFirstTime = !!bodyText.trim();
+  } catch {
+    const { count } = await prisma.journalEntry.updateMany({
+      where: { userId: user.id, date, bodyText: "" },
+      data: { bodyText, improveText, notes },
+    });
+    if (count > 0) {
+      justWrittenFirstTime = !!bodyText.trim();
+    } else {
+      await prisma.journalEntry.updateMany({ where: { userId: user.id, date }, data: { bodyText, improveText, notes } });
+    }
+  }
 
   // Only the first time this day's entry goes from empty to written —
   // otherwise every autosave keystroke would re-award it.
-  if (bodyText.trim() && !existing?.bodyText.trim()) {
+  if (justWrittenFirstTime) {
     await awardXp(user.id, XP_AWARDS.JOURNAL_ENTRY);
 
     const journaledDates = await prisma.journalEntry.findMany({
